@@ -943,8 +943,8 @@ export default function App() {
         }))}
         style={{
           position: 'absolute',
-          bottom: 10,
-          right: 10,
+          bottom: 50,
+          left: 10,
           width: 40,
           height: 40,
           cursor: viewState.bearing !== 0 ? 'pointer' : undefined,
