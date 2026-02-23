@@ -2,7 +2,7 @@
 
 Interactive 3D choropleth of Jersey City property tax payments, from 2018 to 2025.
 
-[![og.png](www/public/og.png)][jct.rbw.sh]
+[![og-lot.png](www/public/og-lot.png)][jct.rbw.sh]
 
 **Live**: [jct.rbw.sh]
 

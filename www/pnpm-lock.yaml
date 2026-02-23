@@ -79,8 +79,8 @@ importers:
         specifier: ^16.5.0
         version: 16.5.0
       scrns:
-        specifier: https://gitlab.com/runsascoded/js/scrns/-/archive/dfa71f06ab91c0f58913a87f395f0480af411c3d/scrns-dfa71f06ab91c0f58913a87f395f0480af411c3d.tar.gz
-        version: https://gitlab.com/runsascoded/js/scrns/-/archive/dfa71f06ab91c0f58913a87f395f0480af411c3d/scrns-dfa71f06ab91c0f58913a87f395f0480af411c3d.tar.gz(typescript@5.9.3)
+        specifier: https://gitlab.com/runsascoded/js/scrns/-/archive/aceac83017e6a69017beb96caae1d25d66e17fd6/scrns-aceac83017e6a69017beb96caae1d25d66e17fd6.tar.gz
+        version: https://gitlab.com/runsascoded/js/scrns/-/archive/aceac83017e6a69017beb96caae1d25d66e17fd6/scrns-aceac83017e6a69017beb96caae1d25d66e17fd6.tar.gz(typescript@5.9.3)
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -2874,9 +2874,9 @@ packages:
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
 
-  scrns@https://gitlab.com/runsascoded/js/scrns/-/archive/dfa71f06ab91c0f58913a87f395f0480af411c3d/scrns-dfa71f06ab91c0f58913a87f395f0480af411c3d.tar.gz:
-    resolution: {tarball: https://gitlab.com/runsascoded/js/scrns/-/archive/dfa71f06ab91c0f58913a87f395f0480af411c3d/scrns-dfa71f06ab91c0f58913a87f395f0480af411c3d.tar.gz}
-    version: 0.2.1-dist.8d08ff2
+  scrns@https://gitlab.com/runsascoded/js/scrns/-/archive/aceac83017e6a69017beb96caae1d25d66e17fd6/scrns-aceac83017e6a69017beb96caae1d25d66e17fd6.tar.gz:
+    resolution: {tarball: https://gitlab.com/runsascoded/js/scrns/-/archive/aceac83017e6a69017beb96caae1d25d66e17fd6/scrns-aceac83017e6a69017beb96caae1d25d66e17fd6.tar.gz}
+    version: 0.3.0-dist.1e1191c
     hasBin: true
 
   seedrandom@3.0.5:
@@ -6479,7 +6479,7 @@ snapshots:
 
   scheduler@0.27.0: {}
 
-  scrns@https://gitlab.com/runsascoded/js/scrns/-/archive/dfa71f06ab91c0f58913a87f395f0480af411c3d/scrns-dfa71f06ab91c0f58913a87f395f0480af411c3d.tar.gz(typescript@5.9.3):
+  scrns@https://gitlab.com/runsascoded/js/scrns/-/archive/aceac83017e6a69017beb96caae1d25d66e17fd6/scrns-aceac83017e6a69017beb96caae1d25d66e17fd6.tar.gz(typescript@5.9.3):
     dependencies:
       commander: 12.1.0
       gifenc: 1.0.3

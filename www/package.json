@@ -10,7 +10,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "screenshot": "scrns -h localhost:3201 -c scrns.config.ts -o public && magick public/og.png -crop 1200x630+0+0 +repage public/og.png"
+    "screenshot": "scrns"
   },
   "dependencies": {
     "@deck.gl/core": "^9.2.6",
@@ -42,6 +42,6 @@
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
     "vite-plugin-dvc": "github:runsascoded/vite-plugin-dvc#57d8f5f71582d4fa42914a569541d82473e8e208",
-    "scrns": "https://gitlab.com/runsascoded/js/scrns/-/archive/dfa71f06ab91c0f58913a87f395f0480af411c3d/scrns-dfa71f06ab91c0f58913a87f395f0480af411c3d.tar.gz"
+    "scrns": "https://gitlab.com/runsascoded/js/scrns/-/archive/aceac83017e6a69017beb96caae1d25d66e17fd6/scrns-aceac83017e6a69017beb96caae1d25d66e17fd6.tar.gz"
   }
 }
