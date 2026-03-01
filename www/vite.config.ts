@@ -13,6 +13,7 @@ export default defineConfig({
     host: true,
     allowedHosts,
   },
+
   preview: {
     port: 3201,
   },

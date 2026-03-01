@@ -27,7 +27,7 @@
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0",
     "react-map-gl": "^8.1.0",
-    "use-kbd": "^0.10.0",
+    "use-kbd": "https://github.com/runsascoded/use-kbd#34745efff8efdfd2c46e3e39d479a708aba704b2",
     "use-prms": "^0.4.0"
   },
   "devDependencies": {

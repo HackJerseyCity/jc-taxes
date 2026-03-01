@@ -45,8 +45,8 @@ importers:
         specifier: ^8.1.0
         version: 8.1.0(maplibre-gl@5.17.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       use-kbd:
-        specifier: ^0.10.0
-        version: 0.10.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        specifier: https://github.com/runsascoded/use-kbd#34745efff8efdfd2c46e3e39d479a708aba704b2
+        version: https://codeload.github.com/runsascoded/use-kbd/tar.gz/34745efff8efdfd2c46e3e39d479a708aba704b2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       use-prms:
         specifier: ^0.4.0
         version: 0.4.0(react@19.2.4)
@@ -99,6 +99,9 @@ importers:
 
   ../../js/use-kbd:
     dependencies:
+      debug:
+        specifier: ^4.4.3
+        version: 4.4.3
       react-dom:
         specifier: '>=18.0.0'
         version: 19.2.4(react@18.3.1)
@@ -109,6 +112,9 @@ importers:
       '@rdub/eslint-config':
         specifier: ^0.0.3
         version: 0.0.3(eslint@9.39.2)(typescript@5.9.3)
+      '@types/debug':
+        specifier: ^4.1.12
+        version: 4.1.12
       '@types/react':
         specifier: ^18.3.27
         version: 18.3.28
@@ -1127,6 +1133,9 @@ packages:
   '@types/d3@7.4.3':
     resolution: {integrity: sha512-lZXZ9ckh5R8uiFVt8ogUNf+pIrK4EsWrx2Np75WvF/eTpJ0FMHNhjXk8CKEx/+gpHbNQyJWehbFaTvqmHWB3ww==}
 
+  '@types/debug@4.1.12':
+    resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
+
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
@@ -1141,6 +1150,9 @@ packages:
 
   '@types/json5@0.0.29':
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
+
+  '@types/ms@2.1.0':
+    resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
   '@types/node@25.2.1':
     resolution: {integrity: sha512-CPrnr8voK8vC6eEtyRzvMpgp3VyVRhgclonE7qYi6P9sXwYb59ucfrnmFBTaP0yUi8Gk4yZg/LlTJULGxvTNsg==}
@@ -3372,8 +3384,9 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
-  use-kbd@0.10.0:
-    resolution: {integrity: sha512-2g0nWWWvZfd7JCkQnxydCPgK35QKY6ieQGrP4X52R3CRAqmfJUgaKygKAAAshrpu3EFZdRlLNlcVAKTfxXcVcA==}
+  use-kbd@https://codeload.github.com/runsascoded/use-kbd/tar.gz/34745efff8efdfd2c46e3e39d479a708aba704b2:
+    resolution: {tarball: https://codeload.github.com/runsascoded/use-kbd/tar.gz/34745efff8efdfd2c46e3e39d479a708aba704b2}
+    version: 0.10.0-dist.bf02e9e
     peerDependencies:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
@@ -4750,6 +4763,10 @@ snapshots:
       '@types/d3-transition': 3.0.9
       '@types/d3-zoom': 3.0.8
 
+  '@types/debug@4.1.12':
+    dependencies:
+      '@types/ms': 2.1.0
+
   '@types/estree@1.0.8': {}
 
   '@types/geojson@7946.0.16': {}
@@ -4759,6 +4776,8 @@ snapshots:
   '@types/json-schema@7.0.15': {}
 
   '@types/json5@0.0.29': {}
+
+  '@types/ms@2.1.0': {}
 
   '@types/node@25.2.1':
     dependencies:
@@ -7357,10 +7376,13 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  use-kbd@0.10.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  use-kbd@https://codeload.github.com/runsascoded/use-kbd/tar.gz/34745efff8efdfd2c46e3e39d479a708aba704b2(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:
+      debug: 4.4.3
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
+    transitivePeerDependencies:
+      - supports-color
 
   use-prms@0.4.0(react@19.2.4):
     optionalDependencies:
