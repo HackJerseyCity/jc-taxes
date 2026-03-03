@@ -16,6 +16,8 @@ import GradientEditor, {
   type ScaleType,
   type ColorStop,
   interpolateColor,
+  encodeStops,
+  decodeStops,
 } from './GradientEditor'
 import type { ParcelProperties, ParcelFeature } from './types'
 import { getLotNote } from './notes'
@@ -104,6 +106,7 @@ function getModeKey(agg: string, metric: string): string {
 // per_sqft: data skewed near zero → stops at ~1-7% of max
 // per_capita: data more spread → stops at ~25-75% of max
 type ModeConfig = {
+  min?: number
   max: number
   maxHeight: number
   scale?: ScaleType
@@ -130,6 +133,14 @@ const MODE_DEFAULTS: Record<string, ModeConfig> = {
     light: [{ value: 0, color: [255, 255, 255] }, { value: 1273.7, color: [255, 71, 71] }, { value: 3500, color: [230, 190, 0] }, { value: 6834.5, color: [0, 214, 0] }],
   }},
 }
+const YR_BUILT_CONFIG: ModeConfig = {
+  min: 1870, max: 2025, maxHeight: 4500, scale: 'linear',
+  stops: {
+    dark:  [{ value: 1870, color: [96, 96, 96] }, { value: 1910, color: [255, 0, 0] }, { value: 1960, color: [255, 217, 26] }, { value: 2025, color: [0, 255, 0] }],
+    light: [{ value: 1870, color: [255, 255, 255] }, { value: 1910, color: [255, 71, 71] }, { value: 1960, color: [230, 190, 0] }, { value: 2025, color: [0, 214, 0] }],
+  },
+}
+
 const SS_PREFIX = 'jc-taxes:'
 
 function ssSave(key: string, field: string, value: string) {
@@ -185,6 +196,7 @@ export default function App() {
   const [wardGeom, setWardGeom] = useUrlState('wg', stringParam('merged'))
   const [wardLabels, setWardLabels] = useUrlState('wl', boolParam)
   const [extruded, setExtruded] = useUrlState('3d', boolParam)
+  const [colorBy, setColorBy] = useUrlState('cb', stringParam('metric'))
 
   const hasPopulation = aggregateMode === 'census-block' || aggregateMode === 'ward'
   const modeKey = getModeKey(aggregateMode, metricMode)
@@ -206,21 +218,43 @@ export default function App() {
   // Freeze height scale while loading to prevent stale data rendered with new-mode elevation
   const stableHeightScaleRef = useRef(heightScale)
   if (!loading) stableHeightScaleRef.current = heightScale
-  // Effective color scale: URL value if explicitly set, else mode default
-  const colorScale = colorScaleRaw ?? modeConf.scale ?? 'log'
+  // Effective color scale: URL value if explicitly set, else mode default (overridden by yr_built config)
+  const colorByYrBuilt = colorBy === 'yr_built' && (aggregateMode === 'lot' || aggregateMode === 'unit')
+  const colorConf = colorByYrBuilt ? YR_BUILT_CONFIG : modeConf
+  const colorMin = colorConf.min ?? 0
+  const colorMax = colorConf.max
+  const colorScale = colorScaleRaw ?? colorConf.scale ?? 'log'
 
   // Color stops: use custom (from URL `c`) → mode-specific → theme defaults
   const { actualTheme, toggleTheme, colorStops: themeStops, hasCustomStops, setColorStops, resetColorStops: resetColorStopsRaw } = useTheme()
   const modeStops = useMemo(() => {
-    if (modeConf.stops) return actualTheme === 'light' ? modeConf.stops.light : modeConf.stops.dark
+    if (colorConf.stops) return actualTheme === 'light' ? colorConf.stops.light : colorConf.stops.dark
     return null
-  }, [modeConf, actualTheme])
+  }, [colorConf, actualTheme])
   const colorStops = hasCustomStops ? themeStops : (modeStops ?? themeStops)
 
   // Reset: clear custom stops from URL; mode stops or theme defaults will apply
   const resetColorStops = useCallback(() => {
     resetColorStopsRaw()
   }, [resetColorStopsRaw])
+
+  // Color-by switching: save/restore custom stops + scale to/from SS when toggling yr_built
+  const switchColorBy = useCallback((newCb: string) => {
+    const oldCb = colorBy
+    if (oldCb === newCb) return
+    // Save current custom stops + scale to SS under cb:{mode}
+    if (hasCustomStops) ssSave(`cb:${oldCb}`, 'c', encodeStops(colorStops))
+    if (colorScaleRaw != null) ssSave(`cb:${oldCb}`, 'scale', colorScaleRaw)
+    // Clear URL (defaults for new mode will apply)
+    resetColorStopsRaw()
+    setColorScaleRaw(undefined)
+    // Restore new mode's customizations from SS
+    const savedC = ssLoad(`cb:${newCb}`, 'c')
+    if (savedC) { const stops = decodeStops(savedC); if (stops) setColorStops(stops) }
+    const savedScale = ssLoad(`cb:${newCb}`, 'scale')
+    setColorScaleRaw(savedScale ? savedScale as ScaleType : undefined)
+    setColorBy(newCb)
+  }, [colorBy, hasCustomStops, colorStops, colorScaleRaw, resetColorStopsRaw, setColorStops, setColorScaleRaw, setColorBy])
 
   // Mode-aware switching: save customizations to SS, clear URL params for new mode
   const switchToMode = useCallback((newAgg: string, newMetric: string) => {
@@ -246,13 +280,17 @@ export default function App() {
   const setAggregateMode = useCallback((newAgg: string) => {
     if (newAgg === aggregateMode) return
     setLoading(true)
+    // Reset color-by when leaving lot/unit (saves yr_built gradient to SS first)
+    if (colorBy === 'yr_built' && newAgg !== 'lot' && newAgg !== 'unit') {
+      switchColorBy('metric')
+    }
     const newMetric = (newAgg === 'census-block' || newAgg === 'ward') ? metricMode : 'per_sqft'
     switchToMode(newAgg, newMetric)
     setAggregateModeRaw(newAgg)
     if (!(newAgg === 'census-block' || newAgg === 'ward') && metricMode === 'per_capita') {
       setMetricModeRaw('per_sqft')
     }
-  }, [aggregateMode, switchToMode, metricMode])
+  }, [aggregateMode, switchToMode, metricMode, colorBy, switchColorBy])
 
   const setMetricMode = useCallback((newMetric: string) => {
     switchToMode(aggregateMode, newMetric)
@@ -295,6 +333,7 @@ export default function App() {
     toggleTheme,
     wardLabels, setWardLabels,
     wardGeom, setWardGeom,
+    colorByYrBuilt, switchColorBy,
   })
 
   // Two-finger pitch gesture for mobile (deck.gl's built-in multipan is broken)
@@ -597,8 +636,12 @@ export default function App() {
     if (id === selectedId) return id === hoveredId ? SELECTED_HOVER_COLOR : SELECTED_COLOR
     if (id === hoveredId) return HOVER_COLOR
 
+    if (colorByYrBuilt) {
+      const yr = f.properties?.yr_built ?? 0
+      return interpolateColor(yr, colorStops, colorMax, colorScale, fillAlpha, colorMin)
+    }
     return interpolateColor(getMetricValue(f), colorStops, maxVal, colorScale, fillAlpha)
-  }, [staleData, colorStops, colorScale, maxVal, hoveredId, selectedId, getFeatureId, fillAlpha, getMetricValue])
+  }, [staleData, colorStops, colorScale, maxVal, hoveredId, selectedId, getFeatureId, fillAlpha, getMetricValue, colorByYrBuilt, colorMax, colorMin])
 
   const layers = [
     new GeoJsonLayer<ParcelFeature>({
@@ -634,7 +677,7 @@ export default function App() {
         }
       },
       updateTriggers: {
-        getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData],
+        getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax],
         getElevation: [year, stableHeightScaleRef.current, aggregateMode, metricMode],
         getLineColor: [actualTheme],
       },
@@ -732,10 +775,12 @@ export default function App() {
                 stops={colorStops}
                 setStops={setColorStops}
                 scale={colorScale}
-                setScale={(s) => setColorScaleRaw(s === (modeConf.scale ?? 'log') ? undefined : s)}
-                max={modeConf.max}
+                setScale={(s) => setColorScaleRaw(s === (colorConf.scale ?? 'log') ? undefined : s)}
+                max={colorMax}
+                min={colorMin}
+                prefix={colorByYrBuilt ? '' : '$'}
                 onReset={hasCustomStops ? resetColorStops : undefined}
-                metricLabel={metricMode === 'per_capita' ? '/capita' : '/sqft'}
+                metricLabel={colorByYrBuilt ? '' : (metricMode === 'per_capita' ? '/capita' : '/sqft')}
               />
             </div>
             <label>
@@ -752,6 +797,16 @@ export default function App() {
                 <option value="unit">Units (individual)</option>
               </select>
             </label>
+            {(aggregateMode === 'lot' || aggregateMode === 'unit') && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={colorByYrBuilt}
+                  onChange={(e) => switchColorBy(e.target.checked ? 'yr_built' : 'metric')}
+                />
+                Color by year built
+              </label>
+            )}
             {hasPopulation && (
               <label>
                 Metric:{' '}
@@ -890,16 +945,24 @@ export default function App() {
                 {info.owner && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{info.owner}</div>}
               </>
             )}
-            {hasBuilding && (
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                {[
-                  info.stories && `${info.stories % 1 ? info.stories : Math.round(info.stories)} stories`,
-                  info.units && `${info.units} unit${info.units > 1 ? 's' : ''}`,
-                  info.yr_built && `built ${info.yr_built}`,
-                  info.bldg_sqft && `${info.bldg_sqft.toLocaleString()} sqft (bldg)`,
-                ].filter(Boolean).join(' · ')}
-              </div>
-            )}
+            {hasBuilding && (() => {
+              const items: { text: string, highlight?: boolean }[] = [
+                info.stories ? { text: `${info.stories % 1 ? info.stories : Math.round(info.stories)} stories` } : null,
+                info.units ? { text: `${info.units} unit${info.units > 1 ? 's' : ''}` } : null,
+                info.yr_built ? { text: `built ${info.yr_built}`, highlight: colorByYrBuilt } : null,
+                info.bldg_sqft ? { text: `${info.bldg_sqft.toLocaleString()} sqft (bldg)` } : null,
+              ].filter((x): x is { text: string, highlight?: boolean } => x !== null)
+              return (
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                  {items.map((item, i) => (
+                    <span key={i}>
+                      {i > 0 && ' · '}
+                      <span style={item.highlight ? { color: 'var(--text-accent)' } : undefined}>{item.text}</span>
+                    </span>
+                  ))}
+                </div>
+              )
+            })()}
             {(() => {
               const note = getLotNote(info.block, info.lot)
               return note ? (

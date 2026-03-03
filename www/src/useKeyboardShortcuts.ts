@@ -55,6 +55,8 @@ type Props = {
   setWardLabels: (v: boolean) => void
   wardGeom: string
   setWardGeom: (v: string) => void
+  colorByYrBuilt: boolean
+  switchColorBy: (cb: string) => void
 }
 
 export function useKeyboardShortcuts({
@@ -76,8 +78,11 @@ export function useKeyboardShortcuts({
   setWardLabels,
   wardGeom,
   setWardGeom,
+  colorByYrBuilt,
+  switchColorBy,
 }: Props) {
   const isWardMode = aggregateMode === 'ward'
+  const isLotOrUnit = aggregateMode === 'lot' || aggregateMode === 'unit'
   const yearIdx = AVAILABLE_YEARS.indexOf(year)
 
   // Continuous movement for press-and-hold
@@ -422,6 +427,14 @@ export function useKeyboardShortcuts({
       startMovement('zoom-out')
     },
     actionPair: { pairId: 'view:zoom', index: 1 },
+  })
+
+  useAction('color:yr-built', {
+    label: 'Toggle color by year built',
+    group: 'UI',
+    defaultBindings: ['y'],
+    enabled: isLotOrUnit,
+    handler: () => switchColorBy(colorByYrBuilt ? 'metric' : 'yr_built'),
   })
 
   useAction('ward:labels', {

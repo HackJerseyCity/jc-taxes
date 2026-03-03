@@ -128,6 +128,65 @@ test.describe('Selected lot tooltip', () => {
   })
 })
 
+test.describe('Color by year built', () => {
+  const SEL = '302-21'
+
+  test('checkbox appears in lot view, absent in block view', async ({ page }) => {
+    await page.goto('/?agg=lot')
+    await waitForLoad(page)
+    await expect(page.getByText('Color by year built')).toBeVisible()
+
+    await page.keyboard.press('b')
+    await waitForLoad(page)
+    await expect(page.getByText('Color by year built')).not.toBeVisible()
+  })
+
+  test('y key toggles cb URL param in lot view', async ({ page }) => {
+    await page.goto('/?agg=lot')
+    await waitForLoad(page)
+
+    await page.keyboard.press('y')
+    await expect(page).toHaveURL(/[?&]cb=yr_built/)
+
+    await page.keyboard.press('y')
+    await expect(page).not.toHaveURL(/[?&]cb=yr_built/)
+  })
+
+  test('y key does nothing in block view', async ({ page }) => {
+    await page.goto('/')
+    await waitForLoad(page)
+    await page.keyboard.press('y')
+    await expect(page).not.toHaveURL(/[?&]cb=yr_built/)
+  })
+
+  test('gradient shows year range when cb=yr_built', async ({ page }) => {
+    await page.goto('/?agg=lot&cb=yr_built')
+    await waitForLoad(page)
+    await expect(page.getByText('1870')).toBeVisible()
+    // The gradient label "2025" is a <span> — scope to avoid matching <option>2025</option>
+    await expect(page.locator('span', { hasText: /^2025$/ })).toBeVisible()
+  })
+
+  test('hoverbox highlights yr_built when coloring active', async ({ page }) => {
+    await page.goto(`/?agg=lot&sel=${SEL}&cb=yr_built`)
+    await waitForLoad(page)
+    // Target the inner span (which has the accent color), not the wrapper
+    const builtSpan = page.getByText('built 1968', { exact: true })
+    await expect(builtSpan).toBeVisible({ timeout: 5000 })
+    const color = await builtSpan.evaluate(el => getComputedStyle(el).color)
+    // Should have accent color (not the default secondary text color)
+    expect(color).not.toBe('rgb(128, 128, 128)')
+  })
+
+  test('switching to block view clears cb=yr_built', async ({ page }) => {
+    await page.goto('/?agg=lot&cb=yr_built')
+    await waitForLoad(page)
+    await page.keyboard.press('b')
+    await waitForLoad(page)
+    await expect(page).not.toHaveURL(/[?&]cb=yr_built/)
+  })
+})
+
 test.describe('Settings panel', () => {
   test('s toggles settings panel', async ({ page }) => {
     await page.goto('/')

@@ -13,34 +13,38 @@ type Props = {
   scale: ScaleType
   setScale: (scale: ScaleType) => void
   max: number
+  min?: number
+  prefix?: string
   onReset?: () => void
   metricLabel?: string
 }
 
 // Convert value to position (0-1) based on scale
-function valueToPosition(value: number, max: number, scale: ScaleType): number {
-  const clamped = Math.max(0, Math.min(value, max))
+function valueToPosition(value: number, max: number, scale: ScaleType, min = 0): number {
+  const range = max - min
+  const clamped = Math.max(0, Math.min(value - min, range))
   switch (scale) {
     case 'sqrt':
-      return Math.sqrt(clamped / max)
+      return Math.sqrt(clamped / range)
     case 'log':
       if (clamped <= 0) return 0
-      return Math.log1p(clamped) / Math.log1p(max)
+      return Math.log1p(clamped) / Math.log1p(range)
     default:
-      return clamped / max
+      return clamped / range
   }
 }
 
 // Convert position (0-1) to value based on scale
-function positionToValue(pos: number, max: number, scale: ScaleType): number {
+function positionToValue(pos: number, max: number, scale: ScaleType, min = 0): number {
+  const range = max - min
   const p = Math.max(0, Math.min(pos, 1))
   switch (scale) {
     case 'sqrt':
-      return p * p * max
+      return p * p * range + min
     case 'log':
-      return Math.expm1(p * Math.log1p(max))
+      return Math.expm1(p * Math.log1p(range)) + min
     default:
-      return p * max
+      return p * range + min
   }
 }
 
@@ -51,6 +55,7 @@ export function interpolateColor(
   max: number,
   scale: ScaleType,
   alpha = 180,
+  min = 0,
 ): [number, number, number, number] {
   if (stops.length === 0) return [128, 128, 128, alpha]
   if (stops.length === 1) return [...stops[0].color, alpha]
@@ -69,9 +74,9 @@ export function interpolateColor(
       const c1 = sorted[i + 1].color
 
       // Interpolate in scaled space
-      const p0 = valueToPosition(v0, max, scale)
-      const p1 = valueToPosition(v1, max, scale)
-      const pv = valueToPosition(value, max, scale)
+      const p0 = valueToPosition(v0, max, scale, min)
+      const p1 = valueToPosition(v1, max, scale, min)
+      const pv = valueToPosition(value, max, scale, min)
       const t = p1 === p0 ? 0 : (pv - p0) / (p1 - p0)
 
       return [
@@ -99,7 +104,7 @@ function hexToRgb(hex: string): [number, number, number] {
   ]
 }
 
-export default function GradientEditor({ stops, setStops, scale, setScale, max, onReset, metricLabel = '/sqft' }: Props) {
+export default function GradientEditor({ stops, setStops, scale, setScale, max, min = 0, prefix = '$', onReset, metricLabel = '/sqft' }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState<number | null>(null)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -118,11 +123,11 @@ export default function GradientEditor({ stops, setStops, scale, setScale, max, 
     }
 
     const colorStops = sortedStops.map(s => {
-      const pos = valueToPosition(s.value, max, scale) * 100
+      const pos = valueToPosition(s.value, max, scale, min) * 100
       return `${rgbToHex(...s.color)} ${pos}%`
     })
     return `linear-gradient(to right, ${colorStops.join(', ')})`
-  }, [sortedStops, max, scale])
+  }, [sortedStops, max, min, scale])
 
   const handleMouseDown = useCallback((index: number, e: React.MouseEvent) => {
     e.preventDefault()
@@ -133,10 +138,10 @@ export default function GradientEditor({ stops, setStops, scale, setScale, max, 
     if (dragging === null || !barRef.current) return
     const rect = barRef.current.getBoundingClientRect()
     const pos = Math.max(0, Math.min((e.clientX - rect.left) / rect.width, 1))
-    const newValue = Math.round(positionToValue(pos, max, scale) * 10) / 10
+    const newValue = Math.round(positionToValue(pos, max, scale, min) * 10) / 10
 
     setStops(stops.map((s, i) => i === dragging ? { ...s, value: newValue } : s))
-  }, [dragging, stops, setStops, max, scale])
+  }, [dragging, stops, setStops, max, min, scale])
 
   const handleMouseUp = useCallback(() => {
     setDragging(null)
@@ -156,9 +161,9 @@ export default function GradientEditor({ stops, setStops, scale, setScale, max, 
 
   const addStop = useCallback(() => {
     // Add a stop at the midpoint
-    const midValue = max / 2
+    const midValue = (min + max) / 2
     setStops([...stops, { value: midValue, color: [200, 200, 200] }])
-  }, [stops, setStops, max])
+  }, [stops, setStops, min, max])
 
   const removeStop = useCallback((index: number) => {
     if (stops.length <= 2) return // Keep at least 2 stops
@@ -228,12 +233,12 @@ export default function GradientEditor({ stops, setStops, scale, setScale, max, 
           const rect = barRef.current?.getBoundingClientRect()
           if (!rect) return
           const pos = (e.clientX - rect.left) / rect.width
-          const newValue = Math.round(positionToValue(pos, max, scale) * 10) / 10
+          const newValue = Math.round(positionToValue(pos, max, scale, min) * 10) / 10
           setStops([...stops, { value: newValue, color: [200, 200, 200] }])
         }}
       >
         {stops.map((stop, i) => {
-          const pos = valueToPosition(stop.value, max, scale) * 100
+          const pos = valueToPosition(stop.value, max, scale, min) * 100
           return (
             <div
               key={i}
@@ -276,14 +281,14 @@ export default function GradientEditor({ stops, setStops, scale, setScale, max, 
             onChange={(e) => updateStopColor(editingIndex, e.target.value)}
             style={{ width: 32, height: 24, padding: 0, border: 'none', cursor: 'pointer' }}
           />
-          <span>$</span>
+          <span>{prefix}</span>
           <input
             type="number"
             value={stops[editingIndex].value}
             onChange={(e) => updateStopValue(editingIndex, Number(e.target.value))}
             style={{ ...inputStyle, width: 60 }}
             step={1}
-            min={0}
+            min={min}
           />
           <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>{metricLabel}</span>
           <button
@@ -306,8 +311,8 @@ export default function GradientEditor({ stops, setStops, scale, setScale, max, 
 
       {/* Labels */}
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary)' }}>
-        <span>$0</span>
-        <span>${max}{metricLabel}</span>
+        <span>{prefix}{min}</span>
+        <span>{prefix}{max}{metricLabel}</span>
       </div>
     </div>
   )
