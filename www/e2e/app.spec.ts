@@ -85,6 +85,49 @@ test.describe('Omnibar', () => {
   })
 })
 
+test.describe('Selected lot tooltip', () => {
+  // 302-21 = 638 Liberty Ave: has stories, units, yr_built, bldg_sqft
+  const SEL = '302-21'
+  const ADDR = '638 LIBERTY AVE.'
+
+  test('sel= URL param shows pinned tooltip with address', async ({ page }) => {
+    await page.goto(`/?agg=lot&sel=${SEL}`)
+    await waitForLoad(page)
+    const tooltip = page.locator('text=' + ADDR)
+    await expect(tooltip).toBeVisible({ timeout: 5000 })
+  })
+
+  test('tooltip shows building info', async ({ page }) => {
+    await page.goto(`/?agg=lot&sel=${SEL}`)
+    await waitForLoad(page)
+    // Building info line: "2 stories · 2 units · built 1968 · 2,264 sqft (bldg)"
+    await expect(page.getByText('2 stories')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('built 1968')).toBeVisible()
+  })
+
+  test('tooltip has Maps and Earth links with address', async ({ page }) => {
+    await page.goto(`/?agg=lot&sel=${SEL}`)
+    await waitForLoad(page)
+    const mapsLink = page.locator('a', { hasText: 'Maps' })
+    await expect(mapsLink).toBeVisible({ timeout: 5000 })
+    const href = await mapsLink.getAttribute('href')
+    expect(href).toContain('Jersey%20City')
+    expect(href).toContain('LIBERTY')
+    const earthLink = page.locator('a', { hasText: 'Earth' })
+    await expect(earthLink).toBeVisible()
+    const earthHref = await earthLink.getAttribute('href')
+    expect(earthHref).toContain('earth.google.com')
+    expect(earthHref).toContain('Jersey%20City')
+  })
+
+  test('lot note appears for annotated lots', async ({ page }) => {
+    // 26001-47 = 33 Bayside Terrace, has a note
+    await page.goto('/?agg=lot&sel=26001-47')
+    await waitForLoad(page)
+    await expect(page.getByText('lot-line-adjustment remnant')).toBeVisible({ timeout: 5000 })
+  })
+})
+
 test.describe('Settings panel', () => {
   test('s toggles settings panel', async ({ page }) => {
     await page.goto('/')

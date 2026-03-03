@@ -32,6 +32,7 @@ Data files (`taxes-{year}-{agg}.geojson`) are [DVC]-tracked in `public/`. In dev
 | `src/useParcelSearch.ts` | Omnibar endpoint: fuzzy search parcels by address/block/owner |
 | `src/useTouchPitch.ts` | Two-finger pitch gesture for mobile (deck.gl workaround) |
 | `src/ThemeContext.tsx` | Dark/light theme with per-theme gradient defaults, URL-persisted color stops |
+| `src/notes.ts` | Per-lot hoverbox notes for known anomalies |
 | `src/types.ts` | `ParcelProperties`, `ParcelFeature` types |
 
 ## URL params

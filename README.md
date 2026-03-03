@@ -22,6 +22,7 @@ src/jc_taxes/       Python package: scrape, process, export
   api.py            HLS API client
   payments.py       Extract yearly payment totals from cached JSONs
   geojson_yearly.py Join payments + geometries → GeoJSON per year/aggregation
+  building_desc.py  Parse encoded Building Desc field (stories, units, etc.)
   census.py         Census block + ward geometry/population processing
 data/               Parcel data, payment caches, parquet exports
 census/             Census block geometries, ward boundaries, population

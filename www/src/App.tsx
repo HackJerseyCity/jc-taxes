@@ -839,12 +839,12 @@ export default function App() {
 
       {/* Hover/selected tooltip */}
       {(hovered || selected) && (() => {
-        const info = hovered ?? selected!
+        const info = selected ?? hovered!
         const isCensus = !!info.geoid || (!!info.ward && !info.block)
         const sqftActive = metricMode === 'per_sqft'
         const hasBuilding = !!(info.stories || info.units || info.yr_built || info.bldg_sqft)
         // Compute centroid for map links
-        const activeId = hovered ? hoveredId : selectedId
+        const activeId = selected ? selectedId : hoveredId
         const feature = activeId && data ? data.find(f => getFeatureId(f) === activeId) : null
         let centroid: [number, number] | null = null
         if (feature?.geometry) {
@@ -924,24 +924,32 @@ export default function App() {
                 ${info.paid_per_capita.toLocaleString()}/capita
               </div>
             )}
-            {centroid && (
-              <div style={{ marginTop: 4, display: 'flex', gap: 8 }}>
-                <a
-                  href={`https://www.google.com/maps/@${centroid[0]},${centroid[1]},19z`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={linkStyle}
-                  title="Google Maps"
-                >Maps</a>
-                <a
-                  href={`https://earth.google.com/web/@${centroid[0]},${centroid[1]},0a,200d,35y,0h,45t`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={linkStyle}
-                  title="Google Earth"
-                >Earth</a>
-              </div>
-            )}
+            {centroid && (() => {
+              const addr = info.addr || info.streets
+              const query = addr ? encodeURIComponent(`${addr}, Jersey City, NJ`) : null
+              return (
+                <div style={{ marginTop: 4, display: 'flex', gap: 8 }}>
+                  <a
+                    href={query
+                      ? `https://www.google.com/maps/search/${query}/@${centroid[0]},${centroid[1]},19z`
+                      : `https://www.google.com/maps/@${centroid[0]},${centroid[1]},19z`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={linkStyle}
+                    title="Google Maps"
+                  >Maps</a>
+                  <a
+                    href={query
+                      ? `https://earth.google.com/web/search/${query}/@${centroid[0]},${centroid[1]},0a,200d,35y,0h,45t`
+                      : `https://earth.google.com/web/@${centroid[0]},${centroid[1]},0a,200d,35y,0h,45t`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={linkStyle}
+                    title="Google Earth"
+                  >Earth</a>
+                </div>
+              )
+            })()}
           </div>
         )
       })()}
