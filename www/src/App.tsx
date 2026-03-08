@@ -22,6 +22,7 @@ import GradientEditor, {
 import type { ParcelProperties, ParcelFeature } from './types'
 import { getLotNote } from './notes'
 import DistributionChart from './DistributionChart'
+import Tooltip from './Tooltip'
 
 // Responsive default views: interpolated by viewport width
 const VIEW_BREAKPOINTS: { width: number, view: ViewState }[] = [
@@ -116,7 +117,7 @@ type ModeConfig = {
 const MODE_DEFAULTS: Record<string, ModeConfig> = {
   'block':                  { max: 300,   maxHeight: 4500 },
   'lot':                    { max: 300,   maxHeight: 4500 },
-  'unit':                   { max: 300,   maxHeight: 4500 },
+  'unit':                   { max: 300,   maxHeight: 900 },
   'census-block:per_sqft':  { max: 20, maxHeight: 2000, stops: {
     dark:  [{ value: 0, color: [96, 96, 96] }, { value: 1.5, color: [255, 0, 0] }, { value: 4, color: [255, 217, 26] }, { value: 12, color: [0, 255, 0] }],
     light: [{ value: 0, color: [255, 255, 255] }, { value: 1.5, color: [255, 71, 71] }, { value: 4, color: [230, 190, 0] }, { value: 12, color: [0, 214, 0] }],
@@ -1044,12 +1045,33 @@ export default function App() {
               ) : null
             })()}
             {info.area_sqft !== undefined && info.area_sqft > 0 && (
-              <div>Area: {info.area_sqft.toLocaleString()} sqft</div>
+              info.unit_sqft ? (
+                <div>Unit: {info.unit_sqft.toLocaleString()} sqft</div>
+              ) : (
+                <div>Area: {info.area_sqft.toLocaleString()} sqft</div>
+              )
             )}
             {info.paid !== undefined && info.paid > 0 && (
               <div>Paid ({year}): ${info.paid.toLocaleString()}</div>
             )}
-            {info.paid_per_sqft !== undefined && info.paid_per_sqft > 0 && (
+            {info.unit_sqft && info.paid ? (<>
+              <div style={{ color: sqftActive ? 'var(--text-accent)' : undefined }}>
+                ${(info.paid / info.unit_sqft).toFixed(2)}/sqft
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                <Tooltip content={<>
+                  Bar height uses taxes per parcel polygon area
+                  ({info.area_sqft?.toLocaleString()} sqft),
+                  not unit interior area ({info.unit_sqft.toLocaleString()} sqft).
+                  Parcel polygons are GIS subdivisions of the lot
+                  and don't reflect actual unit size.
+                </>}>
+                  <span style={{ borderBottom: '1px dotted var(--text-secondary)', cursor: 'help' }}>
+                    ${info.paid_per_sqft?.toFixed(2)}/sqft parcel
+                  </span>
+                </Tooltip>
+              </div>
+            </>) : info.paid_per_sqft !== undefined && info.paid_per_sqft > 0 && (
               <div style={{ color: sqftActive ? 'var(--text-accent)' : undefined }}>
                 ${info.paid_per_sqft.toFixed(2)}/sqft
               </div>

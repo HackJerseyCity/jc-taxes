@@ -11,6 +11,7 @@ export type ParcelProperties = {
   paid?: number
   billed?: number
   area_sqft?: number
+  unit_sqft?: number
   paid_per_sqft?: number
   geoid?: string
   ward?: string

@@ -149,6 +149,29 @@ def load_building_info(data_dir: Path = DATA) -> dict[str, dict]:
     return info
 
 
+def load_unit_sqft(data_dir: Path = DATA) -> dict[str, int]:
+    """Load per-unit square footage from taxrecords_enriched.parquet.
+
+    Returns dict mapping "block-lot-qual" → sqft (interior area from tax records).
+    """
+    path = data_dir / "taxrecords_enriched.parquet"
+    if not path.exists():
+        return {}
+
+    df = pd.read_parquet(path, columns=["Block", "Lot", "Qual", "Sq. Ft."])
+    result: dict[str, int] = {}
+    for _, row in df.iterrows():
+        qual = str(row.get("Qual", "")).strip() if pd.notna(row.get("Qual")) else ""
+        if not qual:
+            continue
+        sqft = row["Sq. Ft."] if pd.notna(row["Sq. Ft."]) else None
+        if not sqft or sqft <= 0:
+            continue
+        key = f"{str(row['Block']).strip()}-{str(row['Lot']).strip()}-{qual}"
+        result[key] = int(sqft)
+    return result
+
+
 def normalize_street(s: str) -> str:
     """Normalize street name variants (AVENUE→AVE, STREET→ST, etc.)."""
     s = re.sub(r"\s*\(.*\)$", "", s)  # Remove parenthetical notes like (INSD)
@@ -259,7 +282,8 @@ def generate_yearly_geojson(
     # Load building info from enriched tax records
     err("Loading building info from enriched tax records...")
     building_info = load_building_info()
-    err(f"  {len(building_info):,} lots with building info")
+    unit_sqft = load_unit_sqft()
+    err(f"  {len(building_info):,} lots with building info, {len(unit_sqft):,} units with sqft")
 
     # Build block-level street summaries
     block_streets = summarize_block_streets(addresses)
@@ -395,6 +419,7 @@ def generate_yearly_geojson(
             pay_data = pay_dict.get(key, {})
             paid = float(pay_data.get("Paid", 0) or 0)
             billed = float(pay_data.get("Billed", 0) or 0)
+
             paid_per_sqft = paid / area_sqft if area_sqft > 0 else 0.0
 
             qual_str = str(row.get("qual", "")).strip() if pd.notna(row.get("qual")) else ""
@@ -409,6 +434,9 @@ def generate_yearly_geojson(
                 "area_sqft": round(area_sqft, 1),
                 "paid_per_sqft": round(paid_per_sqft, 2),
             }
+            true_sqft = unit_sqft.get(key)
+            if true_sqft:
+                properties["unit_sqft"] = true_sqft
             addr = addresses.get(addr_key)
             if addr:
                 properties["addr"] = addr
