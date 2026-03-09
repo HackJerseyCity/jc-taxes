@@ -970,6 +970,11 @@ export default function App() {
           attributionControl={false}
         />
       </DeckGL>
+      {loading && (
+        <div className="loading-overlay">
+          <div className="loading-spinner" />
+        </div>
+      )}
 
       {/* Settings panel (when at top) */}
       {!posBottom && (
