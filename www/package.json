@@ -42,7 +42,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "scrns": "https://gitlab.com/runsascoded/js/scrns/-/archive/da42ee16166c20e4bb44ecf8317b647dbb082603/scrns-da42ee16166c20e4bb44ecf8317b647dbb082603.tar.gz",
+    "scrns": "https://gitlab.com/runsascoded/js/scrns/-/archive/49acda35b490ee7047e79ccdcb5852df8532d3b5/scrns-49acda35b490ee7047e79ccdcb5852df8532d3b5.tar.gz",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",

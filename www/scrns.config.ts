@@ -56,6 +56,7 @@ export default {
       query: '?v=40.7190-74.0440+12.0+52-28&agg=lot',
       width: 800,
       height: 500,
+      headless: false,
       preScreenshotSleep: 6000,
       path: 'cast.gif',
       fps: 30,

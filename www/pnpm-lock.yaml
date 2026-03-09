@@ -85,8 +85,8 @@ importers:
         specifier: ^16.5.0
         version: 16.5.0
       scrns:
-        specifier: https://gitlab.com/runsascoded/js/scrns/-/archive/da42ee16166c20e4bb44ecf8317b647dbb082603/scrns-da42ee16166c20e4bb44ecf8317b647dbb082603.tar.gz
-        version: https://gitlab.com/runsascoded/js/scrns/-/archive/da42ee16166c20e4bb44ecf8317b647dbb082603/scrns-da42ee16166c20e4bb44ecf8317b647dbb082603.tar.gz(playwright@1.58.2)(puppeteer@23.11.1(typescript@5.9.3))
+        specifier: https://gitlab.com/runsascoded/js/scrns/-/archive/49acda35b490ee7047e79ccdcb5852df8532d3b5/scrns-49acda35b490ee7047e79ccdcb5852df8532d3b5.tar.gz
+        version: https://gitlab.com/runsascoded/js/scrns/-/archive/49acda35b490ee7047e79ccdcb5852df8532d3b5/scrns-49acda35b490ee7047e79ccdcb5852df8532d3b5.tar.gz(playwright@1.58.2)(puppeteer@23.11.1(typescript@5.9.3))
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -2922,9 +2922,9 @@ packages:
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
 
-  scrns@https://gitlab.com/runsascoded/js/scrns/-/archive/da42ee16166c20e4bb44ecf8317b647dbb082603/scrns-da42ee16166c20e4bb44ecf8317b647dbb082603.tar.gz:
-    resolution: {tarball: https://gitlab.com/runsascoded/js/scrns/-/archive/da42ee16166c20e4bb44ecf8317b647dbb082603/scrns-da42ee16166c20e4bb44ecf8317b647dbb082603.tar.gz}
-    version: 0.3.0-dist.39688d1
+  scrns@https://gitlab.com/runsascoded/js/scrns/-/archive/49acda35b490ee7047e79ccdcb5852df8532d3b5/scrns-49acda35b490ee7047e79ccdcb5852df8532d3b5.tar.gz:
+    resolution: {tarball: https://gitlab.com/runsascoded/js/scrns/-/archive/49acda35b490ee7047e79ccdcb5852df8532d3b5/scrns-49acda35b490ee7047e79ccdcb5852df8532d3b5.tar.gz}
+    version: 0.3.0-dist.db18eed
     hasBin: true
     peerDependencies:
       playwright: '>=1.40'
@@ -6565,7 +6565,7 @@ snapshots:
 
   scheduler@0.27.0: {}
 
-  scrns@https://gitlab.com/runsascoded/js/scrns/-/archive/da42ee16166c20e4bb44ecf8317b647dbb082603/scrns-da42ee16166c20e4bb44ecf8317b647dbb082603.tar.gz(playwright@1.58.2)(puppeteer@23.11.1(typescript@5.9.3)):
+  scrns@https://gitlab.com/runsascoded/js/scrns/-/archive/49acda35b490ee7047e79ccdcb5852df8532d3b5/scrns-49acda35b490ee7047e79ccdcb5852df8532d3b5.tar.gz(playwright@1.58.2)(puppeteer@23.11.1(typescript@5.9.3)):
     dependencies:
       commander: 12.1.0
       gifenc: 1.0.3
