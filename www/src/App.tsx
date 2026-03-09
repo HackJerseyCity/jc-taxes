@@ -5,7 +5,10 @@ import { WebMercatorViewport, FlyToInterpolator, LinearInterpolator } from '@dec
 import { GeoJsonLayer } from '@deck.gl/layers'
 import { useUrlState, intParam, stringParam } from 'use-prms'
 import type { Param } from 'use-prms'
-import { useHotkeysContext } from 'use-kbd'
+import { useHotkeysContext, SpeedDial } from 'use-kbd'
+import { FaGithub } from 'react-icons/fa'
+import { SiBluesky } from 'react-icons/si'
+import { MdDarkMode, MdLightMode, MdKeyboard, MdSettingsBrightness } from 'react-icons/md'
 import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
@@ -187,7 +190,8 @@ export default function App() {
   const selectedIdRef = useRef(selectedId)
   selectedIdRef.current = selectedId
   const [loading, setLoading] = useState(true)
-  const [settingsOpen, setSettingsOpen] = useState(() => window.innerWidth > 768)
+  const [settingsOpenUrl, setSettingsOpenUrl] = useUrlState('so', boolParam)
+  const [settingsOpen, setSettingsOpen] = useState(() => settingsOpenUrl && window.innerWidth > 768)
 
   // URL-persisted state (mh is optional; absent = use mode default)
   const [year, setYear] = useUrlState('y', intParam(2025))
@@ -200,6 +204,9 @@ export default function App() {
   const [extruded, setExtruded] = useUrlState('3d', boolParam)
   const [colorBy, setColorBy] = useUrlState('cb', stringParam('metric'))
   const [percentileRaw, setPercentileRaw] = useUrlState('pct', optNumParam)
+  const [settingsPos, setSettingsPos] = useUrlState('sp', stringParam('tr'))
+  const posRight = settingsPos.endsWith('r')
+  const posBottom = settingsPos.startsWith('b')
 
   const hasPopulation = aggregateMode === 'census-block' || aggregateMode === 'ward'
   const modeKey = getModeKey(aggregateMode, metricMode)
@@ -245,7 +252,7 @@ export default function App() {
   const colorScale = colorScaleRaw ?? colorConf.scale ?? 'log'
 
   // Color stops: use custom (from URL `c`) → mode-specific → theme defaults
-  const { actualTheme, toggleTheme, colorStops: themeStops, hasCustomStops, setColorStops, resetColorStops: resetColorStopsRaw } = useTheme()
+  const { actualTheme, themeMode, toggleTheme, colorStops: themeStops, hasCustomStops, setColorStops, resetColorStops: resetColorStopsRaw } = useTheme()
   const modeStops = useMemo(() => {
     if (colorConf.stops) return actualTheme === 'light' ? colorConf.stops.light : colorConf.stops.dark
     return null
@@ -356,6 +363,7 @@ export default function App() {
     wardLabels, setWardLabels,
     wardGeom, setWardGeom,
     colorByYrBuilt, switchColorBy,
+    settingsPos, setSettingsPos,
   })
 
   // Two-finger pitch gesture for mobile (deck.gl's built-in multipan is broken)
@@ -725,6 +733,210 @@ export default function App() {
     fontSize: 14,
   }
 
+  const settingsPanel = (
+    <div
+      style={{
+        background: 'var(--panel-bg)',
+        color: 'var(--text-primary)',
+        borderRadius: 4,
+        fontSize: 14,
+        minWidth: settingsOpen ? 240 : undefined,
+        maxWidth: '90vw',
+      }}
+    >
+      <div
+        onClick={() => setSettingsOpen(v => !v)}
+        style={{
+          padding: '8px 15px',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          userSelect: 'none',
+        }}
+      >
+        <span style={{ fontWeight: 'bold' }}>Settings</span>
+        <span style={{ fontSize: 10 }}>{settingsOpen ? '\u25B2' : '\u25BC'}</span>
+      </div>
+      {settingsOpen && (
+        <div style={{ padding: '0 15px 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <label>
+            Tax Year:{' '}
+            <select
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              style={inputStyle}
+            >
+              {AVAILABLE_YEARS.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </label>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 4 }}>
+            <div style={{ marginBottom: 6, fontSize: 12, color: 'var(--text-secondary)' }}>Color Gradient</div>
+            <GradientEditor
+              stops={colorStops}
+              setStops={setColorStops}
+              scale={colorScale}
+              setScale={(s) => setColorScaleRaw(s === (colorConf.scale ?? 'log') ? undefined : s)}
+              max={colorMax}
+              min={colorMin}
+              prefix={colorByYrBuilt ? '' : '$'}
+              onReset={hasCustomStops ? resetColorStops : undefined}
+              metricLabel={colorByYrBuilt ? '' : (metricMode === 'per_capita' ? '/capita' : '/sqft')}
+            />
+            <details style={{ marginTop: 4 }}>
+              <summary style={{ fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                Distribution
+              </summary>
+              <DistributionChart
+                values={sortedVals}
+                percentile={percentile}
+                max={dataMax}
+                prefix={colorByYrBuilt ? '' : '$'}
+                metricLabel={colorByYrBuilt ? '' : metricLabel}
+              />
+            </details>
+          </div>
+          <label>
+            View:{' '}
+            <select
+              value={aggregateMode}
+              onChange={(e) => setAggregateMode(e.target.value as AggregateMode)}
+              style={inputStyle}
+            >
+              <option value="ward">Wards</option>
+              <option value="census-block">Census Blocks</option>
+              <option value="block">Blocks</option>
+              <option value="lot">Lots (dissolved)</option>
+              <option value="unit">Units (individual)</option>
+            </select>
+          </label>
+          {(aggregateMode === 'lot' || aggregateMode === 'unit') && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={colorByYrBuilt}
+                onChange={(e) => switchColorBy(e.target.checked ? 'yr_built' : 'metric')}
+              />
+              Color by year built
+            </label>
+          )}
+          {hasPopulation && (
+            <label>
+              Metric:{' '}
+              <select
+                value={metricMode}
+                onChange={(e) => setMetricMode(e.target.value as MetricMode)}
+                style={inputStyle}
+              >
+                <option value="per_sqft">$/sqft</option>
+                <option value="per_capita">$/capita</option>
+              </select>
+            </label>
+          )}
+          {aggregateMode === 'ward' && (<>
+            <label>
+              Geometry:{' '}
+              <select
+                value={wardGeom}
+                onChange={(e) => setWardGeom(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="merged">Merged</option>
+                <option value="blocks">Tax blocks</option>
+                <option value="lots">Tax lots</option>
+                <option value="boundary">Full boundary</option>
+              </select>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={wardLabels}
+                onChange={(e) => setWardLabels(e.target.checked)}
+              />
+              Ward labels
+            </label>
+          </>)}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={extruded}
+              onChange={(e) => setExtruded(e.target.checked)}
+            />
+            3D
+          </label>
+          {extruded && <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            Max height:{' '}
+            <input
+              type="number"
+              value={Math.round(maxHeight / 100) / 10}
+              onChange={(e) => {
+                const km = Number(e.target.value)
+                if (!km || km <= 0) return
+                const m = Math.round(km * 1000)
+                setMaxHeightRaw(m === modeConf.maxHeight ? undefined : m)
+              }}
+              style={{ ...inputStyle, width: 60 }}
+              min={0.1}
+              step={0.5}
+            />
+            <span>km</span>
+            {maxHeightRaw !== undefined && (
+              <button
+                onClick={() => setMaxHeightRaw(undefined)}
+                title="Reset to default"
+                style={{ ...inputStyle, cursor: 'pointer', padding: '2px 6px', fontSize: 14 }}
+              >
+                ↺
+              </button>
+            )}
+          </label>}
+          {extruded && <>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={percentile != null}
+                onChange={(e) => setPercentileRaw(e.target.checked ? 99 : undefined)}
+              />
+              Height clamp
+            </label>
+            {percentile != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                <input
+                  type="number"
+                  value={percentile}
+                  min={50}
+                  max={100}
+                  step={1}
+                  onChange={(e) => setPercentileRaw(Number(e.target.value))}
+                  style={{ ...inputStyle, width: 50 }}
+                />
+                <span>th percentile</span>
+                {percentilePrice != null && (
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    = ${percentilePrice.toFixed(2)}{metricLabel}
+                  </span>
+                )}
+              </div>
+            )}
+          </>}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            Pitch: {Math.round(viewState.pitch)}°
+            <input
+              type="range"
+              min={0}
+              max={85}
+              value={viewState.pitch}
+              onChange={(e) => setViewState(v => ({ ...v, pitch: Number(e.target.value) }))}
+              style={{ width: 80 }}
+            />
+          </label>
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div style={{ width: '100vw', height: '100vh', WebkitTouchCallout: 'none' }} onContextMenu={e => e.preventDefault()} {...(!loading && { 'data-loaded': '' })}>
       <DeckGL
@@ -755,214 +967,71 @@ export default function App() {
         <Map
           mapStyle={mapStyle}
           maxPitch={85}
+          attributionControl={false}
         />
       </DeckGL>
 
-      {/* Controls */}
-      <div
-        style={{
+      {/* Settings panel (when at top) */}
+      {!posBottom && (
+        <div style={{
           position: 'absolute',
           top: 10,
-          right: 10,
+          right: posRight ? 10 : undefined,
+          left: posRight ? undefined : 10,
           zIndex: 1,
-          background: 'var(--panel-bg)',
-          color: 'var(--text-primary)',
-          borderRadius: 4,
-          fontSize: 14,
-          minWidth: settingsOpen ? 240 : undefined,
-          maxWidth: '90vw',
-        }}
-      >
-        <div
-          onClick={() => setSettingsOpen(v => !v)}
-          style={{
-            padding: '8px 15px',
-            cursor: 'pointer',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            userSelect: 'none',
-          }}
-        >
-          <span style={{ fontWeight: 'bold' }}>Settings</span>
-          <span style={{ fontSize: 10 }}>{settingsOpen ? '\u25B2' : '\u25BC'}</span>
+        }}>
+          {settingsPanel}
         </div>
-        {settingsOpen && (
-          <div style={{ padding: '0 15px 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <label>
-              Tax Year:{' '}
-              <select
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-                style={inputStyle}
-              >
-                {AVAILABLE_YEARS.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </label>
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 4 }}>
-              <div style={{ marginBottom: 6, fontSize: 12, color: 'var(--text-secondary)' }}>Color Gradient</div>
-              <GradientEditor
-                stops={colorStops}
-                setStops={setColorStops}
-                scale={colorScale}
-                setScale={(s) => setColorScaleRaw(s === (colorConf.scale ?? 'log') ? undefined : s)}
-                max={colorMax}
-                min={colorMin}
-                prefix={colorByYrBuilt ? '' : '$'}
-                onReset={hasCustomStops ? resetColorStops : undefined}
-                metricLabel={colorByYrBuilt ? '' : (metricMode === 'per_capita' ? '/capita' : '/sqft')}
-              />
-              <details style={{ marginTop: 4 }}>
-                <summary style={{ fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                  Distribution
-                </summary>
-                <DistributionChart
-                  values={sortedVals}
-                  percentile={percentile}
-                  max={dataMax}
-                  prefix={colorByYrBuilt ? '' : '$'}
-                  metricLabel={colorByYrBuilt ? '' : metricLabel}
-                />
-              </details>
-            </div>
-            <label>
-              View:{' '}
-              <select
-                value={aggregateMode}
-                onChange={(e) => setAggregateMode(e.target.value as AggregateMode)}
-                style={inputStyle}
-              >
-                <option value="ward">Wards</option>
-                <option value="census-block">Census Blocks</option>
-                <option value="block">Blocks</option>
-                <option value="lot">Lots (dissolved)</option>
-                <option value="unit">Units (individual)</option>
-              </select>
-            </label>
-            {(aggregateMode === 'lot' || aggregateMode === 'unit') && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={colorByYrBuilt}
-                  onChange={(e) => switchColorBy(e.target.checked ? 'yr_built' : 'metric')}
-                />
-                Color by year built
-              </label>
-            )}
-            {hasPopulation && (
-              <label>
-                Metric:{' '}
-                <select
-                  value={metricMode}
-                  onChange={(e) => setMetricMode(e.target.value as MetricMode)}
-                  style={inputStyle}
-                >
-                  <option value="per_sqft">$/sqft</option>
-                  <option value="per_capita">$/capita</option>
-                </select>
-              </label>
-            )}
-            {aggregateMode === 'ward' && (<>
-              <label>
-                Geometry:{' '}
-                <select
-                  value={wardGeom}
-                  onChange={(e) => setWardGeom(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="merged">Merged</option>
-                  <option value="blocks">Tax blocks</option>
-                  <option value="lots">Tax lots</option>
-                  <option value="boundary">Full boundary</option>
-                </select>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={wardLabels}
-                  onChange={(e) => setWardLabels(e.target.checked)}
-                />
-                Ward labels
-              </label>
-            </>)}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="checkbox"
-                checked={extruded}
-                onChange={(e) => setExtruded(e.target.checked)}
-              />
-              3D
-            </label>
-            {extruded && <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              Max height:{' '}
-              <input
-                type="number"
-                value={Math.round(maxHeight / 100) / 10}
-                onChange={(e) => {
-                  const km = Number(e.target.value)
-                  if (!km || km <= 0) return
-                  const m = Math.round(km * 1000)
-                  setMaxHeightRaw(m === modeConf.maxHeight ? undefined : m)
-                }}
-                style={{ ...inputStyle, width: 60 }}
-                min={0.1}
-                step={0.5}
-              />
-              <span>km</span>
-              {maxHeightRaw !== undefined && (
-                <button
-                  onClick={() => setMaxHeightRaw(undefined)}
-                  title="Reset to default"
-                  style={{ ...inputStyle, cursor: 'pointer', padding: '2px 6px', fontSize: 14 }}
-                >
-                  ↺
-                </button>
-              )}
-            </label>}
-            {extruded && <>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={percentile != null}
-                  onChange={(e) => setPercentileRaw(e.target.checked ? 99 : undefined)}
-                />
-                Height clamp
-              </label>
-              {percentile != null && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                  <input
-                    type="number"
-                    value={percentile}
-                    min={50}
-                    max={100}
-                    step={1}
-                    onChange={(e) => setPercentileRaw(Number(e.target.value))}
-                    style={{ ...inputStyle, width: 50 }}
-                  />
-                  <span>th percentile</span>
-                  {percentilePrice != null && (
-                    <span style={{ color: 'var(--text-secondary)' }}>
-                      = ${percentilePrice.toFixed(2)}{metricLabel}
-                    </span>
-                  )}
-                </div>
-              )}
-            </>}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              Pitch: {Math.round(viewState.pitch)}°
-              <input
-                type="range"
-                min={0}
-                max={85}
-                value={viewState.pitch}
-                onChange={(e) => setViewState(v => ({ ...v, pitch: Number(e.target.value) }))}
-                style={{ width: 80 }}
-              />
-            </label>
-          </div>
-        )}
+      )}
+
+      {/* Bottom bar: settings (when at bottom) + SpeedDial + attribution */}
+      <div style={{
+        position: 'absolute',
+        bottom: 10,
+        right: posRight ? 10 : undefined,
+        left: posRight ? undefined : 10,
+        display: 'flex',
+        flexDirection: posRight ? 'row-reverse' : 'row',
+        alignItems: 'flex-end',
+        gap: 10,
+        zIndex: 1,
+      }}>
+        {posBottom && settingsPanel}
+        <SpeedDial
+          className="speed-dial-inline"
+          showShortcuts={false}
+          actions={[
+            {
+              key: 'shortcuts',
+              label: 'Keyboard shortcuts',
+              icon: <MdKeyboard />,
+              onClick: () => kbdCtx.openModal(),
+            },
+            {
+              key: 'theme',
+              label: `Theme: ${themeMode}`,
+              icon: themeMode === 'dark' ? <MdDarkMode /> : themeMode === 'light' ? <MdLightMode /> : <MdSettingsBrightness />,
+              onClick: toggleTheme,
+            },
+            {
+              key: 'bluesky',
+              label: 'Follow on Bluesky',
+              icon: <SiBluesky />,
+              href: 'https://bsky.app/profile/jct.rbw.sh',
+            },
+            {
+              key: 'github',
+              label: 'View on GitHub',
+              icon: <FaGithub />,
+              href: 'https://github.com/HackJerseyCity/jc-taxes',
+            },
+          ]}
+        />
+        <div style={{ fontSize: 10, color: 'var(--text-secondary)', whiteSpace: 'nowrap', padding: '2px 4px' }}>
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>© OpenStreetMap</a>
+          {' '}
+          <a href="https://carto.com/about-carto/" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>© CARTO</a>
+        </div>
       </div>
 
       {/* Hover/selected tooltip */}
@@ -987,7 +1056,8 @@ export default function App() {
             style={{
               position: 'absolute',
               top: 10,
-              left: 10,
+              left: posRight ? 10 : undefined,
+              right: posRight ? undefined : 10,
               zIndex: 1,
               background: 'var(--panel-bg)',
               color: 'var(--text-primary)',
@@ -1158,7 +1228,8 @@ export default function App() {
         style={{
           position: 'absolute',
           bottom: 50,
-          left: 10,
+          left: posRight ? 10 : undefined,
+          right: posRight ? undefined : 10,
           width: 40,
           height: 40,
           cursor: viewState.bearing !== 0 ? 'pointer' : undefined,
@@ -1180,7 +1251,8 @@ export default function App() {
         style={{
           position: 'absolute',
           bottom: 10,
-          left: 10,
+          left: posRight ? 10 : undefined,
+          right: posRight ? undefined : 10,
           background: 'var(--panel-bg)',
           color: 'var(--text-primary)',
           padding: '8px 12px',

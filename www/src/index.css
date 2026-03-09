@@ -59,3 +59,12 @@ html, body, #root {
 .kbd-omnibar {
   color: var(--kbd-text);
 }
+
+/* SpeedDial inline in bottom bar flex container (override fixed positioning) */
+.speed-dial-inline.kbd-speed-dial {
+  position: relative !important;
+  top: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+}

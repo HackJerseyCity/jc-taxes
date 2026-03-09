@@ -34,7 +34,20 @@ const ZOOM_SPEED = Number(params.get('zoomSpeed')) || 2.0
 const ROTATE_SPEED = Number(params.get('rotateSpeed')) || 60
 const PITCH_SPEED = Number(params.get('pitchSpeed')) || 60
 
-const MOVEMENT_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '-', '=', 'Shift'])
+const MOVEMENT_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '-', '='])
+
+// Each arrow key has a plain (pan) and shift (rotate/pitch) variant.
+// When starting one, clear the other so modifier transitions are seamless.
+const CONFLICTING: Record<string, string> = {
+  'pan-left': 'rotate-cw',
+  'rotate-cw': 'pan-left',
+  'pan-right': 'rotate-ccw',
+  'rotate-ccw': 'pan-right',
+  'pan-up': 'pitch-down',
+  'pitch-down': 'pan-up',
+  'pan-down': 'pitch-up',
+  'pitch-up': 'pan-down',
+}
 
 type Props = {
   year: number
@@ -57,6 +70,8 @@ type Props = {
   setWardGeom: (v: string) => void
   colorByYrBuilt: boolean
   switchColorBy: (cb: string) => void
+  settingsPos: string
+  setSettingsPos: (v: string) => void
 }
 
 export function useKeyboardShortcuts({
@@ -80,6 +95,8 @@ export function useKeyboardShortcuts({
   setWardGeom,
   colorByYrBuilt,
   switchColorBy,
+  settingsPos,
+  setSettingsPos,
 }: Props) {
   const isWardMode = aggregateMode === 'ward'
   const isLotOrUnit = aggregateMode === 'lot' || aggregateMode === 'unit'
@@ -122,6 +139,8 @@ export function useKeyboardShortcuts({
   }, [setViewState])
 
   const startMovement = useCallback((direction: string) => {
+    const conflict = CONFLICTING[direction]
+    if (conflict) activeMovements.current.delete(conflict)
     activeMovements.current.add(direction)
     if (!rafRef.current) {
       lastTimeRef.current = 0
@@ -196,6 +215,17 @@ export function useKeyboardShortcuts({
     handler: () => setSettingsOpen((v: boolean) => !v),
   })
 
+  const PANEL_POSITIONS = ['tr', 'tl', 'bl', 'br'] as const
+  useAction('settings:position', {
+    label: 'Move settings panel',
+    group: 'UI',
+    defaultBindings: ['p'],
+    handler: () => {
+      const idx = PANEL_POSITIONS.indexOf(settingsPos as typeof PANEL_POSITIONS[number])
+      setSettingsPos(PANEL_POSITIONS[(idx + 1) % PANEL_POSITIONS.length])
+    },
+  })
+
   useAction('view:flat', {
     label: 'Flat view (pitch 0)',
     group: 'UI',
@@ -218,7 +248,7 @@ export function useKeyboardShortcuts({
   })
 
   useAction('metric:toggle', {
-    label: 'Toggle metric ($/sqft ↔ $/capita)',
+    label: metricMode === 'per_sqft' ? 'Switch to $/capita' : 'Switch to $/sqft',
     group: 'Navigation',
     defaultBindings: ['m'],
     enabled: hasPopulation,
@@ -258,9 +288,9 @@ export function useKeyboardShortcuts({
     group: 'Viewport',
     defaultBindings: ['shift+arrowdown', '\\f shift+arrowdown'],
     handler: (e, captures) => {
-      if (e?.repeat) return
       const deg = captures?.[0]
       if (deg) {
+        if (e?.repeat) return
         setViewState(v => ({ ...v, pitch: Math.min(85, v.pitch + deg) }))
       } else {
         startMovement('pitch-up')
@@ -273,9 +303,9 @@ export function useKeyboardShortcuts({
     group: 'Viewport',
     defaultBindings: ['shift+arrowup', '\\f shift+arrowup'],
     handler: (e, captures) => {
-      if (e?.repeat) return
       const deg = captures?.[0]
       if (deg) {
+        if (e?.repeat) return
         setViewState(v => ({ ...v, pitch: Math.max(0, v.pitch - deg) }))
       } else {
         startMovement('pitch-down')
@@ -290,9 +320,9 @@ export function useKeyboardShortcuts({
     group: 'Viewport',
     defaultBindings: ['shift+arrowleft', '\\f shift+arrowleft'],
     handler: (e, captures) => {
-      if (e?.repeat) return
       const deg = captures?.[0]
       if (deg) {
+        if (e?.repeat) return
         setViewState(v => ({ ...v, bearing: v.bearing + deg }))
       } else {
         startMovement('rotate-cw')
@@ -305,9 +335,9 @@ export function useKeyboardShortcuts({
     group: 'Viewport',
     defaultBindings: ['shift+arrowright', '\\f shift+arrowright'],
     handler: (e, captures) => {
-      if (e?.repeat) return
       const deg = captures?.[0]
       if (deg) {
+        if (e?.repeat) return
         setViewState(v => ({ ...v, bearing: v.bearing - deg }))
       } else {
         startMovement('rotate-ccw')
@@ -317,14 +347,16 @@ export function useKeyboardShortcuts({
   })
 
   // Pan: arrow keys (or N arrow for N discrete steps)
+  // No repeat guard on continuous path: allows modifier transitions (e.g. pressing
+  // Shift mid-hold switches from pan to rotate via the next repeat event).
   useAction('view:pan-h-a', {
     label: 'Pan left / right a',
     group: 'Viewport',
     defaultBindings: ['arrowleft', '\\d+ arrowleft'],
     handler: (e, captures) => {
-      if (e?.repeat) return
       const n = captures?.[0]
       if (n) {
+        if (e?.repeat) return
         setViewState(v => {
           const step = panStep(v.zoom) * n
           const rad = v.bearing * Math.PI / 180
@@ -341,9 +373,9 @@ export function useKeyboardShortcuts({
     group: 'Viewport',
     defaultBindings: ['arrowright', '\\d+ arrowright'],
     handler: (e, captures) => {
-      if (e?.repeat) return
       const n = captures?.[0]
       if (n) {
+        if (e?.repeat) return
         setViewState(v => {
           const step = panStep(v.zoom) * n
           const rad = v.bearing * Math.PI / 180
@@ -361,9 +393,9 @@ export function useKeyboardShortcuts({
     group: 'Viewport',
     defaultBindings: ['arrowup', '\\d+ arrowup'],
     handler: (e, captures) => {
-      if (e?.repeat) return
       const n = captures?.[0]
       if (n) {
+        if (e?.repeat) return
         setViewState(v => {
           const step = panStep(v.zoom) * n
           const rad = v.bearing * Math.PI / 180
@@ -380,9 +412,9 @@ export function useKeyboardShortcuts({
     group: 'Viewport',
     defaultBindings: ['arrowdown', '\\d+ arrowdown'],
     handler: (e, captures) => {
-      if (e?.repeat) return
       const n = captures?.[0]
       if (n) {
+        if (e?.repeat) return
         setViewState(v => {
           const step = panStep(v.zoom) * n
           const rad = v.bearing * Math.PI / 180
