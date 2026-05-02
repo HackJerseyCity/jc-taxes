@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Jersey City property tax CLI."""
+import gzip
 import json
 import sys
 from pathlib import Path
@@ -169,7 +170,9 @@ def fetch(input_file: str, delay: float, max_delay: float, limit: int, output_di
 
         for i, row in df.iterrows():
             acct = row['AccountNumber']
-            cache_path = cache_dir / f"{acct}.json"
+            gz_path = cache_dir / f"{acct}.json.gz"
+            json_path = cache_dir / f"{acct}.json"
+            cache_path = gz_path if gz_path.exists() else json_path
 
             # Check if cache exists and is fresh
             if cache_path.exists():
@@ -204,13 +207,17 @@ def export(input_dir: str, output: str):
     from .models import AccountResponse
 
     cache_dir = Path(input_dir)
-    json_files = list(cache_dir.glob("*.json"))
-    err(f"Found {len(json_files)} cached JSON files")
+    json_files = sorted(cache_dir.glob("*.json")) + sorted(cache_dir.glob("*.json.gz"))
+    err(f"Found {len(json_files)} cached files")
 
     records = []
     for path in json_files:
-        with open(path) as f:
-            data = json.load(f)
+        if path.suffixes == ['.json', '.gz']:
+            with gzip.open(path, 'rt') as f:
+                data = json.load(f)
+        else:
+            with open(path) as f:
+                data = json.load(f)
         try:
             resp = AccountResponse.model_validate(data)
             a = resp.account

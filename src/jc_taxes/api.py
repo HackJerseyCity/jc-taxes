@@ -1,4 +1,5 @@
 """HLS Property Tax API client with rate limiting and caching."""
+import gzip
 import json
 import random
 import time
@@ -77,9 +78,15 @@ class HLSClient:
             d = date.today()
         return d.strftime("%a %b %d %Y")
 
-    def _cache_path(self, account: int | str, suffix: str = "json") -> Path:
-        """Get cache path for an account."""
-        return self.cache_dir / f"{account}.{suffix}"
+    def _cache_path(self, account: int | str) -> Path:
+        """Get cache path for an account (.json.gz preferred, falls back to .json)."""
+        gz_path = self.cache_dir / f"{account}.json.gz"
+        if gz_path.exists():
+            return gz_path
+        json_path = self.cache_dir / f"{account}.json"
+        if json_path.exists():
+            return json_path
+        return gz_path  # default to .gz for new files
 
     def _load_cache(self, account: int | str, ttl: Optional[timedelta] = None) -> Optional[dict]:
         """Load cached response if exists and not expired."""
@@ -93,14 +100,21 @@ class HLSClient:
             if datetime.now() - mtime > ttl:
                 return None  # Cache expired
 
+        if path.suffix == '.gz':
+            with gzip.open(path, 'rt') as f:
+                return json.load(f)
         with open(path) as f:
             return json.load(f)
 
     def _save_cache(self, account: int | str, data: dict):
-        """Save response to cache."""
-        path = self._cache_path(account)
-        with open(path, "w") as f:
+        """Save response to cache as .json.gz."""
+        path = self.cache_dir / f"{account}.json.gz"
+        with gzip.open(path, 'wt') as f:
             json.dump(data, f, indent=2)
+        # Remove old .json if it exists
+        json_path = self.cache_dir / f"{account}.json"
+        if json_path.exists():
+            json_path.unlink()
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _get(self, url: str) -> dict:
