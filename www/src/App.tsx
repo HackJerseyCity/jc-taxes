@@ -207,6 +207,8 @@ export default function App() {
   const [settingsPos, setSettingsPos] = useUrlState('sp', stringParam('tr'))
   const posRight = settingsPos.endsWith('r')
   const posBottom = settingsPos.startsWith('b')
+  const [titleMode] = useUrlState('ti', stringParam(''))
+  const showTitle = titleMode !== '0' && titleMode !== 'off'
 
   const hasPopulation = aggregateMode === 'census-block' || aggregateMode === 'ward'
   const modeKey = getModeKey(aggregateMode, metricMode)
@@ -975,6 +977,34 @@ export default function App() {
           <div className="loading-spinner" />
         </div>
       )}
+
+      {/* Plot title — top-center, clear of corner-pinned settings panel and hover tooltip */}
+      {showTitle && (() => {
+        const aggLabel = ({ 'census-block': 'census block' } as Record<string, string>)[aggregateMode] ?? aggregateMode
+        const line2 = colorByYrBuilt
+          ? `Colored by year built · ${year}`
+          : `Paid per ${metricMode === 'per_capita' ? 'capita' : 'sq ft'} · ${year} · by ${aggLabel}`
+        return (
+          <div style={{
+            position: 'absolute',
+            top: 10,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            textAlign: 'center',
+            color: 'white',
+            textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 6px rgba(0,0,0,0.6)',
+            pointerEvents: 'none',
+            fontFamily: 'Inter, sans-serif',
+            zIndex: 1,
+            maxWidth: 'calc(100% - 20px)',
+          }}>
+            <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2 }}>
+              {colorByYrBuilt ? 'Jersey City Parcels' : 'Jersey City Property Taxes'}
+            </div>
+            <div style={{ fontSize: 13, opacity: 0.95, marginTop: 2 }}>{line2}</div>
+          </div>
+        )
+      })()}
 
       {/* Settings panel (when at top) */}
       {!posBottom && (
