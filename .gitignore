@@ -1,3 +1,4 @@
 # Data files (large, can be regenerated)
-data/
+data/*
+!data/*.dvc
 www/public/*.geojson

@@ -11,9 +11,9 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from .models import AccountInquiry, AccountResponse
-from .paths import CACHE
+from .paths import cache_dir as muni_cache_dir, get_muni
 
-BASE_URL = "https://apps.hlssystems.com/JerseyCity/PropertyTaxInquiry"
+HLS_BASE = "https://apps.hlssystems.com"
 
 
 def parse_ttl(ttl: Union[str, int, float, timedelta, None]) -> Optional[timedelta]:
@@ -62,12 +62,15 @@ class HLSClient:
 
     def __init__(
         self,
+        muni: str = "JerseyCity",
         cache_dir: Optional[Path] = None,
         rate_limit: bool = True,
         min_delay: float = 0.5,
         max_delay: float = 1.5,
     ):
-        self.cache_dir = Path(cache_dir) if cache_dir else CACHE
+        self.muni = get_muni(muni)
+        self.base_url = f"{HLS_BASE}/{self.muni.hls_path}/PropertyTaxInquiry"
+        self.cache_dir = Path(cache_dir) if cache_dir else muni_cache_dir(self.muni.name)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.client = httpx.Client(timeout=30.0)
         self.rate_limiter = RateLimiter(min_delay, max_delay) if rate_limit else None
@@ -151,7 +154,7 @@ class HLSClient:
                 return AccountResponse.model_validate(cached)
 
         date_str = self._format_date(interest_date)
-        url = f"{BASE_URL}/GetAccountDetails?accountNumber={account}&interestThruDate={date_str}"
+        url = f"{self.base_url}/GetAccountDetails?accountNumber={account}&interestThruDate={date_str}"
 
         try:
             data = self._get(url)
@@ -183,7 +186,7 @@ class HLSClient:
         Returns:
             Tuple of (accounts list, total count)
         """
-        url = f"{BASE_URL}/GetAccounts?page={page}&searchType={search_type}&searchField={search_field}"
+        url = f"{self.base_url}/GetAccounts?page={page}&searchType={search_type}&searchField={search_field}"
         data = self._get(url)
         return data.get("accounts", []), data.get("recCount", 0)
 
@@ -200,6 +203,22 @@ class HLSClient:
                 break
             yield from accounts
             if page * 10 >= total:  # 10 results per page
+                break
+            page += 1
+
+    def iter_all_paginated(self) -> Iterator[dict]:
+        """
+        Iterate all accounts via paginated `searchType=Account` (returns
+        all accounts regardless of searchField). Some HLS portals (Bayonne)
+        don't support block-prefix search via BLQ, so this is the fallback.
+        """
+        page = 1
+        while True:
+            accounts, total = self.search_accounts("Account", "1", page)
+            if not accounts:
+                break
+            yield from accounts
+            if page * 10 >= total:
                 break
             page += 1
 

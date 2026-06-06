@@ -10,23 +10,51 @@ import pandas as pd
 from utz import err
 
 from .api import HLSClient
-from .paths import ACCOUNTS_INDEX, CACHE, PARCELS, TAXES
+from .paths import (
+    HUDSON_PARCELS, MUNIS, PARCELS,
+    accounts_index as muni_accounts_index,
+    cache_dir as muni_cache_dir,
+    get_muni,
+    taxes_parquet,
+)
+
+MUNI_OPT = click.option(
+    "-m", "--muni", type=click.Choice(sorted(MUNIS)), default="JerseyCity",
+    show_default=True, help="Municipality (HLS portal)",
+)
 
 
 @click.group()
 def main():
-    """Jersey City property tax data tools."""
+    """Hudson County (HLS) property tax data tools."""
     pass
+
+
+def _block_list_for_muni(muni: str) -> list[str]:
+    """Block list for enumeration: JC uses jc_parcels.parquet (legacy/richer); other munis pull from HudsonCountyParcels.shp."""
+    m = get_muni(muni)
+    if muni == "JerseyCity" and PARCELS.exists():
+        parcels = pd.read_parquet(PARCELS)
+        return sorted(parcels['block'].dropna().unique().tolist())
+
+    if not HUDSON_PARCELS.exists():
+        err(f"Hudson parcels not found: {HUDSON_PARCELS}")
+        sys.exit(1)
+    import geopandas as gpd
+    gdf = gpd.read_file(HUDSON_PARCELS)
+    sub = gdf[gdf['MUN'] == m.mun_code]
+    return sorted(sub['BLOCK'].dropna().astype(str).str.strip().unique().tolist())
 
 
 @main.command()
 @click.argument("account")
 @click.option("-c/-C", "--cache/--no-cache", default=True, help="Use local cache")
 @click.option("-j", "--json-output", is_flag=True, help="Output raw JSON")
+@MUNI_OPT
 @click.option("-t", "--ttl", default=None, help="Cache TTL (e.g. '1d', '12h'). None=forever")
-def get(account: str, cache: bool, json_output: bool, ttl: str):
+def get(account: str, cache: bool, json_output: bool, muni: str, ttl: str):
     """Fetch details for a single account (number or B-L-Q)."""
-    with HLSClient(rate_limit=False) as client:
+    with HLSClient(muni=muni, rate_limit=False) as client:
         resp = client.get_account_details(account, use_cache=cache, ttl=ttl)
         if resp is None:
             err(f"Account not found: {account}")
@@ -51,9 +79,10 @@ def get(account: str, cache: bool, json_output: bool, ttl: str):
 @click.option("-d", "--delay", default=0.3, help="Min delay between requests (sec)")
 @click.option("-D", "--max-delay", default=0.8, help="Max delay between requests (sec)")
 @click.option("-l", "--limit", default=0, help="Limit results (0=all)")
-def search(block: str, delay: float, max_delay: float, limit: int):
+@MUNI_OPT
+def search(block: str, delay: float, max_delay: float, limit: int, muni: str):
     """Search accounts by block number."""
-    with HLSClient(min_delay=delay, max_delay=max_delay) as client:
+    with HLSClient(muni=muni, min_delay=delay, max_delay=max_delay) as client:
         count = 0
         for acct in client.search_by_block(block):
             print(f"{acct['AccountNumber']:>8} | {acct['Block']}-{acct['Lot']}-{acct.get('Qualifier', ''):<10} | {acct['PropertyLocation']}")
@@ -67,18 +96,60 @@ def search(block: str, delay: float, max_delay: float, limit: int):
 @click.option("-d", "--delay", default=0.3, help="Min delay between requests (sec)")
 @click.option("-D", "--max-delay", default=0.8, help="Max delay between requests (sec)")
 @click.option("-l", "--limit-blocks", default=0, help="Limit blocks to process (0=all)")
-@click.option("-o", "--output", default=str(ACCOUNTS_INDEX), help="Output file")
+@MUNI_OPT
+@click.option("-o", "--output", default=None, help="Output file (default: data/accounts_index.{muni}.parquet)")
 @click.option("-s", "--start-block", default="", help="Start from this block")
-def enumerate_accounts(delay: float, max_delay: float, limit_blocks: int, output: str, start_block: str):
+def enumerate_accounts(delay: float, max_delay: float, limit_blocks: int, muni: str, output: str, start_block: str):
     """Enumerate all accounts by iterating blocks from parcels data."""
-    if not PARCELS.exists():
-        err(f"Parcels file not found: {PARCELS}")
-        err("Download from: https://data.jerseycitynj.gov/explore/dataset/jersey-city-parcels/export/")
-        sys.exit(1)
+    m = get_muni(muni)
+    if output is None:
+        output = str(muni_accounts_index(muni))
+    output_path = Path(output)
 
-    parcels = pd.read_parquet(PARCELS)
-    blocks = sorted(parcels['block'].dropna().unique().tolist())
-    err(f"Found {len(blocks)} unique blocks in parcels data")
+    def save_progress(msg: str = ""):
+        if all_accounts:
+            df = pd.DataFrame(all_accounts)
+            df.to_parquet(output_path)
+            err(f"{msg}Saved {len(all_accounts)} accounts to {output}")
+
+    all_accounts: list[dict] = []
+    if output_path.exists():
+        existing = pd.read_parquet(output_path)
+        all_accounts = existing.to_dict('records')
+        err(f"Resuming: loaded {len(all_accounts)} existing accounts")
+
+    if m.enumerate == "paginate":
+        # Bayonne-style: paginate through `searchType=Account&searchField=1` (returns all)
+        seen_ids = {a.get('AccountId') for a in all_accounts}
+        err(f"Strategy: paginate (Account-search) for {m.name}")
+        try:
+            with HLSClient(muni=muni, min_delay=delay, max_delay=max_delay) as client:
+                page = 1
+                while True:
+                    accts, total = client.search_accounts("Account", "1", page)
+                    if not accts:
+                        break
+                    new = [a for a in accts if a.get('AccountId') not in seen_ids]
+                    all_accounts.extend(new)
+                    seen_ids.update(a.get('AccountId') for a in new)
+                    if page % 50 == 0:
+                        save_progress(f"Page {page} (total≈{total}, got={len(all_accounts)}): ")
+                    if page * 10 >= total:
+                        break
+                    page += 1
+        except KeyboardInterrupt:
+            err("\nInterrupted.")
+            save_progress("Saving progress: ")
+            sys.exit(130)
+        except Exception as e:
+            err(f"\nError: {e}")
+            save_progress("Saving progress before exit: ")
+            raise
+        save_progress("\nDone: ")
+        return
+
+    blocks = _block_list_for_muni(muni)
+    err(f"Found {len(blocks)} unique blocks for {m.name} ({m.mun_code})")
 
     if start_block:
         if start_block in blocks:
@@ -93,27 +164,14 @@ def enumerate_accounts(delay: float, max_delay: float, limit_blocks: int, output
         blocks = blocks[:limit_blocks]
         err(f"Limited to {limit_blocks} blocks")
 
-    output_path = Path(output)
-
-    # Load existing progress if resuming
-    existing_blocks = set()
-    all_accounts = []
-    if output_path.exists():
-        existing = pd.read_parquet(output_path)
-        all_accounts = existing.to_dict('records')
-        existing_blocks = set(existing['Block'].unique())
-        err(f"Resuming: loaded {len(all_accounts)} existing accounts from {len(existing_blocks)} blocks")
+    existing_blocks = {a.get('Block') for a in all_accounts}
+    if existing_blocks:
+        err(f"  {len(existing_blocks)} existing blocks loaded")
         blocks = [b for b in blocks if b not in existing_blocks]
         err(f"  {len(blocks)} blocks remaining")
 
-    def save_progress(msg: str = ""):
-        if all_accounts:
-            df = pd.DataFrame(all_accounts)
-            df.to_parquet(output_path)
-            err(f"{msg}Saved {len(all_accounts)} accounts to {output}")
-
     try:
-        with HLSClient(min_delay=delay, max_delay=max_delay) as client:
+        with HLSClient(muni=muni, min_delay=delay, max_delay=max_delay) as client:
             for i, block in enumerate(blocks):
                 accounts = list(client.search_by_block(block))
                 all_accounts.extend(accounts)
@@ -134,15 +192,20 @@ def enumerate_accounts(delay: float, max_delay: float, limit_blocks: int, output
 
 
 @main.command()
-@click.argument("input_file", default=str(ACCOUNTS_INDEX))
+@click.argument("input_file", default=None, required=False)
 @click.option("-d", "--delay", default=0.5, help="Min delay between requests (sec)")
 @click.option("-D", "--max-delay", default=1.0, help="Max delay between requests (sec)")
 @click.option("-l", "--limit", default=0, help="Limit accounts to fetch (0=all)")
-@click.option("-o", "--output-dir", default=str(CACHE), help="Cache directory for JSON")
+@MUNI_OPT
+@click.option("-o", "--output-dir", default=None, help="Cache directory (default: data/cache/{muni})")
 @click.option("-s", "--start", default=0, help="Start from this account index")
 @click.option("-t", "--ttl", default=None, help="Cache TTL (e.g. '1d', '12h', '3600'). None=forever")
-def fetch(input_file: str, delay: float, max_delay: float, limit: int, output_dir: str, start: int, ttl: str):
+def fetch(input_file: str, delay: float, max_delay: float, limit: int, muni: str, output_dir: str, start: int, ttl: str):
     """Fetch full details for accounts in index file."""
+    if input_file is None:
+        input_file = str(muni_accounts_index(muni))
+    if output_dir is None:
+        output_dir = str(muni_cache_dir(muni))
     df = pd.read_parquet(input_file)
     err(f"Loaded {len(df)} accounts from {input_file}")
 
@@ -162,7 +225,7 @@ def fetch(input_file: str, delay: float, max_delay: float, limit: int, output_di
 
     ttl_delta = parse_ttl(ttl)
 
-    with HLSClient(cache_dir=cache_dir, min_delay=delay, max_delay=max_delay) as client:
+    with HLSClient(muni=muni, cache_dir=cache_dir, min_delay=delay, max_delay=max_delay) as client:
         fetched = 0
         cached = 0
         expired = 0
@@ -200,10 +263,15 @@ def fetch(input_file: str, delay: float, max_delay: float, limit: int, output_di
 
 
 @main.command()
-@click.option("-i", "--input-dir", default=str(CACHE), help="Cache directory with JSON files")
-@click.option("-o", "--output", default=str(TAXES), help="Output parquet file")
-def export(input_dir: str, output: str):
+@MUNI_OPT
+@click.option("-i", "--input-dir", default=None, help="Cache directory (default: data/cache/{muni})")
+@click.option("-o", "--output", default=None, help="Output parquet (default: data/taxes.{muni}.parquet)")
+def export(muni: str, input_dir: str, output: str):
     """Export cached JSON files to parquet."""
+    if input_dir is None:
+        input_dir = str(muni_cache_dir(muni))
+    if output is None:
+        output = str(taxes_parquet(muni))
     from .models import AccountResponse
 
     cache_dir = Path(input_dir)
@@ -262,6 +330,18 @@ def geojson(output: str, limit: int):
     """Generate GeoJSON for web visualization."""
     from .geojson import generate_geojson
     generate_geojson(Path(output), limit)
+
+
+@main.command("geojson-county")
+@click.option("-o", "--output-dir", default=None, help="Output dir (default: www/public/county/)")
+@click.option("-S", "--no-sanity-check", is_flag=True, help="Skip post-write sanity check")
+def geojson_county(output_dir: str, no_sanity_check: bool):
+    """Generate per-muni and combined county GeoJSONs from NJGIN dumps (TY2024)."""
+    from .geojson_county import generate, sanity_check
+    out = Path(output_dir) if output_dir else None
+    generate(out)
+    if not no_sanity_check:
+        sanity_check(out)
 
 
 if __name__ == "__main__":

@@ -151,12 +151,24 @@ class AccountInquiry(BaseModel):
     def empty_list_if_none(cls, v):
         return v if v is not None else []
 
-    @field_validator("Block", "Lot", "Qualifier", "PropertyLocation", "Address", "CityState", "PostalCode", "OwnerName", mode="before")
+    @field_validator(
+        "Block", "Lot", "Qualifier",
+        "PropertyLocation", "Address", "CityState", "PostalCode", "OwnerName",
+        "BuildingDescription", "LandDescription", "AdditionalLots",
+        "TaxMapPage", "DeedBook", "DeedPage",
+        "Class", "BankName",
+        mode="before",
+    )
     @classmethod
     def strip_strings(cls, v):
         if v is None:
             return ""
         return str(v).strip()
+
+    @field_validator("DeedDate", "FireDistrict", "AccountId", "LienCount", mode="before")
+    @classmethod
+    def zero_if_none(cls, v):
+        return 0 if v is None else v
 
     @property
     def blq(self) -> str:
