@@ -72,6 +72,8 @@ type Props = {
   switchColorBy: (cb: string) => void
   settingsPos: string
   setSettingsPos: (v: string) => void
+  extruded: boolean
+  setExtruded: (v: boolean) => void
 }
 
 export function useKeyboardShortcuts({
@@ -97,6 +99,8 @@ export function useKeyboardShortcuts({
   switchColorBy,
   settingsPos,
   setSettingsPos,
+  extruded,
+  setExtruded,
 }: Props) {
   const isWardMode = aggregateMode === 'ward'
   const isLotOrUnit = aggregateMode === 'lot' || aggregateMode === 'unit'
@@ -256,10 +260,17 @@ export function useKeyboardShortcuts({
   })
 
   useAction('view:3d', {
-    label: '3D view (pitch 45)',
+    label: extruded ? 'Toggle 3D (off)' : 'Toggle 3D (on, pitch ≥ 45)',
     group: 'UI',
     defaultBindings: ['d'],
-    handler: () => setViewState(v => ({ ...v, pitch: 45, ...transition(['pitch']) })),
+    handler: () => {
+      const next = !extruded
+      setExtruded(next)
+      if (next) {
+        // Going 3D: nudge pitch into a view that actually shows the bars.
+        setViewState(v => v.pitch >= 30 ? v : ({ ...v, pitch: 45, ...transition(['pitch']) }))
+      }
+    },
   })
 
   useAction('view:bearing', {

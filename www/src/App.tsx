@@ -452,6 +452,7 @@ export default function App() {
     wardGeom, setWardGeom,
     colorByYrBuilt, switchColorBy,
     settingsPos, setSettingsPos,
+    extruded, setExtruded,
   })
 
   // Two-finger pitch gesture for mobile (deck.gl's built-in multipan is broken)
