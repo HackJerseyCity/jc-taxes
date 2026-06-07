@@ -1,0 +1,12 @@
+md5: 0abbbc72837cd3ea96793abc6e723f87
+frozen: true
+deps:
+- checksum: '"1132bb32-64873ee1"'
+  size: 288537394
+  hash: md5
+  path: https://www.nj.gov/treasury/taxation/pdf/lpt/modiv-2022.zip
+outs:
+- md5: cc4e7c88402cc6b23071aaccee4ffc66
+  size: 288537394
+  hash: md5
+  path: modiv-2022.zip

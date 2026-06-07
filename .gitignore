@@ -1,4 +1,7 @@
 # Data files (large, can be regenerated)
 data/*
 !data/*.dvc
+# Allow .dvc sidecars at any depth (e.g. data/modiv/treasury/*.dvc)
+!data/**/
+!data/**/*.dvc
 www/public/*.geojson
