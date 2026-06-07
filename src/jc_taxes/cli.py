@@ -10,6 +10,7 @@ import pandas as pd
 from utz import err
 
 from .api import HLSClient
+from .modiv import modiv
 from .paths import (
     HUDSON_PARCELS, MUNIS, PARCELS,
     accounts_index as muni_accounts_index,
@@ -28,6 +29,9 @@ MUNI_OPT = click.option(
 def main():
     """Hudson County (HLS) property tax data tools."""
     pass
+
+
+main.add_command(modiv)
 
 
 def _block_list_for_muni(muni: str) -> list[str]:
