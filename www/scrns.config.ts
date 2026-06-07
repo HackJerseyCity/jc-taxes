@@ -5,6 +5,18 @@ const unitView = '?v=40.7188-74.0563+13.6+66-34&agg=unit&mh=1100&pct=99&sp=br&so
 // OGI captures suppress the on-screen title (overlap with og:title / og:description).
 const noTitle = '&ti=0'
 
+// Hold-then-transition schedule for year-cycling captures.
+// Per "year cycle": `hold` frames at the integer year (so the year reads
+// cleanly) then `trans` frames smoothly ramping to the next.
+// Total frames = N_years * hold + (N_years - 1) * trans.
+// Returns a single-line JS string suitable as scrns `animate.eval`.
+function holdEval(fromY: number, toY: number, hold: number, trans: number): string {
+  return `(i, n) => { const f=${fromY}, t=${toY}, h=${hold}, r=${trans}; let p=i; for (let y=0; y<=t-f; y++) { if (p<h) return window.__setYear(f+y); p-=h; if (p<r) return window.__setYear(f+y+p/r); p-=r; } return window.__setYear(t); }`
+}
+function holdFrames(fromY: number, toY: number, hold: number, trans: number): number {
+  return (toY - fromY + 1) * hold + (toY - fromY) * trans
+}
+
 export default {
   engine: 'puppeteer' as const,
   host: 3201,
@@ -54,21 +66,49 @@ export default {
       preScreenshotSleep: 6000,
       path: 'og-unit.png',
     },
-    'anim-frac-v8': {
-      // Deterministic per-frame capture via `?y` fractional-year interpolation.
-      // `?animYr=2018-2025` (no `:dwell`) just preloads all years' data so
-      // `window.__setYear(...)` calls hit cache → no spinner, no race with
-      // deck.gl tweens. 120 frames / 30 fps = 4s video covering 2018→2025.
-      query: `${defaultView}&agg=lot&animYr=2018-2025${noTitle}`,
+    // Two pacing variants — keep both around to compare what feels best.
+    // "half": 0.5s pause + 0.5s ramp per year (most readable year marks).
+    // "snappy": 0.3s pause + 0.7s ramp (briefer marks, smoother roll).
+    'anim-frac-v11-half': {
+      // Title-on (no `&ti=0`): the rolling odometer + subtitle is the point.
+      query: `${defaultView}&agg=lot&animYr=2015-2025`,
       width: 1200,
       height: 630,
       headless: false,
-      preScreenshotSleep: 8000, // long enough to preload 8 years of geojson cold
+      preScreenshotSleep: 12000, // 11 years of geojson preload, cold start
       fps: 30,
       videoCrf: 20,
-      path: 'anim-frac-v8.mp4',
+      path: 'anim-frac-v11-half.mp4',
       actions: [
-        { type: 'animate', frames: 120, eval: '(i, n) => window.__setYear(2018 + (i/(n-1)) * 7)' },
+        { type: 'animate', frames: holdFrames(2015, 2025, 15, 15), eval: holdEval(2015, 2025, 15, 15) },
+      ],
+    },
+    'anim-frac-v11-snappy': {
+      query: `${defaultView}&agg=lot&animYr=2015-2025`,
+      width: 1200,
+      height: 630,
+      headless: false,
+      preScreenshotSleep: 12000,
+      fps: 30,
+      videoCrf: 20,
+      path: 'anim-frac-v11-snappy.mp4',
+      actions: [
+        { type: 'animate', frames: holdFrames(2015, 2025, 9, 21), eval: holdEval(2015, 2025, 9, 21) },
+      ],
+    },
+    'anim-frac-v11-ward': {
+      // Wards view with block-level geometry; same hold/transition schedule
+      // as `v10-half` so visual pacing matches across lot↔ward comparisons.
+      query: `${wardView}&agg=ward&wg=blocks&animYr=2015-2025`,
+      width: 1200,
+      height: 630,
+      headless: false,
+      preScreenshotSleep: 14000, // ward fixture + 11-year preload
+      fps: 30,
+      videoCrf: 20,
+      path: 'anim-frac-v11-ward.mp4',
+      actions: [
+        { type: 'animate', frames: holdFrames(2015, 2025, 15, 15), eval: holdEval(2015, 2025, 15, 15) },
       ],
     },
     cast: {

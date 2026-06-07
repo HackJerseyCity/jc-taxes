@@ -1,0 +1,8 @@
+outs:
+- md5: 76018b09c81de203dd1d9732e1d14267
+  size: 37034839
+  hash: md5
+  path: taxes-2015-units.geojson
+meta:
+  computation:
+    cmd: python -m jc_taxes.geojson_yearly -y 2015 -a unit -o www/public

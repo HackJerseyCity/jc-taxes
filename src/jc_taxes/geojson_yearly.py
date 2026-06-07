@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate year-specific GeoJSON files showing taxes paid per parcel."""
+import gzip
 import json
 import re
 from collections import defaultdict
@@ -12,6 +13,21 @@ import shapely.wkb
 import shapely.ops
 from pyproj import Transformer
 from utz import err
+
+
+def _iter_cache_jsons(cache_dir: Path):
+    """Yield parsed JSON dicts from cached account files (.json or .json.gz)."""
+    paths = list(cache_dir.glob("*.json")) + list(cache_dir.glob("*.json.gz"))
+    for path in paths:
+        try:
+            if path.suffixes[-2:] == [".json", ".gz"]:
+                with gzip.open(path, "rt") as f:
+                    yield json.load(f)
+            else:
+                with open(path) as f:
+                    yield json.load(f)
+        except Exception:
+            continue
 
 from .building_desc import parse_building_desc
 from .census import load_jc_census_blocks, load_jc_wards
@@ -33,34 +49,28 @@ def load_owners(cache_dir: Path = CACHE) -> tuple[dict[str, str], dict[str, str]
     """
     lot_owners: dict[str, str] = {}
     unit_owners: dict[str, str] = {}
-    json_files = list(cache_dir.glob("*.json"))
-    for path in json_files:
-        try:
-            with open(path) as f:
-                data = json.load(f)
-            acct = data.get("accountInquiryVM", {})
-            block = str(acct.get("Block", "")).strip()
-            lot = str(acct.get("Lot", "")).strip()
-            qual = str(acct.get("Qualifier", "")).strip()
-            owner = str(acct.get("OwnerName", "")).strip()
-            if not (block and lot and owner):
-                continue
-            lot_key = f"{block}-{lot}"
-            if not qual:
-                # Base record: building-level owner or HOA
-                lot_owners[lot_key] = owner
-            else:
-                unit_key = f"{block}-{lot}-{qual}"
-                unit_owners[unit_key] = owner
-                # Also set lot owner if no base record exists and all units share owner
-                if lot_key not in lot_owners:
-                    lot_owners[lot_key] = owner
-                elif lot_owners[lot_key] != owner:
-                    # Multiple different owners → mark as multi-owner (condo)
-                    # Keep the first one (base record will overwrite if it exists)
-                    pass
-        except Exception:
+    for data in _iter_cache_jsons(cache_dir):
+        acct = data.get("accountInquiryVM", {})
+        block = str(acct.get("Block", "")).strip()
+        lot = str(acct.get("Lot", "")).strip()
+        qual = str(acct.get("Qualifier", "")).strip()
+        owner = str(acct.get("OwnerName", "")).strip()
+        if not (block and lot and owner):
             continue
+        lot_key = f"{block}-{lot}"
+        if not qual:
+            # Base record: building-level owner or HOA
+            lot_owners[lot_key] = owner
+        else:
+            unit_key = f"{block}-{lot}-{qual}"
+            unit_owners[unit_key] = owner
+            # Also set lot owner if no base record exists and all units share owner
+            if lot_key not in lot_owners:
+                lot_owners[lot_key] = owner
+            elif lot_owners[lot_key] != owner:
+                # Multiple different owners → mark as multi-owner (condo)
+                # Keep the first one (base record will overwrite if it exists)
+                pass
     return lot_owners, unit_owners
 
 
@@ -71,21 +81,15 @@ def load_addresses(cache_dir: Path = CACHE) -> dict[str, str]:
         dict mapping "block-lot" to PropertyLocation address string
     """
     addresses = {}
-    json_files = list(cache_dir.glob("*.json"))
-    for path in json_files:
-        try:
-            with open(path) as f:
-                data = json.load(f)
-            acct = data.get("accountInquiryVM", {})
-            block = str(acct.get("Block", "")).strip()
-            lot = str(acct.get("Lot", "")).strip()
-            prop_loc = acct.get("PropertyLocation", "")
-            if block and lot and prop_loc:
-                key = f"{block}-{lot}"
-                if key not in addresses:
-                    addresses[key] = prop_loc.strip()
-        except Exception:
-            continue
+    for data in _iter_cache_jsons(cache_dir):
+        acct = data.get("accountInquiryVM", {})
+        block = str(acct.get("Block", "")).strip()
+        lot = str(acct.get("Lot", "")).strip()
+        prop_loc = acct.get("PropertyLocation", "")
+        if block and lot and prop_loc:
+            key = f"{block}-{lot}"
+            if key not in addresses:
+                addresses[key] = prop_loc.strip()
     return addresses
 
 

@@ -17,14 +17,17 @@ ROOT="$(cd "$DIR/.." && pwd)"                            # repo root
 TMP="$ROOT/tmp"
 mkdir -p "$TMP"
 
-# Pick name: explicit CLI arg, or pull the latest `anim-frac-vN` key from the config.
-NAME="${1:-$(grep -oE "'anim-frac-v[0-9]+'" "$DIR/scrns.config.ts" | head -1 | tr -d "'")}"
-if [ -z "$NAME" ]; then
+# Pick name: explicit CLI arg, or pull all `anim-frac-…` keys from the config.
+# With no arg, runs each `anim-frac-*` entry sequentially.
+if [ $# -gt 0 ]; then
+  NAMES=("$@")
+else
+  mapfile -t NAMES < <(grep -oE "'anim-frac-[A-Za-z0-9-]+'" "$DIR/scrns.config.ts" | tr -d "'")
+fi
+if [ ${#NAMES[@]} -eq 0 ]; then
   echo "[regen-anim] could not infer name; pass one as the first arg" >&2
   exit 1
 fi
-
-OUT="$TMP/$NAME.mp4"
 
 # Ensure dev server is up before scrns tries to load the URL.
 if ! curl -sf -o /dev/null "http://localhost:3201/"; then
@@ -32,18 +35,18 @@ if ! curl -sf -o /dev/null "http://localhost:3201/"; then
   exit 1
 fi
 
-echo "[regen-anim] target: $OUT"
-rm -f "$OUT"
-
-"$DIR/node_modules/.bin/scrns" \
-  -c "$DIR/scrns.config.ts" \
-  -i "$NAME" \
-  -o "$TMP" 2>&1 | tee "$TMP/$NAME.log" | tail -20
-
-if [ ! -s "$OUT" ]; then
-  echo "[regen-anim] no output written; see $TMP/$NAME.log" >&2
-  exit 1
-fi
-
-echo "[regen-anim] OK: $(ls -lh "$OUT" | awk '{print $5}'), opening in QuickTime"
-open "$OUT"
+for NAME in "${NAMES[@]}"; do
+  OUT="$TMP/$NAME.mp4"
+  echo "[regen-anim] target: $OUT"
+  rm -f "$OUT"
+  "$DIR/node_modules/.bin/scrns" \
+    -c "$DIR/scrns.config.ts" \
+    -i "$NAME" \
+    -o "$TMP" 2>&1 | tee "$TMP/$NAME.log" | tail -10
+  if [ ! -s "$OUT" ]; then
+    echo "[regen-anim] no output written for $NAME; see $TMP/$NAME.log" >&2
+    exit 1
+  fi
+  echo "[regen-anim] OK: $(ls -lh "$OUT" | awk '{print $5}'), opening in QuickTime"
+  open "$OUT"
+done

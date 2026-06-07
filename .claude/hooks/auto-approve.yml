@@ -1,2 +1,3 @@
 - allow:
     www/scripts/regen-anim.sh: ['', anim-frac-*]
+    www/scripts/scan-jumps.sh: ['*/anim-frac-*.mp4']

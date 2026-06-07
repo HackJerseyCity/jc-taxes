@@ -1,0 +1,8 @@
+outs:
+- md5: d76dbe71cc8d47de254e6d6f4f0460da
+  size: 22778422
+  hash: md5
+  path: taxes-2017-lots.geojson
+meta:
+  computation:
+    cmd: python -m jc_taxes.geojson_yearly -y 2017 -a lot -o www/public

@@ -61,7 +61,7 @@ const viewParam = viewStateParam({
   zoomDecimals: 1,
 })
 
-const AVAILABLE_YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+const AVAILABLE_YEARS = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
 const YEAR_MIN = AVAILABLE_YEARS[0]
 const YEAR_MAX = AVAILABLE_YEARS[AVAILABLE_YEARS.length - 1]
 
@@ -75,6 +75,46 @@ const yearParam = {
     return isNaN(n) ? YEAR_MAX : n
   },
   encode: (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(3).replace(/\.?0+$/, ''),
+}
+
+// Odometer-style year display for animation captures. Digits that differ
+// between floor(year) and ceil(year) are stacked vertically inside a clipped
+// column and scrolled up by `year - floor(year)`, so the fractional part
+// shows up as a half-rolled digit. Unchanged digits render as plain glyphs.
+function RollingYear({ year, fontSize = 56 }: { year: number, fontSize?: number }) {
+  const yFloor = Math.floor(year)
+  const yCeil = Math.ceil(year)
+  const t = yFloor === yCeil ? 0 : year - yFloor
+  const from = String(yFloor).padStart(4, '0').split('')
+  const to = String(yCeil).padStart(4, '0').split('')
+  const digitStyle = {
+    display: 'inline-block',
+    height: '1em',
+    lineHeight: '1em',
+    width: '0.62em',
+    textAlign: 'center' as const,
+    fontVariantNumeric: 'tabular-nums' as const,
+  }
+  return (
+    <span style={{ display: 'inline-flex', fontSize, fontWeight: 700, lineHeight: 1 }}>
+      {from.map((f, i) => {
+        const c = to[i]
+        if (f === c) return <span key={i} style={digitStyle}>{f}</span>
+        return (
+          <span key={i} style={{ ...digitStyle, overflow: 'hidden', verticalAlign: 'top' }}>
+            {/* Strip is 2em tall (two 1em digits stacked). translateY % is
+                relative to the strip's own height, so -50% moves it by
+                exactly one digit-height — `from` slides out the top as
+                `to` slides in from the bottom. -100% would overshoot. */}
+            <span style={{ display: 'block', transform: `translateY(${-t * 50}%)` }}>
+              <span style={{ ...digitStyle, display: 'block' }}>{f}</span>
+              <span style={{ ...digitStyle, display: 'block' }}>{c}</span>
+            </span>
+          </span>
+        )
+      })}
+    </span>
+  )
 }
 
 // Stable across the file: used by both the accessor closures and the data cache.
@@ -265,18 +305,24 @@ export default function App() {
     vals.sort((a, b) => a - b)
     return vals
   }, [data, metricMode])
+  // Set by the preload effect once all `animYr` years are fetched; max metric
+  // value across every loaded year (per-feature). Falls back to `modeConf.max`
+  // before the preload settles.
+  const [crossYearMax, setCrossYearMax] = useState<number | null>(null)
   const dataMax = useMemo(() => {
-    // Pin to the mode default whenever we're in an animation context (?animYr
-    // set, or `year` is fractional). Auto-fit per year would make `heightScale`
-    // jump at every integer boundary — including the integer frames between
-    // fractional ticks during a scrns recording — visibly rescaling all bars.
-    if (animYr || !Number.isInteger(year)) return modeConf.max
+    // In animation context (?animYr set, or `year` is fractional) auto-fit per
+    // year would jump `heightScale` at every integer boundary — including
+    // integer frames during a scrns recording — visibly rescaling all bars.
+    // Use the cross-year max once it's computed (covers the ward case where
+    // mode-default `max=10` is a color clamp but actual Ward E reaches $21+),
+    // falling back to the mode default while preload is still in-flight.
+    if (animYr || !Number.isInteger(year)) return crossYearMax ?? modeConf.max
     if (sortedVals.length === 0) return modeConf.max
     if (percentile != null) {
       return sortedVals[Math.floor(sortedVals.length * percentile / 100)] || modeConf.max
     }
     return sortedVals[sortedVals.length - 1] || modeConf.max
-  }, [sortedVals, modeConf.max, percentile, year, animYr])
+  }, [sortedVals, modeConf.max, percentile, year, animYr, crossYearMax])
   const percentilePrice = useMemo(() => {
     if (percentile == null || sortedVals.length === 0) return null
     return sortedVals[Math.floor(sortedVals.length * percentile / 100)]
@@ -499,11 +545,34 @@ export default function App() {
   }, [yearFloor, yearCeil, aggregateMode, fetchYear, cacheKey, data])
 
   // Preload all years when ?animYr is set, so every frame of the recording
-  // is served from cache and no spinner ever appears mid-animation.
+  // is served from cache and no spinner ever appears mid-animation. After all
+  // fetches resolve, compute the global per-feature max across every loaded
+  // year so the height scale is stable AND large enough to fit the tallest
+  // bar of any year — without this, ward mode (where `modeConf.max=10` is a
+  // color clamp but Ward E reaches ~$21/sqft in recent years) overshoots
+  // `maxHeight` by ~2x and runs off the top of the viewport.
+  // (`crossYearMax` state is declared earlier in the file so `dataMax` can read it.)
   useEffect(() => {
+    setCrossYearMax(null)
     if (!animYr) return
-    AVAILABLE_YEARS.forEach(y => { fetchYear(aggregateMode, y).catch(() => {}) })
-  }, [animYr, aggregateMode, fetchYear])
+    let cancelled = false
+    Promise.all(AVAILABLE_YEARS.map(y => fetchYear(aggregateMode, y).catch(() => null)))
+      .then(() => {
+        if (cancelled) return
+        let m = 0
+        for (const y of AVAILABLE_YEARS) {
+          const features = yearCacheRef.current.get(cacheKey(aggregateMode, y))
+          if (!features) continue
+          for (const f of features) {
+            const p = f.properties
+            const v = (metricMode === 'per_capita' ? p?.paid_per_capita : p?.paid_per_sqft) ?? 0
+            if (v > m) m = v
+          }
+        }
+        setCrossYearMax(m || null)
+      })
+    return () => { cancelled = true }
+  }, [animYr, aggregateMode, metricMode, fetchYear, cacheKey])
 
   // Expose imperative year setter for scrns `animate` actions (per-frame
   // fractional-year stepping). Avoids URL-thrash and matches the existing
@@ -511,6 +580,7 @@ export default function App() {
   useEffect(() => {
     (window as unknown as { __setYear: (v: number) => void }).__setYear = setYear
   }, [setYear])
+
 
   // Default unit mode to p99 on initial load
   useEffect(() => {
@@ -1111,30 +1181,45 @@ export default function App() {
         </div>
       )}
 
-      {/* Plot title — top-center, clear of corner-pinned settings panel and hover tooltip */}
+      {/* Plot title — top-center. In animation context (?animYr) the year
+          becomes a big odometer-style readout above the subtitle: digits that
+          differ between floor(year) and ceil(year) scroll up by `year-floor`,
+          so the fractional bit is visualized as a rolling digit. */}
       {showTitle && (() => {
         const aggLabel = ({ 'census-block': 'census block' } as Record<string, string>)[aggregateMode] ?? aggregateMode
-        const line2 = colorByYrBuilt
-          ? `Colored by year built · ${year}`
-          : `Paid per ${metricMode === 'per_capita' ? 'capita' : 'sq ft'} · ${year} · by ${aggLabel}`
-        return (
-          <div style={{
-            position: 'absolute',
-            top: 10,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            textAlign: 'center',
-            color: 'white',
-            textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 6px rgba(0,0,0,0.6)',
-            pointerEvents: 'none',
-            fontFamily: 'Inter, sans-serif',
-            zIndex: 1,
-            maxWidth: 'calc(100% - 20px)',
-          }}>
-            <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2 }}>
-              {colorByYrBuilt ? 'Jersey City Parcels' : 'Jersey City Property Taxes'}
+        const headline = colorByYrBuilt ? 'Jersey City Parcels' : 'Jersey City Property Taxes'
+        const subPrefix = colorByYrBuilt
+          ? 'Colored by year built'
+          : `Paid per ${metricMode === 'per_capita' ? 'capita' : 'sq ft'} · by ${aggLabel}`
+        const isAnim = !!animYr
+        const titleStyle = {
+          position: 'absolute' as const,
+          top: 10,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          textAlign: 'center' as const,
+          color: 'white',
+          textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 6px rgba(0,0,0,0.6)',
+          pointerEvents: 'none' as const,
+          fontFamily: 'Inter, sans-serif',
+          zIndex: 1,
+          maxWidth: 'calc(100% - 20px)',
+        }
+        if (isAnim) {
+          return (
+            <div style={titleStyle}>
+              <div style={{ fontSize: 14, fontWeight: 500, opacity: 0.85, marginBottom: 2 }}>{headline}</div>
+              <RollingYear year={year} />
+              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>{subPrefix}</div>
             </div>
-            <div style={{ fontSize: 13, opacity: 0.95, marginTop: 2 }}>{line2}</div>
+          )
+        }
+        return (
+          <div style={titleStyle}>
+            <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2 }}>{headline}</div>
+            <div style={{ fontSize: 13, opacity: 0.95, marginTop: 2 }}>
+              {colorByYrBuilt ? `Colored by year built · ${year}` : `${subPrefix} · ${year}`}
+            </div>
           </div>
         )
       })()}

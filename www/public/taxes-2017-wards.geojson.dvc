@@ -1,0 +1,8 @@
+outs:
+- md5: 11e4169950ec399ce59ae932a7503c4b
+  size: 1204949
+  hash: md5
+  path: taxes-2017-wards.geojson
+meta:
+  computation:
+    cmd: python -m jc_taxes.geojson_yearly -y 2017 -a ward -o www/public
