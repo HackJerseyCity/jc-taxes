@@ -54,6 +54,23 @@ export default {
       preScreenshotSleep: 6000,
       path: 'og-unit.png',
     },
+    'anim-frac-v8': {
+      // Deterministic per-frame capture via `?y` fractional-year interpolation.
+      // `?animYr=2018-2025` (no `:dwell`) just preloads all years' data so
+      // `window.__setYear(...)` calls hit cache → no spinner, no race with
+      // deck.gl tweens. 120 frames / 30 fps = 4s video covering 2018→2025.
+      query: `${defaultView}&agg=lot&animYr=2018-2025${noTitle}`,
+      width: 1200,
+      height: 630,
+      headless: false,
+      preScreenshotSleep: 8000, // long enough to preload 8 years of geojson cold
+      fps: 30,
+      videoCrf: 20,
+      path: 'anim-frac-v8.mp4',
+      actions: [
+        { type: 'animate', frames: 120, eval: '(i, n) => window.__setYear(2018 + (i/(n-1)) * 7)' },
+      ],
+    },
     cast: {
       query: '?v=40.7190-74.0440+12.0+52-28&agg=lot',
       width: 800,

@@ -29,7 +29,7 @@
     "react-icons": "^5.5.0",
     "react-map-gl": "^8.1.0",
     "use-kbd": "https://github.com/runsascoded/use-kbd#f5af8cbfc9bb618c6d7691466a4e072a0baff752",
-    "use-prms": "^0.4.0"
+    "use-prms": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -42,10 +42,18 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "puppeteer": "^24.42.0",
+    "puppeteer-capture": "^1.48.0",
+    "puppeteer-core": "^24.42.0",
     "scrns": "https://gitlab.com/runsascoded/js/scrns/-/archive/49acda35b490ee7047e79ccdcb5852df8532d3b5/scrns-49acda35b490ee7047e79ccdcb5852df8532d3b5.tar.gz",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
     "vite-plugin-dvc": "github:runsascoded/vite-plugin-dvc#57d8f5f71582d4fa42914a569541d82473e8e208"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "puppeteer"
+    ]
   }
 }

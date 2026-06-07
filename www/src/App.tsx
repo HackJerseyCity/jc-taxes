@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Map } from 'react-map-gl/maplibre'
+import { Map as MaplibreMap } from 'react-map-gl/maplibre'
 import DeckGL from '@deck.gl/react'
 import { WebMercatorViewport, FlyToInterpolator, LinearInterpolator } from '@deck.gl/core'
 import { GeoJsonLayer } from '@deck.gl/layers'
-import { useUrlState, intParam, stringParam } from 'use-prms'
-import type { Param } from 'use-prms'
+import { useUrlState, intParam, stringParam, viewStateParam } from 'use-prms'
 import { useHotkeysContext, SpeedDial } from 'use-kbd'
 import { FaGithub } from 'react-icons/fa'
 import { SiBluesky } from 'react-icons/si'
@@ -56,41 +55,35 @@ function getDefaultView(width: number): ViewState {
 
 const DEFAULT_VIEW = getDefaultView(window.innerWidth)
 
-function encodeView(v: ViewState): string {
-  const parts = [
-    v.latitude.toFixed(4),
-    v.longitude.toFixed(4),
-    v.zoom.toFixed(1),
-    String(Math.round(v.pitch)),
-    String(Math.round(v.bearing)),
-  ]
-  let result = parts[0]
-  for (let i = 1; i < parts.length; i++) {
-    if (!parts[i].startsWith('-')) result += ' '
-    result += parts[i]
-  }
-  return result
-}
-
-const viewParam: Param<ViewState> = {
-  encode: encodeView,
-  decode: (s: string | undefined) => {
-    if (!s) return DEFAULT_VIEW
-    const matches = s.match(/-?\d+\.?\d*/g)
-    if (!matches || matches.length < 5) return DEFAULT_VIEW
-    const nums = matches.map(Number)
-    if (nums.some(isNaN)) return DEFAULT_VIEW
-    return {
-      latitude: nums[0],
-      longitude: nums[1],
-      zoom: nums[2],
-      pitch: nums[3],
-      bearing: nums[4],
-    }
-  },
-}
+const viewParam = viewStateParam({
+  default: DEFAULT_VIEW,
+  signedDelim: true,
+  zoomDecimals: 1,
+})
 
 const AVAILABLE_YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+const YEAR_MIN = AVAILABLE_YEARS[0]
+const YEAR_MAX = AVAILABLE_YEARS[AVAILABLE_YEARS.length - 1]
+
+// Float-aware ?y param: accepts integer years for normal use and fractional
+// values (e.g. ?y=2020.5) for deterministic mid-animation states. Adjacent
+// integer years' data is interpolated per-feature in getElevation/getFillColor.
+const yearParam = {
+  decode: (s: string | undefined) => {
+    if (s == null) return YEAR_MAX
+    const n = parseFloat(s)
+    return isNaN(n) ? YEAR_MAX : n
+  },
+  encode: (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(3).replace(/\.?0+$/, ''),
+}
+
+// Stable across the file: used by both the accessor closures and the data cache.
+function featureIdOf(f: ParcelFeature): string {
+  const p = f.properties
+  if (p?.geoid) return p.geoid
+  if (p?.ward && !p?.block) return `ward-${p.ward}`
+  return `${p?.block || ''}-${p?.lot || ''}-${p?.qual || ''}`.replace(/-+$/, '')
+}
 const AGGREGATE_MODES = ['block', 'lot', 'unit', 'census-block', 'ward'] as const
 type AggregateMode = typeof AGGREGATE_MODES[number]
 const SUFFIX_MAP: Record<string, string> = {
@@ -194,7 +187,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(() => settingsOpenUrl && window.innerWidth > 768)
 
   // URL-persisted state (mh is optional; absent = use mode default)
-  const [year, setYear] = useUrlState('y', intParam(2025))
+  const [year, setYear] = useUrlState('y', yearParam)
   const [maxHeightRaw, setMaxHeightRaw] = useUrlState('mh', optNumParam)
   const [aggregateMode, setAggregateModeRaw] = useUrlState('agg', stringParam('block'))
   const [colorScaleRaw, setColorScaleRaw] = useUrlState('scale', optScaleParam)
@@ -209,6 +202,47 @@ export default function App() {
   const posBottom = settingsPos.startsWith('b')
   const [titleMode] = useUrlState('ti', stringParam(''))
   const showTitle = titleMode !== '0' && titleMode !== 'off'
+  // Animation: ?animYr=2018-2025[:secsPerYear] cycles year forward, dwelling at each.
+  // Year is parked at `from` on mount; ticking begins on `scrns:capture-start`
+  // (for recordings, so frame 0 = `from` with no fresh-fetch spinner) or after
+  // a short browser-session delay otherwise.
+  // ?animYr=FROM-TO[:secsPerYear]
+  //   - With `:dwell`: browser auto-plays after a 6s settle (preSleep-safe);
+  //     `scrns:capture-start` event preempts the timer for real-time recordings.
+  //   - Without `:dwell`: just parks year at FROM and triggers the preload
+  //     effect (so scrns `animate` actions can step `window.__setYear`
+  //     per-frame against a fully-warm cache).
+  const [animYr] = useUrlState('animYr', stringParam(''))
+  useEffect(() => {
+    if (!animYr) return
+    const m = animYr.match(/^(\d{4})-(\d{4})(?::(\d+(?:\.\d+)?))?$/)
+    if (!m) return
+    const [, fromS, toS, dwellS] = m
+    const from = Number(fromS), to = Number(toS)
+    setYear(from)
+    if (dwellS == null) return  // preload-only mode (scrns animate uses this)
+    const dwell = Number(dwellS) * 1000
+    let id: ReturnType<typeof setInterval> | undefined
+    let started = false
+    const start = () => {
+      if (started) return
+      started = true
+      let yr = from
+      id = setInterval(() => {
+        yr = yr + 1
+        if (yr > to) { clearInterval(id); id = undefined; return }
+        setYear(yr)
+      }, dwell)
+    }
+    const autoStartId = setTimeout(start, 6000)
+    const onCaptureStart = () => { clearTimeout(autoStartId); start() }
+    document.addEventListener('scrns:capture-start', onCaptureStart)
+    return () => {
+      clearTimeout(autoStartId)
+      document.removeEventListener('scrns:capture-start', onCaptureStart)
+      if (id) clearInterval(id)
+    }
+  }, [animYr]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasPopulation = aggregateMode === 'census-block' || aggregateMode === 'ward'
   const modeKey = getModeKey(aggregateMode, metricMode)
@@ -232,12 +266,17 @@ export default function App() {
     return vals
   }, [data, metricMode])
   const dataMax = useMemo(() => {
+    // Pin to the mode default whenever we're in an animation context (?animYr
+    // set, or `year` is fractional). Auto-fit per year would make `heightScale`
+    // jump at every integer boundary — including the integer frames between
+    // fractional ticks during a scrns recording — visibly rescaling all bars.
+    if (animYr || !Number.isInteger(year)) return modeConf.max
     if (sortedVals.length === 0) return modeConf.max
     if (percentile != null) {
       return sortedVals[Math.floor(sortedVals.length * percentile / 100)] || modeConf.max
     }
     return sortedVals[sortedVals.length - 1] || modeConf.max
-  }, [sortedVals, modeConf.max, percentile])
+  }, [sortedVals, modeConf.max, percentile, year, animYr])
   const percentilePrice = useMemo(() => {
     if (percentile == null || sortedVals.length === 0) return null
     return sortedVals[Math.floor(sortedVals.length * percentile / 100)]
@@ -329,7 +368,8 @@ export default function App() {
   }, [switchToMode, aggregateMode])
 
   // URL is source of truth for initial load; local state for smooth rendering
-  const [urlView, setUrlView] = useUrlState('v', viewParam)
+  const [urlView_, setUrlView] = useUrlState('v', viewParam)
+  const urlView = urlView_ ?? DEFAULT_VIEW
   const [viewState, setViewState] = useState<ViewState>(urlView)
   // Expose setViewState for external tools (e.g. scrns screencast automation)
   useEffect(() => {
@@ -393,20 +433,84 @@ export default function App() {
   }, [])
   useParcelSearch({ data, onSelect: onParcelSelect })
 
+  // Per-(agg, year) feature cache + id maps. Populated lazily on year/agg
+  // changes; preloaded eagerly when ?animYr is set (so frame-by-frame
+  // scrns recordings never re-fetch mid-animation and never flash a spinner).
+  const yearCacheRef = useRef<Map<string, ParcelFeature[]>>(new Map())
+  const yearIdMapsRef = useRef<Map<string, Map<string, ParcelFeature>>>(new Map())
+  const cacheKey = useCallback((agg: string, yr: number) => `${agg}|${yr}`, [])
+  const fetchYear = useCallback(async (agg: string, yr: number): Promise<ParcelFeature[]> => {
+    const key = cacheKey(agg, yr)
+    const cached = yearCacheRef.current.get(key)
+    if (cached) return cached
+    const suffix = SUFFIX_MAP[agg] ?? '-lots'
+    const geojson = await fetch(dvcResolve(`taxes-${yr}${suffix}.geojson`)).then(r => r.json())
+    const features: ParcelFeature[] = geojson.features
+    yearCacheRef.current.set(key, features)
+    const idMap = new Map<string, ParcelFeature>()
+    features.forEach(f => idMap.set(featureIdOf(f), f))
+    yearIdMapsRef.current.set(key, idMap)
+    return features
+  }, [cacheKey])
+
+  // Track whether the in-flight fetch is a year-only change (smooth transition,
+  // keep showing stale bars) vs. an aggregation change (gray out — geometry differs).
+  const prevAggRef = useRef(aggregateMode)
+  const yearOnlyChangeRef = useRef(false)
+  // Only re-run on integer boundary crossings (or agg switch), not on every
+  // sub-year tick. The interpolation accessor reads ceil-year features straight
+  // from `yearIdMapsRef`, so a sub-year change needs no data/state update —
+  // forcing one would re-run this effect ~30x/sec during recordings and trip
+  // deck.gl's WebGL context init race on some browsers.
+  const yearFloor = Math.floor(year)
+  const yearCeil = Math.ceil(year)
   useEffect(() => {
+    const aggChanged = prevAggRef.current !== aggregateMode
+    yearOnlyChangeRef.current = !aggChanged
+    prevAggRef.current = aggregateMode
+    const needed = yearFloor === yearCeil ? [yearFloor] : [yearFloor, yearCeil]
+    const ensureLoaded = () => Promise.all(needed.map(y => fetchYear(aggregateMode, y)))
+    // Fractional mode (recording / animation): if we already have `data` for
+    // this agg, keep it as-is — the interpolation accessor reads adjacent
+    // years from the cache by id, so swapping `data` at integer boundaries
+    // would only introduce a one-frame flicker before the new data settles.
+    if (yearFloor !== yearCeil && data && !aggChanged) {
+      ensureLoaded().catch(() => {})
+      return
+    }
+    const allCached = needed.every(y => yearCacheRef.current.has(cacheKey(aggregateMode, y)))
+    if (allCached) {
+      setData(yearCacheRef.current.get(cacheKey(aggregateMode, yearFloor)) ?? null)
+      yearOnlyChangeRef.current = false
+      return
+    }
     setLoading(true)
-    const suffix = SUFFIX_MAP[aggregateMode] ?? '-lots'
-    fetch(dvcResolve(`taxes-${year}${suffix}.geojson`))
-      .then((r) => r.json())
-      .then((geojson) => {
-        setData(geojson.features)
+    ensureLoaded()
+      .then(() => {
+        setData(yearCacheRef.current.get(cacheKey(aggregateMode, yearFloor)) ?? null)
         setLoading(false)
+        yearOnlyChangeRef.current = false
       })
       .catch((e) => {
         console.error('Failed to load parcels:', e)
         setLoading(false)
+        yearOnlyChangeRef.current = false
       })
-  }, [year, aggregateMode])
+  }, [yearFloor, yearCeil, aggregateMode, fetchYear, cacheKey, data])
+
+  // Preload all years when ?animYr is set, so every frame of the recording
+  // is served from cache and no spinner ever appears mid-animation.
+  useEffect(() => {
+    if (!animYr) return
+    AVAILABLE_YEARS.forEach(y => { fetchYear(aggregateMode, y).catch(() => {}) })
+  }, [animYr, aggregateMode, fetchYear])
+
+  // Expose imperative year setter for scrns `animate` actions (per-frame
+  // fractional-year stepping). Avoids URL-thrash and matches the existing
+  // `window.__setViewState` pattern used by `cast.gif`.
+  useEffect(() => {
+    (window as unknown as { __setYear: (v: number) => void }).__setYear = setYear
+  }, [setYear])
 
   // Default unit mode to p99 on initial load
   useEffect(() => {
@@ -662,13 +766,35 @@ export default function App() {
     ? [100, 100, 100, 100]
     : [60, 60, 60, 160]
 
-  const getMetricValue = useCallback((f: ParcelFeature): number => {
+  const metricOf = useCallback((f: ParcelFeature): number => {
     const p = f.properties
     if (metricMode === 'per_capita') return p?.paid_per_capita ?? 0
     return p?.paid_per_sqft ?? 0
   }, [metricMode])
 
-  const staleData = loading && data
+  // Per-feature metric at the (possibly fractional) `year`. For integer years
+  // this is just the feature's stored value. For fractional years we look up
+  // BOTH the floor and ceil years' values for this feature ID via the cache —
+  // never reading the metric off `f.properties` directly. This decouples the
+  // interpolation from whatever year `data` happens to be, so a year-boundary
+  // setData swap can't briefly snap bars to the prior floor's values.
+  const isFractionalYear = !Number.isInteger(year)
+  const getMetricValue = useCallback((f: ParcelFeature): number => {
+    if (!isFractionalYear) return metricOf(f)
+    const yFloor = Math.floor(year), yCeil = Math.ceil(year)
+    const t = year - yFloor
+    const id = featureIdOf(f)
+    const floorMap = yearIdMapsRef.current.get(cacheKey(aggregateMode, yFloor))
+    const ceilMap = yearIdMapsRef.current.get(cacheKey(aggregateMode, yCeil))
+    const v0 = floorMap?.get(id) ? metricOf(floorMap.get(id)!) : 0
+    const v1 = ceilMap?.get(id) ? metricOf(ceilMap.get(id)!) : 0
+    return v0 + (v1 - v0) * t
+  }, [metricOf, isFractionalYear, year, aggregateMode, cacheKey])
+
+
+  // Gray-out only when geometry actually changes (agg switch). Year-only changes
+  // keep the prior bars visible and let deck.gl transitions tween to the new year.
+  const staleData = loading && data && !yearOnlyChangeRef.current
   const getFillColor = useCallback((f: ParcelFeature): [number, number, number, number] => {
     if (staleData) return LOADING_COLOR
     const id = getFeatureId(f)
@@ -694,6 +820,11 @@ export default function App() {
         const h = getMetricValue(f) * stableHeightScaleRef.current
         return percentile != null ? Math.min(h, maxHeight) : h
       } : 0,
+      // No deck.gl tweens — both browser-time year flips and scrns fractional
+      // sweeps rely on per-feature interpolation in getMetricValue (instant).
+      // Toggling transitions shape per render triggered a luma.gl WebGL init
+      // race that blanked the canvas on subsequent frames.
+      transitions: undefined,
       getLineColor: lineColor,
       lineWidthMinPixels: 1,
       pickable: true,
@@ -765,7 +896,9 @@ export default function App() {
           <label>
             Tax Year:{' '}
             <select
-              value={year}
+              // Snap to nearest integer for the option-list match so the dropdown
+              // tracks fractional-year animations instead of falling back to 2018.
+              value={Math.round(year)}
               onChange={(e) => setYear(Number(e.target.value))}
               style={inputStyle}
             >
@@ -966,7 +1099,7 @@ export default function App() {
         layers={layers}
         deviceProps={{ type: 'webgl' }}
       >
-        <Map
+        <MaplibreMap
           mapStyle={mapStyle}
           maxPitch={85}
           attributionControl={false}

@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import dvc from 'vite-plugin-dvc'
 
-const allowedHosts = process.env.VITE_ALLOWED_HOSTS?.split(',') ?? []
+const allowedHosts = ['host.docker.internal', ...(process.env.VITE_ALLOWED_HOSTS?.split(',') ?? [])]
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -16,5 +16,8 @@ export default defineConfig({
 
   preview: {
     port: 3201,
+  },
+  optimizeDeps: {
+    exclude: ['use-prms'],
   },
 })
