@@ -1,4 +1,8 @@
 [core]
-    remote = s3
+    remote = r2
 ['remote "s3"']
     url = s3://jc-taxes/.dvc/cache
+['remote "r2"']
+    url = s3://jc-taxes/.dvc/cache
+    endpointurl = https://0dcad5654e9744de6616f74b8df4af63.r2.cloudflarestorage.com
+    profile = cf

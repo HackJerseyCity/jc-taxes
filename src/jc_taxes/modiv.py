@@ -132,6 +132,118 @@ def fetch_block(
     return out, True
 
 
+# --- Fixed-width MOD-IV record layout (NJ Treasury `modivlayout.pdf`) --------
+#
+# Records are 700 chars, CRLF-terminated. Positions below are 1-based,
+# inclusive, matching the PDF's START/END columns. `kind` controls decoding:
+#   str  — text; both-side stripped
+#   int  — unsigned integer (`9(9)`/`X` numeric), whole dollars; left-justified
+#          + right-space-padded in practice. blank → None
+#   tax  — `S9(7)V99` signed money. Two encodings appear in the wild: zoned
+#          (right-justified, overpunch sign on the last byte, e.g. `00000000{`)
+#          and plain left-justified ASCII (e.g. `9300450  ` with trailing
+#          spaces). `_decode_tax` handles both, returns dollars (÷100).
+#   acre — `9(5)V9(4)` 9 digits, 4 implied decimals → acres (÷10000)
+MODIV_FIELDS: list[tuple[str, int, int, str]] = [
+    ("county_district",      1,   4,   "str"),
+    ("block",                5,   13,  "str"),
+    ("lot",                  14,  22,  "str"),
+    ("qualifier",            23,  33,  "str"),
+    ("record_id",            34,  35,  "str"),
+    ("property_class",       56,  58,  "str"),
+    ("property_location",    59,  83,  "str"),
+    ("building_description", 84,  98,  "str"),
+    ("land_description",     99,  118, "str"),
+    ("calculated_acreage",   119, 127, "acre"),
+    ("addition_lots1",       128, 147, "str"),
+    ("addition_lots2",       148, 167, "str"),
+    ("street_address",       211, 235, "str"),
+    ("city_state",           236, 260, "str"),
+    ("zip_code",             261, 269, "str"),
+    ("year_constructed",     416, 419, "str"),
+    ("land_value",           421, 429, "int"),
+    ("improvement_value",    430, 438, "int"),
+    ("net_value",            439, 447, "int"),
+    ("old_property_id",      522, 550, "str"),
+    ("census_tract",         551, 555, "str"),
+    ("census_block",         556, 559, "str"),
+    ("property_use_code",    560, 562, "str"),
+    ("last_year_tax",        601, 609, "tax"),
+    ("current_year_tax",     610, 618, "tax"),
+]
+
+# Zoned-decimal overpunch: last byte's zone nibble carries the sign.
+_OVERPUNCH = {
+    "{": ("0", False), "A": ("1", False), "B": ("2", False), "C": ("3", False),
+    "D": ("4", False), "E": ("5", False), "F": ("6", False), "G": ("7", False),
+    "H": ("8", False), "I": ("9", False),
+    "}": ("0", True), "J": ("1", True), "K": ("2", True), "L": ("3", True),
+    "M": ("4", True), "N": ("5", True), "O": ("6", True), "P": ("7", True),
+    "Q": ("8", True), "R": ("9", True),
+}
+
+
+def _decode_tax(raw: str) -> float | None:
+    """Decode an `S9(7)V99` money field to dollars. Handles zoned (overpunch
+    sign on last byte) and plain left-justified ASCII. blank → None."""
+    raw = raw.strip()
+    if not raw:
+        return None
+    last = raw[-1]
+    neg = False
+    if last in _OVERPUNCH:
+        digit, neg = _OVERPUNCH[last]
+        digits = raw[:-1] + digit
+    else:
+        digits = raw
+    if not digits.isdigit():
+        return None
+    val = int(digits) / 100.0
+    return -val if neg else val
+
+
+def _decode_int(raw: str) -> int | None:
+    raw = raw.strip()
+    if not raw:
+        return None
+    return int(raw) if raw.isdigit() else None
+
+
+def _decode_acre(raw: str) -> float | None:
+    raw = raw.strip()
+    if not raw:
+        return None
+    return int(raw) / 10000.0 if raw.isdigit() else None
+
+
+def norm_blq(block: str, lot: str, qualifier: str) -> str:
+    """Normalize a Block-Lot-Qualifier key for joining MOD-IV (zero-padded,
+    e.g. `02404`/`00022`) against HLS (unpadded, e.g. `2404`/`22`). Strips
+    surrounding whitespace and leading zeros on block/lot."""
+    b = str(block).strip().lstrip("0") or "0"
+    l = str(lot).strip().lstrip("0") or "0"
+    q = str(qualifier).strip()
+    return f"{b}-{l}-{q}"
+
+
+def parse_record(line: str) -> dict:
+    """Slice one 700-char MOD-IV record into a field dict."""
+    line = line.rstrip("\r\n").ljust(700)
+    rec: dict = {}
+    for name, start, end, kind in MODIV_FIELDS:
+        raw = line[start - 1:end]
+        if kind == "str":
+            rec[name] = raw.strip()
+        elif kind == "int":
+            rec[name] = _decode_int(raw)
+        elif kind == "tax":
+            rec[name] = _decode_tax(raw)
+        elif kind == "acre":
+            rec[name] = _decode_acre(raw)
+    rec["blq"] = f"{rec['block'].strip()}-{rec['lot'].strip()}-{rec['qualifier'].strip()}"
+    return rec
+
+
 @click.group()
 def modiv():
     """Rutgers MOD-IV (modiv.rutgers.edu) bulk-pull commands."""
@@ -217,6 +329,167 @@ def cmd_pull_treasury(years: tuple[int, ...], force: bool, layout: bool, extract
             args = ["unzip", "-j", "-o" if force else "-n", str(zip_path), m, "-d", str(year_dir)]
             subprocess.run(args, check=True, capture_output=True)
             err(f"[modiv]   extracted {m} → {target.relative_to(DATA.parent)} ({target.stat().st_size / 1e6:.1f}MB)")
+
+
+@modiv.command("parse")
+@click.option("-m", "--mun", default="0906", show_default=True,
+              help='County-district (MUN) code to keep, e.g. "0906" for Jersey '
+                   'City. Pass "" to keep all of Hudson county.')
+@click.option("-o", "--out-dir", default=None,
+              help="Output dir for {year}.parquet (default: data/modiv/treasury/)")
+def cmd_parse(mun: str, out_dir: str):
+    """Parse extracted MOD-IV `Hudson*re.txt` fixed-width files → parquet.
+
+    Walks `data/modiv/treasury/*/Hudson*re.txt`, decodes each record per the
+    `modivlayout.pdf` field offsets, filters to `--mun`, and writes one
+    `{year}.parquet` per source year. The source year is the parent dir name.
+    """
+    import pandas as pd
+    out_root = Path(out_dir) if out_dir else TREASURY_ROOT
+    out_root.mkdir(parents=True, exist_ok=True)
+    txts = sorted(
+        p for p in TREASURY_ROOT.glob("*/*")
+        if p.is_file() and p.name.lower().startswith("hudson")
+        and p.name.lower().endswith("re.txt")
+    )
+    if not txts:
+        err(f"[modiv] no Hudson*re.txt under {TREASURY_ROOT}/*/ — run pull-treasury first")
+        sys.exit(1)
+    for txt in txts:
+        year = txt.parent.name
+        records = []
+        kept = 0
+        total = 0
+        with txt.open(encoding="latin-1") as fh:
+            for line in fh:
+                if not line.rstrip("\r\n"):
+                    continue
+                total += 1
+                if mun and not line.startswith(mun):
+                    continue
+                rec = parse_record(line)
+                rec["year"] = int(year)
+                records.append(rec)
+                kept += 1
+        df = pd.DataFrame(records)
+        out = out_root / f"{year}.parquet"
+        df.to_parquet(out, index=False)
+        err(f"[modiv] {txt.name}: {kept:,}/{total:,} records (MUN={mun or 'all'}) "
+            f"→ {out.relative_to(DATA.parent)} ({out.stat().st_size / 1e6:.1f}MB)")
+
+
+@modiv.command("crossval")
+@click.option("-H", "--hls", "hls_path", default=None,
+              help="HLS payments parquet (default: data/payments.parquet)")
+@click.option("-o", "--out-dir", default="tmp", show_default=True,
+              help="Dir for per-year modiv-vs-hls-{tax_year}.parquet")
+@click.option("-t", "--treasury-dir", default=None,
+              help="Dir of {year}.parquet (default: data/modiv/treasury/)")
+def cmd_crossval(hls_path: str, out_dir: str, treasury_dir: str):
+    """Cross-validate Treasury tax vs HLS Billed/Paid, per (BLQ, tax-year).
+
+    The Treasury assessment file published in year Y carries the *prior*
+    year's finalized tax in `last_year_tax` (current_year_tax is still 0/TBD
+    when the file ships), so file-year Y maps to tax-year Y-1. Verified
+    empirically: file-year Y `last_year_tax` matches HLS `Billed[Y-1]` ~80-85%
+    exact, and HLS `Billed[Y]` ~0%.
+    """
+    import pandas as pd
+    troot = Path(treasury_dir) if treasury_dir else TREASURY_ROOT
+    hls_p = Path(hls_path) if hls_path else DATA / "payments.parquet"
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    hls = pd.read_parquet(hls_p)
+    hls["key"] = [norm_blq(b, l, q) for b, l, q in zip(hls.Block, hls.Lot, hls.Qualifier)]
+    err(f"[crossval] HLS: {len(hls):,} rows, years {hls.Year.min()}-{hls.Year.max()}")
+    err(f"{'tax_yr':>6} {'common':>7} {'exact':>7} {'<$1':>6} {'<$10':>6} "
+        f">{'$10':>5} {'t_only':>7} {'h_only':>7}")
+    for tpath in sorted(troot.glob("[0-9][0-9][0-9][0-9].parquet")):
+        fy = int(tpath.stem)
+        tax_year = fy - 1
+        t = pd.read_parquet(tpath)
+        t = t[t.last_year_tax.notna()].copy()
+        t["key"] = [norm_blq(b, l, q) for b, l, q in zip(t.block, t.lot, t.qualifier)]
+        t = t.drop_duplicates("key")[["key", "blq", "last_year_tax"]]
+        h = hls[hls.Year == tax_year].drop_duplicates("key")[["key", "Billed", "Paid"]]
+        m = t.merge(h, on="key", how="outer", indicator=True)
+        m["tax_year"] = tax_year
+        m = m.rename(columns={"last_year_tax": "treasury_tax", "Billed": "hls_billed", "Paid": "hls_paid"})
+        both = m["_merge"] == "both"
+        diff = (m["treasury_tax"] - m["hls_billed"]).abs()
+        m["diff_billed"] = diff
+        # Categorize
+        m["status"] = "missing"
+        m.loc[m["_merge"] == "left_only", "status"] = "treasury_only"
+        m.loc[m["_merge"] == "right_only", "status"] = "hls_only"
+        m.loc[both & (diff < 0.005), "status"] = "exact"
+        m.loc[both & (diff >= 0.005) & (diff < 1), "status"] = "under_1"
+        m.loc[both & (diff >= 1) & (diff < 10), "status"] = "under_10"
+        m.loc[both & (diff >= 10), "status"] = "over_10"
+        m = m.drop(columns="_merge")
+        dest = out / f"modiv-vs-hls-{tax_year}.parquet"
+        m.to_parquet(dest, index=False)
+        nb = both.sum()
+        c = m["status"].value_counts()
+        pct = lambda k: f"{100 * c.get(k, 0) / nb:.1f}%" if nb else "n/a"
+        err(f"{tax_year:>6} {nb:>7,} {pct('exact'):>7} {pct('under_1'):>6} "
+            f"{pct('under_10'):>6} {pct('over_10'):>6} "
+            f"{c.get('treasury_only', 0):>7,} {c.get('hls_only', 0):>7,}")
+    err(f"[crossval] wrote per-year comparisons → {out}/modiv-vs-hls-*.parquet")
+
+
+def split_old_property_id(raw: str) -> tuple[str, str, str]:
+    """`OLD-PROPERTY-ID` X(29) mirrors the PROPERTY-ID group: BLOCK X(9) +
+    LOT X(9) + QUALIFIER X(11). Returns (block, lot, qualifier), each stripped."""
+    raw = raw.ljust(29)
+    return raw[0:9].strip(), raw[9:18].strip(), raw[18:29].strip()
+
+
+@modiv.command("blq-history")
+@click.option("-n", "--sample", default=20, show_default=True, help="Sample N (current, old) pairs to stderr")
+@click.option("-o", "--out", default=None, help="Output parquet (default: data/modiv/blq_history.parquet)")
+@click.option("-t", "--treasury-dir", default=None, help="Dir of {year}.parquet (default: data/modiv/treasury/)")
+def cmd_blq_history(sample: int, out: str, treasury_dir: str):
+    """Build a cross-year BLQ-renumbering map from `old_property_id`.
+
+    For each Treasury year, decodes `old_property_id` (the prior BLQ for
+    renumbered lots) and writes the union of (year, current_blq, old_blq)
+    tuples — the canonical answer to "what was this lot called before?".
+    """
+    import pandas as pd
+    troot = Path(treasury_dir) if treasury_dir else TREASURY_ROOT
+    dest = Path(out) if out else MODIV_ROOT / "blq_history.parquet"
+    rows = []
+    err(f"{'year':>4} {'records':>8} {'old_id_nonempty':>15} {'rate':>6} {'renumbered':>10}")
+    for tpath in sorted(troot.glob("[0-9][0-9][0-9][0-9].parquet")):
+        year = int(tpath.stem)
+        t = pd.read_parquet(tpath)
+        opid = t.old_property_id.fillna("").str.strip()
+        nonempty = opid.str.len() > 0
+        n_renum = 0
+        for _, r in t[nonempty].iterrows():
+            ob, ol, oq = split_old_property_id(r.old_property_id)
+            old_blq = norm_blq(ob, ol, oq)
+            cur_blq = norm_blq(r.block, r.lot, r.qualifier)
+            renumbered = old_blq != cur_blq
+            if renumbered:
+                n_renum += 1
+            rows.append({
+                "year": year, "current_blq": cur_blq, "old_blq": old_blq,
+                "renumbered": renumbered, "old_property_id": r.old_property_id.strip(),
+            })
+        rate = 100 * nonempty.mean()
+        err(f"{year:>4} {len(t):>8,} {int(nonempty.sum()):>15,} {rate:>5.1f}% {n_renum:>10,}")
+    df = pd.DataFrame(rows)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(dest, index=False)
+    err(f"[blq-history] {len(df):,} (year,current,old) tuples → {dest.relative_to(DATA.parent)}")
+    renum = df[df.renumbered].drop_duplicates(["current_blq", "old_blq"])
+    err(f"[blq-history] {len(renum):,} distinct renumbering pairs (current != old)")
+    if sample:
+        err(f"[blq-history] sample of {sample} renumbered (current_blq <- old_blq):")
+        for _, r in renum.head(sample).iterrows():
+            err(f"    {r.current_blq:24} <- {r.old_blq}")
 
 
 @modiv.command("pull-polygons")
