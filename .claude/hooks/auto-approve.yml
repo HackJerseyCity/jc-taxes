@@ -1,0 +1,2 @@
+- allow:
+    www/scripts/regen-anim.sh: ['', anim-frac-*]
