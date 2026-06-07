@@ -29,7 +29,7 @@
     "react-icons": "^5.5.0",
     "react-map-gl": "^8.1.0",
     "use-kbd": "https://github.com/runsascoded/use-kbd#f5af8cbfc9bb618c6d7691466a4e072a0baff752",
-    "use-prms": "workspace:*"
+    "use-prms": "https://github.com/runsascoded/use-prms#da21b49c98e1ad372f88c4dee07eca483d17f1c8"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

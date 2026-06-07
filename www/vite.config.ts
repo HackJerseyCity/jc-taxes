@@ -16,8 +16,5 @@ export default defineConfig({
 
   preview: {
     port: 3201,
-  },
-  optimizeDeps: {
-    exclude: ['use-prms'],
-  },
+  }
 })

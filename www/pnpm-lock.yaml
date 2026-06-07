@@ -51,8 +51,8 @@ importers:
         specifier: https://github.com/runsascoded/use-kbd#f5af8cbfc9bb618c6d7691466a4e072a0baff752
         version: https://codeload.github.com/runsascoded/use-kbd/tar.gz/f5af8cbfc9bb618c6d7691466a4e072a0baff752(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       use-prms:
-        specifier: workspace:*
-        version: link:../../js/use-prms
+        specifier: https://github.com/runsascoded/use-prms#da21b49c98e1ad372f88c4dee07eca483d17f1c8
+        version: https://codeload.github.com/runsascoded/use-prms/tar.gz/da21b49c98e1ad372f88c4dee07eca483d17f1c8(react@19.2.4)
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.1
@@ -3181,6 +3181,12 @@ packages:
     peerDependencies:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
+
+  use-prms@https://codeload.github.com/runsascoded/use-prms/tar.gz/da21b49c98e1ad372f88c4dee07eca483d17f1c8:
+    resolution: {tarball: https://codeload.github.com/runsascoded/use-prms/tar.gz/da21b49c98e1ad372f88c4dee07eca483d17f1c8}
+    version: 0.4.1-dist.678d4b4
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
@@ -6815,6 +6821,10 @@ snapshots:
       react-dom: 19.2.4(react@19.2.4)
     transitivePeerDependencies:
       - supports-color
+
+  use-prms@https://codeload.github.com/runsascoded/use-prms/tar.gz/da21b49c98e1ad372f88c4dee07eca483d17f1c8(react@19.2.4):
+    dependencies:
+      react: 19.2.4
 
   util-deprecate@1.0.2: {}
 
