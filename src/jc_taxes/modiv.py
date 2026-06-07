@@ -170,9 +170,11 @@ def _stream_download(url: str, out: Path, *, force: bool = False, timeout: float
 @click.option("-f", "--force", is_flag=True, help="Re-download even if cached")
 @click.option("-L", "--layout/--no-layout", default=True, show_default=True,
               help="Also fetch the modivlayout.pdf field reference")
-@click.option("-x", "--extract", default="HudsonRE.txt",
-              help="Comma-separated list of zip-member globs to extract alongside "
-                   "the zip (so we don't reread 270MB per query). "
+@click.option("-x", "--extract", default="hudson*re.txt",
+              help="Comma-separated case-insensitive globs matched against each "
+                   "zip member's basename. Default catches Hudson county across "
+                   "all the naming conventions used in 2021-2025 (`HudsonRE.txt`, "
+                   "`Hudson23re.txt`, `Hudson 24re.txt`, …). "
                    'Pass "" to skip extraction, "*" for everything.')
 def cmd_pull_treasury(years: tuple[int, ...], force: bool, layout: bool, extract: str):
     """Download annual NJ Treasury MOD-IV releases (modiv-YYYY.zip).
@@ -181,7 +183,7 @@ def cmd_pull_treasury(years: tuple[int, ...], force: bool, layout: bool, extract
     extracts a subset of members (default: just `HudsonRE.txt`, the slice
     we actually use). Each zip is ~270MB statewide.
     """
-    import zipfile, fnmatch
+    import fnmatch, subprocess, zipfile
     if not years:
         years = (2021, 2022, 2023, 2024, 2025)
     TREASURY_ROOT.mkdir(parents=True, exist_ok=True)
@@ -196,18 +198,25 @@ def cmd_pull_treasury(years: tuple[int, ...], force: bool, layout: bool, extract
             continue
         with zipfile.ZipFile(zip_path) as z:
             names = z.namelist()
-            members = [n for n in names if any(fnmatch.fnmatch(n, p) for p in patterns)]
-            if not members:
-                err(f"[modiv]   no zip members matched {patterns} (have: {names[:5]}...)")
+        lo_patterns = [p.lower() for p in patterns]
+        members = [n for n in names if not n.endswith("/") and any(
+            fnmatch.fnmatch(Path(n).name.lower(), p) for p in lo_patterns
+        )]
+        if not members:
+            err(f"[modiv]   no zip members matched {patterns} (have: {names[:5]}...)")
+            continue
+        year_dir = TREASURY_ROOT / str(y)
+        year_dir.mkdir(parents=True, exist_ok=True)
+        # Shell out to `unzip` — Python's stdlib zipfile chokes on the
+        # DEFLATE64-like compression Treasury uses for some years (2024).
+        # `-j` flattens directory structure, `-o` overwrites if `--force`.
+        for m in members:
+            target = year_dir / Path(m).name
+            if target.exists() and not force:
                 continue
-            year_dir = TREASURY_ROOT / str(y)
-            year_dir.mkdir(parents=True, exist_ok=True)
-            for m in members:
-                target = year_dir / Path(m).name
-                if target.exists() and not force:
-                    continue
-                target.write_bytes(z.read(m))
-                err(f"[modiv]   extracted {m} → {target.relative_to(DATA.parent)} ({target.stat().st_size / 1e6:.1f}MB)")
+            args = ["unzip", "-j", "-o" if force else "-n", str(zip_path), m, "-d", str(year_dir)]
+            subprocess.run(args, check=True, capture_output=True)
+            err(f"[modiv]   extracted {m} → {target.relative_to(DATA.parent)} ({target.stat().st_size / 1e6:.1f}MB)")
 
 
 @modiv.command("pull-polygons")
