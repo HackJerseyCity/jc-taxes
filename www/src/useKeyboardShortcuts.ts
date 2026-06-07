@@ -180,21 +180,21 @@ export function useKeyboardShortcuts({
   })
 
   useAction('view:agg-a', {
-    label: 'Block / Lot / Unit view a',
+    label: 'Block view',
     group: 'Navigation',
     defaultBindings: ['b'],
     handler: () => setAggregateMode('block'),
     actionTriplet: { tripletId: 'view:agg', index: 0 },
   })
   useAction('view:agg-b', {
-    label: 'Block / Lot / Unit view b',
+    label: 'Lot view',
     group: 'Navigation',
     defaultBindings: ['l'],
     handler: () => setAggregateMode('lot'),
     actionTriplet: { tripletId: 'view:agg', index: 1 },
   })
   useAction('view:agg-c', {
-    label: 'Block / Lot / Unit view c',
+    label: 'Unit view',
     group: 'Navigation',
     defaultBindings: ['u'],
     handler: () => setAggregateMode('unit'),
