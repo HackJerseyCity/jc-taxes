@@ -39,6 +39,15 @@ from .paths import DATA, MUNIS, get_muni
 MODIV_BASE = "https://modiv.rutgers.edu"
 MODIV_ROOT = DATA / "modiv"
 
+# Canonical NJ Treasury MOD-IV releases — same underlying data the Rutgers
+# DB serves up, but as one zip per year (statewide, ~270MB each) instead of
+# 1239 HTTP requests per muni. Years 2021-2025 are linked from
+# https://www.nj.gov/treasury/taxation/lpt/statdata.shtml; earlier years
+# may require a written request to the dept.
+TREASURY_BASE = "https://www.nj.gov/treasury/taxation/pdf/lpt"
+TREASURY_LAYOUT_URL = f"{TREASURY_BASE}/modivlayout.pdf"
+TREASURY_ROOT = MODIV_ROOT / "treasury"
+
 # County name → filename slug at /common_files/extra/json/{slug}.json
 # (Lifted from `jsonFiles` at modiv.rutgers.edu/map/, line ~431.)
 COUNTY_FILES = {
@@ -127,6 +136,78 @@ def fetch_block(
 def modiv():
     """Rutgers MOD-IV (modiv.rutgers.edu) bulk-pull commands."""
     pass
+
+
+def _stream_download(url: str, out: Path, *, force: bool = False, timeout: float = 600.0) -> Path:
+    """Stream a large file to disk with periodic progress lines."""
+    if out.exists() and not force:
+        err(f"[modiv] {out.name} cached ({out.stat().st_size / 1e6:.1f}MB), skipping")
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_suffix(out.suffix + ".partial")
+    err(f"[modiv] GET {url}")
+    with httpx.stream("GET", url, timeout=timeout, follow_redirects=True) as resp:
+        resp.raise_for_status()
+        total = int(resp.headers.get("content-length") or 0)
+        n = 0
+        next_log = 25_000_000  # every ~25MB
+        with tmp.open("wb") as f:
+            for chunk in resp.iter_bytes(chunk_size=1 << 20):
+                f.write(chunk)
+                n += len(chunk)
+                if n >= next_log:
+                    pct = f" ({n * 100 / total:.0f}%)" if total else ""
+                    err(f"[modiv]   {n / 1e6:.0f}MB{pct}")
+                    next_log += 25_000_000
+    tmp.rename(out)
+    err(f"[modiv] saved {out} ({out.stat().st_size / 1e6:.1f}MB)")
+    return out
+
+
+@modiv.command("pull-treasury")
+@click.option("-y", "--year", "years", multiple=True, type=int,
+              help="Year(s) to download. Repeatable. Defaults to 2021-2025 if omitted.")
+@click.option("-f", "--force", is_flag=True, help="Re-download even if cached")
+@click.option("-L", "--layout/--no-layout", default=True, show_default=True,
+              help="Also fetch the modivlayout.pdf field reference")
+@click.option("-x", "--extract", default="HudsonRE.txt",
+              help="Comma-separated list of zip-member globs to extract alongside "
+                   "the zip (so we don't reread 270MB per query). "
+                   'Pass "" to skip extraction, "*" for everything.')
+def cmd_pull_treasury(years: tuple[int, ...], force: bool, layout: bool, extract: str):
+    """Download annual NJ Treasury MOD-IV releases (modiv-YYYY.zip).
+
+    Pulls one zip per year into `data/modiv/treasury/` and optionally
+    extracts a subset of members (default: just `HudsonRE.txt`, the slice
+    we actually use). Each zip is ~270MB statewide.
+    """
+    import zipfile, fnmatch
+    if not years:
+        years = (2021, 2022, 2023, 2024, 2025)
+    TREASURY_ROOT.mkdir(parents=True, exist_ok=True)
+    if layout:
+        _stream_download(TREASURY_LAYOUT_URL, TREASURY_ROOT / "modivlayout.pdf", force=force)
+    patterns = [p for p in extract.split(",") if p] if extract else []
+    for y in years:
+        url = f"{TREASURY_BASE}/modiv-{y}.zip"
+        zip_path = TREASURY_ROOT / f"modiv-{y}.zip"
+        _stream_download(url, zip_path, force=force)
+        if not patterns:
+            continue
+        with zipfile.ZipFile(zip_path) as z:
+            names = z.namelist()
+            members = [n for n in names if any(fnmatch.fnmatch(n, p) for p in patterns)]
+            if not members:
+                err(f"[modiv]   no zip members matched {patterns} (have: {names[:5]}...)")
+                continue
+            year_dir = TREASURY_ROOT / str(y)
+            year_dir.mkdir(parents=True, exist_ok=True)
+            for m in members:
+                target = year_dir / Path(m).name
+                if target.exists() and not force:
+                    continue
+                target.write_bytes(z.read(m))
+                err(f"[modiv]   extracted {m} → {target.relative_to(DATA.parent)} ({target.stat().st_size / 1e6:.1f}MB)")
 
 
 @modiv.command("pull-polygons")
