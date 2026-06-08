@@ -92,7 +92,7 @@ async function waitForView(page: Page, agg: string) {
 test.describe('Loading & data', () => {
   test('default page loads and shows parcel count', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map')
+    await page.goto('/')
     await waitForLoad(page)
     await expect(page.getByText(/\d+ parcels/)).toBeVisible()
   })
@@ -102,7 +102,7 @@ test.describe('Aggregation modes', () => {
   for (const agg of ['lot', 'block', 'ward'] as const) {
     test(`loads with agg=${agg}`, async ({ page }) => {
       await mockGeoJSON(page)
-      await page.goto(`/map?agg=${agg}`)
+      await page.goto(`/?agg=${agg}`)
       await waitForLoad(page)
       await expect(page.getByText(/\d+ parcels/)).toBeVisible()
     })
@@ -112,7 +112,7 @@ test.describe('Aggregation modes', () => {
 test.describe('URL params round-trip', () => {
   test('retains agg and year params after load', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map?agg=lot&y=2020')
+    await page.goto('/?agg=lot&y=2020')
     await waitForLoad(page)
     const url = new URL(page.url())
     expect(url.searchParams.get('agg')).toBe('lot')
@@ -121,7 +121,7 @@ test.describe('URL params round-trip', () => {
 
   test('year select updates URL', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map')
+    await page.goto('/')
     await waitForLoad(page)
     await page.getByLabel('Tax Year:').selectOption('2020')
     await expect(page).toHaveURL(/[?&]y=2020/)
@@ -131,7 +131,7 @@ test.describe('URL params round-trip', () => {
 test.describe('Keyboard shortcuts', () => {
   test('l → agg=lot, w → agg=ward, b → agg=block', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map')
+    await page.goto('/')
     await waitForLoad(page)
 
     await page.keyboard.press('l')
@@ -147,7 +147,7 @@ test.describe('Keyboard shortcuts', () => {
 
   test('] increments year, [ decrements year', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map?y=2022')
+    await page.goto('/?y=2022')
     await waitForLoad(page)
 
     await page.keyboard.press(']')
@@ -161,7 +161,7 @@ test.describe('Keyboard shortcuts', () => {
 test.describe('Omnibar', () => {
   test('Cmd+K opens omnibar, Escape closes it', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map')
+    await page.goto('/')
     await waitForLoad(page)
 
     // use-kbd binds to Meta; Playwright synthesizes metaKey on any OS
@@ -183,14 +183,14 @@ test.describe('Selected lot tooltip', () => {
 
   test('sel= URL param shows pinned tooltip with address', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto(`/map?agg=lot&sel=${SEL}`)
+    await page.goto(`/?agg=lot&sel=${SEL}`)
     await waitForLoad(page)
     await expect(page.locator('text=' + ADDR)).toBeVisible()
   })
 
   test('tooltip shows building info', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto(`/map?agg=lot&sel=${SEL}`)
+    await page.goto(`/?agg=lot&sel=${SEL}`)
     await waitForLoad(page)
     await expect(page.getByText('2 stories')).toBeVisible()
     await expect(page.getByText('built 1968')).toBeVisible()
@@ -198,7 +198,7 @@ test.describe('Selected lot tooltip', () => {
 
   test('tooltip has Maps and Earth links with address', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto(`/map?agg=lot&sel=${SEL}`)
+    await page.goto(`/?agg=lot&sel=${SEL}`)
     await waitForLoad(page)
     const mapsLink = page.locator('a', { hasText: 'Maps' })
     await expect(mapsLink).toBeVisible()
@@ -215,7 +215,7 @@ test.describe('Selected lot tooltip', () => {
   test('lot note appears for annotated lots', async ({ page }) => {
     await mockGeoJSON(page)
     // 26001-47 = 33 Bayside Terrace, has a note
-    await page.goto('/map?agg=lot&sel=26001-47')
+    await page.goto('/?agg=lot&sel=26001-47')
     await waitForLoad(page)
     await expect(page.getByText('lot-line-adjustment remnant')).toBeVisible()
   })
@@ -226,7 +226,7 @@ test.describe('Color by year built', () => {
 
   test('checkbox appears in lot view, absent in block view', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map?agg=lot')
+    await page.goto('/?agg=lot')
     await waitForLoad(page)
     await expect(page.getByText('Color by year built')).toBeVisible()
 
@@ -237,7 +237,7 @@ test.describe('Color by year built', () => {
 
   test('y key toggles cb URL param in lot view', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map?agg=lot')
+    await page.goto('/?agg=lot')
     await waitForLoad(page)
 
     await page.keyboard.press('y')
@@ -249,7 +249,7 @@ test.describe('Color by year built', () => {
 
   test('y key does nothing in block view', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map')
+    await page.goto('/')
     await waitForLoad(page)
     await page.keyboard.press('y')
     await expect(page).not.toHaveURL(/[?&]cb=yr_built/)
@@ -257,7 +257,7 @@ test.describe('Color by year built', () => {
 
   test('gradient shows year range when cb=yr_built', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map?agg=lot&cb=yr_built')
+    await page.goto('/?agg=lot&cb=yr_built')
     await waitForLoad(page)
     await expect(page.getByText('1870')).toBeVisible()
     await expect(page.locator('span', { hasText: /^2025$/ })).toBeVisible()
@@ -265,7 +265,7 @@ test.describe('Color by year built', () => {
 
   test('hoverbox highlights yr_built when coloring active', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto(`/map?agg=lot&sel=${SEL}&cb=yr_built`)
+    await page.goto(`/?agg=lot&sel=${SEL}&cb=yr_built`)
     await waitForLoad(page)
     const builtSpan = page.getByText('built 1968', { exact: true })
     await expect(builtSpan).toBeVisible()
@@ -275,7 +275,7 @@ test.describe('Color by year built', () => {
 
   test('switching to block view clears cb=yr_built', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map?agg=lot&cb=yr_built')
+    await page.goto('/?agg=lot&cb=yr_built')
     await waitForLoad(page)
     await page.keyboard.press('b')
     await waitForView(page, 'block')
@@ -286,7 +286,7 @@ test.describe('Color by year built', () => {
 test.describe('Settings panel', () => {
   test('s toggles settings panel', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/map')
+    await page.goto('/')
     await waitForLoad(page)
 
     const taxYearLabel = page.getByText('Tax Year:')
@@ -309,28 +309,26 @@ test.describe('Settings panel', () => {
 })
 
 test.describe('Routing', () => {
-  test('GET / shows the landing page (not the map)', async ({ page }) => {
+  test('GET / shows the map (not the landing page)', async ({ page }) => {
+    await mockGeoJSON(page)
     await page.goto('/')
-    await expect(page.getByRole('heading', { level: 1, name: /Jersey City Property Taxes/i })).toBeVisible()
-    await expect(page.getByRole('link', { name: /Explore the 3D map/i })).toBeVisible()
+    await waitForLoad(page)
+    await expect(page.getByText(/\d+ parcels/)).toBeVisible()
     expect(new URL(page.url()).pathname).toBe('/')
   })
 
-  test('GET / with map query-params redirects to /map (preserves params)', async ({ page }) => {
-    await mockGeoJSON(page)
-    await page.goto('/?agg=lot&y=2024')
-    await waitForLoad(page)
-    const url = new URL(page.url())
-    expect(url.pathname).toBe('/map')
-    expect(url.searchParams.get('agg')).toBe('lot')
-    expect(url.searchParams.get('y')).toBe('2024')
+  test('GET /about shows the landing page', async ({ page }) => {
+    await page.goto('/about')
+    await expect(page.getByRole('heading', { level: 1, name: /Jersey City Property Taxes/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Explore the 3D map/i })).toBeVisible()
+    expect(new URL(page.url()).pathname).toBe('/about')
   })
 
-  test('CTA on / navigates to /map', async ({ page }) => {
+  test('CTA on /about navigates to the map at /', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/')
+    await page.goto('/about')
     await page.getByRole('link', { name: /Explore the 3D map/i }).click()
     await waitForLoad(page)
-    expect(new URL(page.url()).pathname).toBe('/map')
+    expect(new URL(page.url()).pathname).toBe('/')
   })
 })

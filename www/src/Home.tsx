@@ -33,7 +33,7 @@ export default function Home() {
           Where Jersey City's $64 billion of assessed value actually sits, how it's
           grown, and how the city stacks up against its 11 Hudson County neighbors.
         </p>
-        <Link to="/map" className="home-cta">Explore the 3D map →</Link>
+        <Link to="/" className="home-cta">Explore the 3D map →</Link>
         <div className="home-stats">
           <Stat label="JC assessed value, 2025" value="$64.1B" sub="up 11.3% since 2021" />
           <Stat label="Tax-exempt share" value="26.6%" sub="$17.0B off the rolls" />
@@ -77,7 +77,7 @@ export default function Home() {
         <p>
           Data from <a href="https://www.nj.gov/treasury/taxation/lpt/statdata.shtml" target="_blank" rel="noopener noreferrer">NJ Treasury MOD-IV</a> (2021–2025) and per-parcel HLS scrapes.
           {' '}
-          <Link to="/map">Open the interactive map →</Link>
+          <Link to="/">Open the interactive map →</Link>
         </p>
         <p className="home-foot-caveat">
           <em>Caveats:</em> <code>net_value</code> is assessed (not market) value;

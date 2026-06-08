@@ -97,7 +97,9 @@ html, body, #root {
   overflow-y: auto;
   font-family: 'Inter', system-ui, sans-serif;
   color: var(--text-primary);
+  background: var(--bg-primary);
 }
+.home-h1, .home-section-h { color: var(--text-primary); }
 .home > * { max-width: 960px; margin-left: auto; margin-right: auto; padding-left: 24px; padding-right: 24px; }
 .home-hero { padding-top: 48px; padding-bottom: 64px; }
 .home-foot  { padding-bottom: 96px; }
