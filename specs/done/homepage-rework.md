@@ -190,3 +190,65 @@ Two consequences for this work:
 [`src/jc_taxes/modiv.py`]: ../src/jc_taxes/modiv.py
 [`specs/done/modiv-etl-and-r2-migration.md`]: done/modiv-etl-and-r2-migration.md
 [@floating-ui/react]: https://floating-ui.com/docs/react
+
+---
+
+## Implementation report (2026-06-08, laptop session)
+
+**Phase 3 landed** (Phases 1-2 had been completed on `e` and pulled in via `git pull h main`).
+
+**Routing:** `react-router-dom@v7` with `BrowserRouter`. `/` = `Home`, `/map` = `MapView` (renamed
+from `App.tsx`). `App.tsx` is now the top-level router shell; `HomeOrRedirect` inspects
+`useLocation().search` against a 17-element `MAP_PARAMS` allowlist (the params currently
+consumed by the map via `use-prms` — `v/agg/y/animYr/3d/metric/mh/pct/scale/sel/so/sp/ti/wg/wl/cb` plus `sp`).
+If any are present, `<Navigate>` rewrites to `/map?…` preserving the full search string.
+
+**GH Pages SPA fallback:** Added a small `ghPagesSpaFallback()` plugin to `vite.config.ts` that
+copies `dist/index.html` → `dist/404.html` in `closeBundle`. Direct visits to `/map` (or
+anything else) hit `404.html`, serve the same SPA bundle, and the router takes over client-side.
+Verified after `pnpm build`.
+
+**Charts:** `@observablehq/plot` via a shared `PlotChart` React wrapper that re-renders on
+theme change AND container resize (ResizeObserver). Four chart components under
+`www/src/charts/`:
+
+- `TaxBaseChart.tsx` — stacked-area Land vs Improvements over 2021-2025 (JC default)
+- `ClassCompositionChart.tsx` — stacked bars by `class_group` (residential/commercial/apartment/industrial/exempt/vacant/other)
+- `ExemptShareChart.tsx` — line, JC vs (totals-weighted) Hudson average exempt share
+- `MuniCompareChart.tsx` — horizontal bar, all 12 munis sorted by 2025 net value, JC highlighted
+
+A shared `palette(theme)` in `PlotChart.tsx` keeps chart colors consistent across the suite
+in both light and dark mode; chart components read it inside their `build` callback so
+theme flips are instant. Tooltips use Plot's built-in `tip: true` (faster to ship than
+@floating-ui — happy to revisit if you want consistent styling with the map's hover boxes).
+
+**Home page:** `Home.tsx` is a single scrollable column with hero + 3 stat callouts
+(`$64.1B`, `26.6%`, `~42%`) + 4 sections (one per chart, each with a one-paragraph blurb) +
+a footer with data attribution and caveat copy lifted from the spec's Phase 4 draft.
+
+**CSS:** Added a `.home` block to `index.css`. The pre-existing root rule
+`html, body, #root { height: 100%; overflow: hidden; }` was the map's
+fullscreen lock — kept it (so the map still locks scroll) and made `.home` itself
+the scroll container (`overflow-y: auto`). Reused the existing `--text-primary`,
+`--text-secondary`, `--panel-bg`, `--border` CSS variables so theme switching
+on the home page just works.
+
+**e2e:** Rewrote all `page.goto('/')` calls in `www/e2e/app.spec.ts` to `/map`
+(20 sites). Added a `Routing` describe-block with 3 tests: bare `/` shows the
+landing page, `/?agg=lot&y=2024` redirects to `/map?agg=lot&y=2024` (params
+preserved), and the CTA link click navigates to `/map`. Suite: **23 passed,
+0 failed (10.2s)**. `pnpm build`: green.
+
+**Prod-deploy caveat unchanged:** `vite-plugin-dvc` still emits public S3 URLs.
+The MOD-IV spec's "retire S3 after a few weeks" step is still gated on either
+teaching the plugin a public R2 URL OR keeping S3 as the public web origin —
+this homepage rework didn't touch that.
+
+**Files changed**
+- new: `www/src/App.tsx`, `www/src/Home.tsx`, `www/src/charts/{PlotChart,TaxBaseChart,ClassCompositionChart,ExemptShareChart,MuniCompareChart}.tsx`
+- renamed: `www/src/App.tsx` → `www/src/MapView.tsx` (only the exported function name changed)
+- modified: `www/src/main.tsx` (unchanged actually — still mounts `<App />`),
+  `www/src/index.css` (+`.home` block, root rules unchanged),
+  `www/vite.config.ts` (+`ghPagesSpaFallback()` plugin),
+  `www/e2e/app.spec.ts` (paths → `/map`, +Routing describe),
+  `www/package.json` + `www/pnpm-lock.yaml` (+react-router-dom, +@observablehq/plot)
