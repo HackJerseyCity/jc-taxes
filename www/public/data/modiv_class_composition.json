@@ -1,0 +1,3362 @@
+[
+  {
+    "year": 2021,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "apartment",
+    "parcels": 357,
+    "net_value": 419191800
+  },
+  {
+    "year": 2021,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "commercial",
+    "parcels": 1149,
+    "net_value": 986559800
+  },
+  {
+    "year": 2021,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "exempt",
+    "parcels": 706,
+    "net_value": 2394594700
+  },
+  {
+    "year": 2021,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "industrial",
+    "parcels": 94,
+    "net_value": 987330100
+  },
+  {
+    "year": 2021,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "other",
+    "parcels": 53,
+    "net_value": 42743906
+  },
+  {
+    "year": 2021,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "residential",
+    "parcels": 11188,
+    "net_value": 4478244400
+  },
+  {
+    "year": 2021,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "vacant",
+    "parcels": 389,
+    "net_value": 661237500
+  },
+  {
+    "year": 2021,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "apartment",
+    "parcels": 14,
+    "net_value": 17845900
+  },
+  {
+    "year": 2021,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "commercial",
+    "parcels": 29,
+    "net_value": 11654000
+  },
+  {
+    "year": 2021,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "exempt",
+    "parcels": 17,
+    "net_value": 6993300
+  },
+  {
+    "year": 2021,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "industrial",
+    "parcels": 5,
+    "net_value": 33638100
+  },
+  {
+    "year": 2021,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 117117
+  },
+  {
+    "year": 2021,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "residential",
+    "parcels": 345,
+    "net_value": 92137100
+  },
+  {
+    "year": 2021,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "vacant",
+    "parcels": 9,
+    "net_value": 3281700
+  },
+  {
+    "year": 2021,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "apartment",
+    "parcels": 87,
+    "net_value": 94253800
+  },
+  {
+    "year": 2021,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "commercial",
+    "parcels": 164,
+    "net_value": 76923700
+  },
+  {
+    "year": 2021,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "exempt",
+    "parcels": 77,
+    "net_value": 67819202
+  },
+  {
+    "year": 2021,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "industrial",
+    "parcels": 40,
+    "net_value": 17320800
+  },
+  {
+    "year": 2021,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 507541
+  },
+  {
+    "year": 2021,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "residential",
+    "parcels": 2369,
+    "net_value": 590624276
+  },
+  {
+    "year": 2021,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "vacant",
+    "parcels": 67,
+    "net_value": 3685199
+  },
+  {
+    "year": 2021,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "apartment",
+    "parcels": 90,
+    "net_value": 89393879
+  },
+  {
+    "year": 2021,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "commercial",
+    "parcels": 254,
+    "net_value": 211904000
+  },
+  {
+    "year": 2021,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "exempt",
+    "parcels": 294,
+    "net_value": 1140467400
+  },
+  {
+    "year": 2021,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "industrial",
+    "parcels": 47,
+    "net_value": 240377800
+  },
+  {
+    "year": 2021,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "other",
+    "parcels": 55,
+    "net_value": 2434195
+  },
+  {
+    "year": 2021,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "residential",
+    "parcels": 1986,
+    "net_value": 896780320
+  },
+  {
+    "year": 2021,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "vacant",
+    "parcels": 58,
+    "net_value": 109935300
+  },
+  {
+    "year": 2021,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "apartment",
+    "parcels": 329,
+    "net_value": 1465640100
+  },
+  {
+    "year": 2021,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "commercial",
+    "parcels": 951,
+    "net_value": 1938055100
+  },
+  {
+    "year": 2021,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "exempt",
+    "parcels": 1073,
+    "net_value": 3147902200
+  },
+  {
+    "year": 2021,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "industrial",
+    "parcels": 27,
+    "net_value": 91247600
+  },
+  {
+    "year": 2021,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "other",
+    "parcels": 26,
+    "net_value": 12165416
+  },
+  {
+    "year": 2021,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "residential",
+    "parcels": 15847,
+    "net_value": 8322244950
+  },
+  {
+    "year": 2021,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "vacant",
+    "parcels": 114,
+    "net_value": 36763400
+  },
+  {
+    "year": 2021,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "apartment",
+    "parcels": 1735,
+    "net_value": 5905639300
+  },
+  {
+    "year": 2021,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "commercial",
+    "parcels": 4460,
+    "net_value": 10793001060
+  },
+  {
+    "year": 2021,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "exempt",
+    "parcels": 8935,
+    "net_value": 17923090382
+  },
+  {
+    "year": 2021,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "industrial",
+    "parcels": 496,
+    "net_value": 2228211200
+  },
+  {
+    "year": 2021,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "other",
+    "parcels": 128,
+    "net_value": 62334566
+  },
+  {
+    "year": 2021,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "residential",
+    "parcels": 39983,
+    "net_value": 18469142131
+  },
+  {
+    "year": 2021,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "vacant",
+    "parcels": 7604,
+    "net_value": 2182347635
+  },
+  {
+    "year": 2021,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "apartment",
+    "parcels": 141,
+    "net_value": 34266600
+  },
+  {
+    "year": 2021,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "commercial",
+    "parcels": 490,
+    "net_value": 126759900
+  },
+  {
+    "year": 2021,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "exempt",
+    "parcels": 338,
+    "net_value": 337613100
+  },
+  {
+    "year": 2021,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "industrial",
+    "parcels": 219,
+    "net_value": 237432250
+  },
+  {
+    "year": 2021,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "other",
+    "parcels": 156,
+    "net_value": 115406712
+  },
+  {
+    "year": 2021,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "residential",
+    "parcels": 7121,
+    "net_value": 689170600
+  },
+  {
+    "year": 2021,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "vacant",
+    "parcels": 171,
+    "net_value": 17358300
+  },
+  {
+    "year": 2021,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "apartment",
+    "parcels": 158,
+    "net_value": 186704800
+  },
+  {
+    "year": 2021,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "commercial",
+    "parcels": 729,
+    "net_value": 468034467
+  },
+  {
+    "year": 2021,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "exempt",
+    "parcels": 421,
+    "net_value": 540202500
+  },
+  {
+    "year": 2021,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "industrial",
+    "parcels": 190,
+    "net_value": 364514200
+  },
+  {
+    "year": 2021,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "other",
+    "parcels": 42,
+    "net_value": 18869606
+  },
+  {
+    "year": 2021,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "residential",
+    "parcels": 10835,
+    "net_value": 1493139400
+  },
+  {
+    "year": 2021,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "vacant",
+    "parcels": 308,
+    "net_value": 50615400
+  },
+  {
+    "year": 2021,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "apartment",
+    "parcels": 15,
+    "net_value": 63663400
+  },
+  {
+    "year": 2021,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "commercial",
+    "parcels": 263,
+    "net_value": 920609275
+  },
+  {
+    "year": 2021,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "exempt",
+    "parcels": 233,
+    "net_value": 553479500
+  },
+  {
+    "year": 2021,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "industrial",
+    "parcels": 154,
+    "net_value": 940545350
+  },
+  {
+    "year": 2021,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "other",
+    "parcels": 23,
+    "net_value": 3488259
+  },
+  {
+    "year": 2021,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "residential",
+    "parcels": 4812,
+    "net_value": 848416150
+  },
+  {
+    "year": 2021,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "vacant",
+    "parcels": 88,
+    "net_value": 52675600
+  },
+  {
+    "year": 2021,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "apartment",
+    "parcels": 689,
+    "net_value": 292138100
+  },
+  {
+    "year": 2021,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "commercial",
+    "parcels": 1362,
+    "net_value": 390905161
+  },
+  {
+    "year": 2021,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "exempt",
+    "parcels": 601,
+    "net_value": 385662390
+  },
+  {
+    "year": 2021,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "industrial",
+    "parcels": 75,
+    "net_value": 23567500
+  },
+  {
+    "year": 2021,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "other",
+    "parcels": 2,
+    "net_value": 5639777
+  },
+  {
+    "year": 2021,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "residential",
+    "parcels": 6722,
+    "net_value": 803980399
+  },
+  {
+    "year": 2021,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "vacant",
+    "parcels": 183,
+    "net_value": 20266500
+  },
+  {
+    "year": 2021,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "apartment",
+    "parcels": 97,
+    "net_value": 300851000
+  },
+  {
+    "year": 2021,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "commercial",
+    "parcels": 122,
+    "net_value": 715569600
+  },
+  {
+    "year": 2021,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "exempt",
+    "parcels": 181,
+    "net_value": 724945357
+  },
+  {
+    "year": 2021,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "industrial",
+    "parcels": 17,
+    "net_value": 138210800
+  },
+  {
+    "year": 2021,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "other",
+    "parcels": 9,
+    "net_value": 2975938
+  },
+  {
+    "year": 2021,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "residential",
+    "parcels": 3276,
+    "net_value": 2527070200
+  },
+  {
+    "year": 2021,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "vacant",
+    "parcels": 126,
+    "net_value": 417299700
+  },
+  {
+    "year": 2021,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "apartment",
+    "parcels": 447,
+    "net_value": 234239375
+  },
+  {
+    "year": 2021,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "commercial",
+    "parcels": 725,
+    "net_value": 188795400
+  },
+  {
+    "year": 2021,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "exempt",
+    "parcels": 1623,
+    "net_value": 830259100
+  },
+  {
+    "year": 2021,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "industrial",
+    "parcels": 86,
+    "net_value": 19498000
+  },
+  {
+    "year": 2021,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 820896
+  },
+  {
+    "year": 2021,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "residential",
+    "parcels": 4629,
+    "net_value": 448054130
+  },
+  {
+    "year": 2021,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "vacant",
+    "parcels": 1486,
+    "net_value": 34674200
+  },
+  {
+    "year": 2022,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "apartment",
+    "parcels": 362,
+    "net_value": 425124700
+  },
+  {
+    "year": 2022,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "commercial",
+    "parcels": 1128,
+    "net_value": 986181100
+  },
+  {
+    "year": 2022,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "exempt",
+    "parcels": 714,
+    "net_value": 2483361300
+  },
+  {
+    "year": 2022,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "industrial",
+    "parcels": 92,
+    "net_value": 957352500
+  },
+  {
+    "year": 2022,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "other",
+    "parcels": 53,
+    "net_value": 42711677
+  },
+  {
+    "year": 2022,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "residential",
+    "parcels": 11193,
+    "net_value": 4484120400
+  },
+  {
+    "year": 2022,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "vacant",
+    "parcels": 376,
+    "net_value": 674147900
+  },
+  {
+    "year": 2022,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "apartment",
+    "parcels": 14,
+    "net_value": 17845900
+  },
+  {
+    "year": 2022,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "commercial",
+    "parcels": 27,
+    "net_value": 10264500
+  },
+  {
+    "year": 2022,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "exempt",
+    "parcels": 18,
+    "net_value": 8004000
+  },
+  {
+    "year": 2022,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "industrial",
+    "parcels": 5,
+    "net_value": 33638100
+  },
+  {
+    "year": 2022,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 122994
+  },
+  {
+    "year": 2022,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "residential",
+    "parcels": 345,
+    "net_value": 92363500
+  },
+  {
+    "year": 2022,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "vacant",
+    "parcels": 9,
+    "net_value": 3281700
+  },
+  {
+    "year": 2022,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "apartment",
+    "parcels": 87,
+    "net_value": 93353800
+  },
+  {
+    "year": 2022,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "commercial",
+    "parcels": 164,
+    "net_value": 76803600
+  },
+  {
+    "year": 2022,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "exempt",
+    "parcels": 77,
+    "net_value": 67819202
+  },
+  {
+    "year": 2022,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "industrial",
+    "parcels": 40,
+    "net_value": 17320800
+  },
+  {
+    "year": 2022,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 507541
+  },
+  {
+    "year": 2022,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "residential",
+    "parcels": 2370,
+    "net_value": 592261376
+  },
+  {
+    "year": 2022,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "vacant",
+    "parcels": 67,
+    "net_value": 3846499
+  },
+  {
+    "year": 2022,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "apartment",
+    "parcels": 90,
+    "net_value": 89270179
+  },
+  {
+    "year": 2022,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "commercial",
+    "parcels": 250,
+    "net_value": 207360000
+  },
+  {
+    "year": 2022,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "exempt",
+    "parcels": 300,
+    "net_value": 1290686908
+  },
+  {
+    "year": 2022,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "industrial",
+    "parcels": 47,
+    "net_value": 239976174
+  },
+  {
+    "year": 2022,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "other",
+    "parcels": 52,
+    "net_value": 2502682
+  },
+  {
+    "year": 2022,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "residential",
+    "parcels": 1996,
+    "net_value": 904708870
+  },
+  {
+    "year": 2022,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "vacant",
+    "parcels": 56,
+    "net_value": 97047415
+  },
+  {
+    "year": 2022,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "apartment",
+    "parcels": 327,
+    "net_value": 1453483700
+  },
+  {
+    "year": 2022,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "commercial",
+    "parcels": 950,
+    "net_value": 1918710500
+  },
+  {
+    "year": 2022,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "exempt",
+    "parcels": 1874,
+    "net_value": 3149687600
+  },
+  {
+    "year": 2022,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "industrial",
+    "parcels": 27,
+    "net_value": 91247600
+  },
+  {
+    "year": 2022,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "other",
+    "parcels": 26,
+    "net_value": 12592078
+  },
+  {
+    "year": 2022,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "residential",
+    "parcels": 15963,
+    "net_value": 8380583500
+  },
+  {
+    "year": 2022,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "vacant",
+    "parcels": 99,
+    "net_value": 31914900
+  },
+  {
+    "year": 2022,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "apartment",
+    "parcels": 1731,
+    "net_value": 5877330600
+  },
+  {
+    "year": 2022,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "commercial",
+    "parcels": 4450,
+    "net_value": 11882147000
+  },
+  {
+    "year": 2022,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "exempt",
+    "parcels": 9347,
+    "net_value": 17822268582
+  },
+  {
+    "year": 2022,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "industrial",
+    "parcels": 476,
+    "net_value": 2117968200
+  },
+  {
+    "year": 2022,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "other",
+    "parcels": 128,
+    "net_value": 62929044
+  },
+  {
+    "year": 2022,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "residential",
+    "parcels": 40320,
+    "net_value": 18764944385
+  },
+  {
+    "year": 2022,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "vacant",
+    "parcels": 7492,
+    "net_value": 2246822835
+  },
+  {
+    "year": 2022,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "apartment",
+    "parcels": 142,
+    "net_value": 36590300
+  },
+  {
+    "year": 2022,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "commercial",
+    "parcels": 487,
+    "net_value": 122930900
+  },
+  {
+    "year": 2022,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "exempt",
+    "parcels": 334,
+    "net_value": 348728900
+  },
+  {
+    "year": 2022,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "industrial",
+    "parcels": 217,
+    "net_value": 243351850
+  },
+  {
+    "year": 2022,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "other",
+    "parcels": 148,
+    "net_value": 115124910
+  },
+  {
+    "year": 2022,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "residential",
+    "parcels": 7117,
+    "net_value": 693244900
+  },
+  {
+    "year": 2022,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "vacant",
+    "parcels": 206,
+    "net_value": 30209300
+  },
+  {
+    "year": 2022,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "apartment",
+    "parcels": 166,
+    "net_value": 646300300
+  },
+  {
+    "year": 2022,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "commercial",
+    "parcels": 800,
+    "net_value": 1943695502
+  },
+  {
+    "year": 2022,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "exempt",
+    "parcels": 426,
+    "net_value": 1629349400
+  },
+  {
+    "year": 2022,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "industrial",
+    "parcels": 192,
+    "net_value": 1810298695
+  },
+  {
+    "year": 2022,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "other",
+    "parcels": 43,
+    "net_value": 25128757
+  },
+  {
+    "year": 2022,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "residential",
+    "parcels": 10877,
+    "net_value": 5254501100
+  },
+  {
+    "year": 2022,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "vacant",
+    "parcels": 240,
+    "net_value": 173412800
+  },
+  {
+    "year": 2022,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "apartment",
+    "parcels": 15,
+    "net_value": 63663400
+  },
+  {
+    "year": 2022,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "commercial",
+    "parcels": 267,
+    "net_value": 899861775
+  },
+  {
+    "year": 2022,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "exempt",
+    "parcels": 218,
+    "net_value": 551617800
+  },
+  {
+    "year": 2022,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "industrial",
+    "parcels": 154,
+    "net_value": 978187100
+  },
+  {
+    "year": 2022,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "other",
+    "parcels": 21,
+    "net_value": 3840357
+  },
+  {
+    "year": 2022,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "residential",
+    "parcels": 4812,
+    "net_value": 850806050
+  },
+  {
+    "year": 2022,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "vacant",
+    "parcels": 125,
+    "net_value": 53501800
+  },
+  {
+    "year": 2022,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "apartment",
+    "parcels": 695,
+    "net_value": 301725100
+  },
+  {
+    "year": 2022,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "commercial",
+    "parcels": 1363,
+    "net_value": 393061061
+  },
+  {
+    "year": 2022,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "exempt",
+    "parcels": 606,
+    "net_value": 385768990
+  },
+  {
+    "year": 2022,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "industrial",
+    "parcels": 71,
+    "net_value": 23252900
+  },
+  {
+    "year": 2022,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "other",
+    "parcels": 2,
+    "net_value": 5554122
+  },
+  {
+    "year": 2022,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "residential",
+    "parcels": 6734,
+    "net_value": 809938499
+  },
+  {
+    "year": 2022,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "vacant",
+    "parcels": 170,
+    "net_value": 18613100
+  },
+  {
+    "year": 2022,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "apartment",
+    "parcels": 102,
+    "net_value": 378069000
+  },
+  {
+    "year": 2022,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "commercial",
+    "parcels": 123,
+    "net_value": 721338384
+  },
+  {
+    "year": 2022,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "exempt",
+    "parcels": 194,
+    "net_value": 973687657
+  },
+  {
+    "year": 2022,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "industrial",
+    "parcels": 16,
+    "net_value": 133710800
+  },
+  {
+    "year": 2022,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "other",
+    "parcels": 9,
+    "net_value": 3235084
+  },
+  {
+    "year": 2022,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "residential",
+    "parcels": 3274,
+    "net_value": 2518422100
+  },
+  {
+    "year": 2022,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "vacant",
+    "parcels": 115,
+    "net_value": 339208300
+  },
+  {
+    "year": 2022,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "apartment",
+    "parcels": 447,
+    "net_value": 235979695
+  },
+  {
+    "year": 2022,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "commercial",
+    "parcels": 726,
+    "net_value": 188319400
+  },
+  {
+    "year": 2022,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "exempt",
+    "parcels": 1636,
+    "net_value": 829106300
+  },
+  {
+    "year": 2022,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "industrial",
+    "parcels": 86,
+    "net_value": 19410000
+  },
+  {
+    "year": 2022,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 851873
+  },
+  {
+    "year": 2022,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "residential",
+    "parcels": 4628,
+    "net_value": 449388130
+  },
+  {
+    "year": 2022,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "vacant",
+    "parcels": 1483,
+    "net_value": 34702000
+  },
+  {
+    "year": 2023,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "apartment",
+    "parcels": 365,
+    "net_value": 435124200
+  },
+  {
+    "year": 2023,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "commercial",
+    "parcels": 1110,
+    "net_value": 955270000
+  },
+  {
+    "year": 2023,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "exempt",
+    "parcels": 726,
+    "net_value": 2681100950
+  },
+  {
+    "year": 2023,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "industrial",
+    "parcels": 92,
+    "net_value": 958628700
+  },
+  {
+    "year": 2023,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "other",
+    "parcels": 53,
+    "net_value": 42433486
+  },
+  {
+    "year": 2023,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "residential",
+    "parcels": 11209,
+    "net_value": 4504141150
+  },
+  {
+    "year": 2023,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "vacant",
+    "parcels": 371,
+    "net_value": 743772300
+  },
+  {
+    "year": 2023,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "apartment",
+    "parcels": 14,
+    "net_value": 17845900
+  },
+  {
+    "year": 2023,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "commercial",
+    "parcels": 27,
+    "net_value": 12168100
+  },
+  {
+    "year": 2023,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "exempt",
+    "parcels": 18,
+    "net_value": 8004000
+  },
+  {
+    "year": 2023,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "industrial",
+    "parcels": 5,
+    "net_value": 33638100
+  },
+  {
+    "year": 2023,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 104498
+  },
+  {
+    "year": 2023,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "residential",
+    "parcels": 345,
+    "net_value": 93338000
+  },
+  {
+    "year": 2023,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "vacant",
+    "parcels": 9,
+    "net_value": 3281700
+  },
+  {
+    "year": 2023,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "apartment",
+    "parcels": 87,
+    "net_value": 93275100
+  },
+  {
+    "year": 2023,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "commercial",
+    "parcels": 164,
+    "net_value": 76372400
+  },
+  {
+    "year": 2023,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "exempt",
+    "parcels": 80,
+    "net_value": 71808002
+  },
+  {
+    "year": 2023,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "industrial",
+    "parcels": 40,
+    "net_value": 17320800
+  },
+  {
+    "year": 2023,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 513346
+  },
+  {
+    "year": 2023,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "residential",
+    "parcels": 2367,
+    "net_value": 592242676
+  },
+  {
+    "year": 2023,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "vacant",
+    "parcels": 64,
+    "net_value": 3768899
+  },
+  {
+    "year": 2023,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "apartment",
+    "parcels": 90,
+    "net_value": 89345179
+  },
+  {
+    "year": 2023,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "commercial",
+    "parcels": 248,
+    "net_value": 210192700
+  },
+  {
+    "year": 2023,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "exempt",
+    "parcels": 296,
+    "net_value": 1429157908
+  },
+  {
+    "year": 2023,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "industrial",
+    "parcels": 48,
+    "net_value": 242401174
+  },
+  {
+    "year": 2023,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "other",
+    "parcels": 52,
+    "net_value": 2621976
+  },
+  {
+    "year": 2023,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "residential",
+    "parcels": 2002,
+    "net_value": 910633470
+  },
+  {
+    "year": 2023,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "vacant",
+    "parcels": 51,
+    "net_value": 91022915
+  },
+  {
+    "year": 2023,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "apartment",
+    "parcels": 328,
+    "net_value": 1449401600
+  },
+  {
+    "year": 2023,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "commercial",
+    "parcels": 949,
+    "net_value": 1936203800
+  },
+  {
+    "year": 2023,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "exempt",
+    "parcels": 1896,
+    "net_value": 3191982900
+  },
+  {
+    "year": 2023,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "industrial",
+    "parcels": 23,
+    "net_value": 78394100
+  },
+  {
+    "year": 2023,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "other",
+    "parcels": 26,
+    "net_value": 12302125
+  },
+  {
+    "year": 2023,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "residential",
+    "parcels": 16198,
+    "net_value": 8533853550
+  },
+  {
+    "year": 2023,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "vacant",
+    "parcels": 93,
+    "net_value": 31718800
+  },
+  {
+    "year": 2023,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "apartment",
+    "parcels": 1742,
+    "net_value": 6643483700
+  },
+  {
+    "year": 2023,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "commercial",
+    "parcels": 4467,
+    "net_value": 13070377800
+  },
+  {
+    "year": 2023,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "exempt",
+    "parcels": 9131,
+    "net_value": 17478101982
+  },
+  {
+    "year": 2023,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "industrial",
+    "parcels": 469,
+    "net_value": 2152526500
+  },
+  {
+    "year": 2023,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "other",
+    "parcels": 129,
+    "net_value": 64553490
+  },
+  {
+    "year": 2023,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "residential",
+    "parcels": 40889,
+    "net_value": 19216937685
+  },
+  {
+    "year": 2023,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "vacant",
+    "parcels": 7241,
+    "net_value": 2811689035
+  },
+  {
+    "year": 2023,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "apartment",
+    "parcels": 141,
+    "net_value": 37462900
+  },
+  {
+    "year": 2023,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "commercial",
+    "parcels": 486,
+    "net_value": 123131200
+  },
+  {
+    "year": 2023,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "exempt",
+    "parcels": 339,
+    "net_value": 354042800
+  },
+  {
+    "year": 2023,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "industrial",
+    "parcels": 214,
+    "net_value": 248813850
+  },
+  {
+    "year": 2023,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "other",
+    "parcels": 152,
+    "net_value": 116392780
+  },
+  {
+    "year": 2023,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "residential",
+    "parcels": 7123,
+    "net_value": 700184500
+  },
+  {
+    "year": 2023,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "vacant",
+    "parcels": 199,
+    "net_value": 32722000
+  },
+  {
+    "year": 2023,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "apartment",
+    "parcels": 169,
+    "net_value": 691354500
+  },
+  {
+    "year": 2023,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "commercial",
+    "parcels": 797,
+    "net_value": 1847883802
+  },
+  {
+    "year": 2023,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "exempt",
+    "parcels": 420,
+    "net_value": 1714200400
+  },
+  {
+    "year": 2023,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "industrial",
+    "parcels": 191,
+    "net_value": 1774284895
+  },
+  {
+    "year": 2023,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "other",
+    "parcels": 47,
+    "net_value": 25720546
+  },
+  {
+    "year": 2023,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "residential",
+    "parcels": 10877,
+    "net_value": 5261063300
+  },
+  {
+    "year": 2023,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "vacant",
+    "parcels": 238,
+    "net_value": 161432700
+  },
+  {
+    "year": 2023,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "apartment",
+    "parcels": 15,
+    "net_value": 63663400
+  },
+  {
+    "year": 2023,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "commercial",
+    "parcels": 264,
+    "net_value": 899656575
+  },
+  {
+    "year": 2023,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "exempt",
+    "parcels": 222,
+    "net_value": 577168900
+  },
+  {
+    "year": 2023,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "industrial",
+    "parcels": 154,
+    "net_value": 982777800
+  },
+  {
+    "year": 2023,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "other",
+    "parcels": 21,
+    "net_value": 3538758
+  },
+  {
+    "year": 2023,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "residential",
+    "parcels": 4807,
+    "net_value": 856130150
+  },
+  {
+    "year": 2023,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "vacant",
+    "parcels": 133,
+    "net_value": 52912600
+  },
+  {
+    "year": 2023,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "apartment",
+    "parcels": 699,
+    "net_value": 308379700
+  },
+  {
+    "year": 2023,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "commercial",
+    "parcels": 1359,
+    "net_value": 393299761
+  },
+  {
+    "year": 2023,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "exempt",
+    "parcels": 586,
+    "net_value": 380284890
+  },
+  {
+    "year": 2023,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "industrial",
+    "parcels": 70,
+    "net_value": 23033500
+  },
+  {
+    "year": 2023,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "other",
+    "parcels": 2,
+    "net_value": 5069293
+  },
+  {
+    "year": 2023,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "residential",
+    "parcels": 6716,
+    "net_value": 815902199
+  },
+  {
+    "year": 2023,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "vacant",
+    "parcels": 223,
+    "net_value": 17897600
+  },
+  {
+    "year": 2023,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "apartment",
+    "parcels": 103,
+    "net_value": 379385600
+  },
+  {
+    "year": 2023,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "commercial",
+    "parcels": 123,
+    "net_value": 721331284
+  },
+  {
+    "year": 2023,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "exempt",
+    "parcels": 207,
+    "net_value": 924831157
+  },
+  {
+    "year": 2023,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "industrial",
+    "parcels": 16,
+    "net_value": 133710800
+  },
+  {
+    "year": 2023,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "other",
+    "parcels": 9,
+    "net_value": 3235084
+  },
+  {
+    "year": 2023,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "residential",
+    "parcels": 3280,
+    "net_value": 2514592300
+  },
+  {
+    "year": 2023,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "vacant",
+    "parcels": 113,
+    "net_value": 330392900
+  },
+  {
+    "year": 2023,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "apartment",
+    "parcels": 447,
+    "net_value": 240685495
+  },
+  {
+    "year": 2023,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "commercial",
+    "parcels": 724,
+    "net_value": 187598100
+  },
+  {
+    "year": 2023,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "exempt",
+    "parcels": 1648,
+    "net_value": 837577400
+  },
+  {
+    "year": 2023,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "industrial",
+    "parcels": 84,
+    "net_value": 19169100
+  },
+  {
+    "year": 2023,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 786911
+  },
+  {
+    "year": 2023,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "residential",
+    "parcels": 4630,
+    "net_value": 451916230
+  },
+  {
+    "year": 2023,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "vacant",
+    "parcels": 1479,
+    "net_value": 34686600
+  },
+  {
+    "year": 2024,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "apartment",
+    "parcels": 361,
+    "net_value": 426237200
+  },
+  {
+    "year": 2024,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "commercial",
+    "parcels": 1107,
+    "net_value": 942508700
+  },
+  {
+    "year": 2024,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "exempt",
+    "parcels": 766,
+    "net_value": 3015387900
+  },
+  {
+    "year": 2024,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "industrial",
+    "parcels": 85,
+    "net_value": 889944200
+  },
+  {
+    "year": 2024,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "other",
+    "parcels": 53,
+    "net_value": 42001876
+  },
+  {
+    "year": 2024,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "residential",
+    "parcels": 11195,
+    "net_value": 4503262900
+  },
+  {
+    "year": 2024,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "vacant",
+    "parcels": 405,
+    "net_value": 801963500
+  },
+  {
+    "year": 2024,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "apartment",
+    "parcels": 14,
+    "net_value": 16875900
+  },
+  {
+    "year": 2024,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "commercial",
+    "parcels": 28,
+    "net_value": 13178800
+  },
+  {
+    "year": 2024,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "exempt",
+    "parcels": 16,
+    "net_value": 6585300
+  },
+  {
+    "year": 2024,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "industrial",
+    "parcels": 5,
+    "net_value": 33638100
+  },
+  {
+    "year": 2024,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 0
+  },
+  {
+    "year": 2024,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "residential",
+    "parcels": 345,
+    "net_value": 94156700
+  },
+  {
+    "year": 2024,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "vacant",
+    "parcels": 10,
+    "net_value": 3689700
+  },
+  {
+    "year": 2024,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "apartment",
+    "parcels": 87,
+    "net_value": 93105100
+  },
+  {
+    "year": 2024,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "commercial",
+    "parcels": 164,
+    "net_value": 75494100
+  },
+  {
+    "year": 2024,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "exempt",
+    "parcels": 84,
+    "net_value": 77807402
+  },
+  {
+    "year": 2024,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "industrial",
+    "parcels": 40,
+    "net_value": 17320800
+  },
+  {
+    "year": 2024,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 513346
+  },
+  {
+    "year": 2024,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "residential",
+    "parcels": 2365,
+    "net_value": 592217976
+  },
+  {
+    "year": 2024,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "vacant",
+    "parcels": 64,
+    "net_value": 3843899
+  },
+  {
+    "year": 2024,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "apartment",
+    "parcels": 90,
+    "net_value": 89372679
+  },
+  {
+    "year": 2024,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "commercial",
+    "parcels": 245,
+    "net_value": 209450650
+  },
+  {
+    "year": 2024,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "exempt",
+    "parcels": 295,
+    "net_value": 1430248608
+  },
+  {
+    "year": 2024,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "industrial",
+    "parcels": 47,
+    "net_value": 239193174
+  },
+  {
+    "year": 2024,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "other",
+    "parcels": 52,
+    "net_value": 2435660
+  },
+  {
+    "year": 2024,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "residential",
+    "parcels": 2001,
+    "net_value": 912527358
+  },
+  {
+    "year": 2024,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "vacant",
+    "parcels": 62,
+    "net_value": 96510531
+  },
+  {
+    "year": 2024,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "apartment",
+    "parcels": 332,
+    "net_value": 1503983000
+  },
+  {
+    "year": 2024,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "commercial",
+    "parcels": 937,
+    "net_value": 1920276400
+  },
+  {
+    "year": 2024,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "exempt",
+    "parcels": 1902,
+    "net_value": 3143461700
+  },
+  {
+    "year": 2024,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "industrial",
+    "parcels": 22,
+    "net_value": 76393100
+  },
+  {
+    "year": 2024,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "other",
+    "parcels": 26,
+    "net_value": 12141768
+  },
+  {
+    "year": 2024,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "residential",
+    "parcels": 16219,
+    "net_value": 8556402250
+  },
+  {
+    "year": 2024,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "vacant",
+    "parcels": 98,
+    "net_value": 34857300
+  },
+  {
+    "year": 2024,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "apartment",
+    "parcels": 1751,
+    "net_value": 6721649700
+  },
+  {
+    "year": 2024,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "commercial",
+    "parcels": 4555,
+    "net_value": 13629660000
+  },
+  {
+    "year": 2024,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "exempt",
+    "parcels": 9072,
+    "net_value": 17440017282
+  },
+  {
+    "year": 2024,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "industrial",
+    "parcels": 447,
+    "net_value": 2167715100
+  },
+  {
+    "year": 2024,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "other",
+    "parcels": 128,
+    "net_value": 68212845
+  },
+  {
+    "year": 2024,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "residential",
+    "parcels": 41265,
+    "net_value": 19632694385
+  },
+  {
+    "year": 2024,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "vacant",
+    "parcels": 7076,
+    "net_value": 3172432972
+  },
+  {
+    "year": 2024,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "apartment",
+    "parcels": 141,
+    "net_value": 37497000
+  },
+  {
+    "year": 2024,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "commercial",
+    "parcels": 485,
+    "net_value": 131291800
+  },
+  {
+    "year": 2024,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "exempt",
+    "parcels": 356,
+    "net_value": 354199450
+  },
+  {
+    "year": 2024,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "industrial",
+    "parcels": 213,
+    "net_value": 253349650
+  },
+  {
+    "year": 2024,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "other",
+    "parcels": 136,
+    "net_value": 114969746
+  },
+  {
+    "year": 2024,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "residential",
+    "parcels": 7136,
+    "net_value": 704483250
+  },
+  {
+    "year": 2024,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "vacant",
+    "parcels": 201,
+    "net_value": 34826700
+  },
+  {
+    "year": 2024,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "apartment",
+    "parcels": 169,
+    "net_value": 689394800
+  },
+  {
+    "year": 2024,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "commercial",
+    "parcels": 794,
+    "net_value": 1767418402
+  },
+  {
+    "year": 2024,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "exempt",
+    "parcels": 423,
+    "net_value": 1736272400
+  },
+  {
+    "year": 2024,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "industrial",
+    "parcels": 190,
+    "net_value": 1748646395
+  },
+  {
+    "year": 2024,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "other",
+    "parcels": 47,
+    "net_value": 25585326
+  },
+  {
+    "year": 2024,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "residential",
+    "parcels": 10848,
+    "net_value": 5281134800
+  },
+  {
+    "year": 2024,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "vacant",
+    "parcels": 237,
+    "net_value": 158702200
+  },
+  {
+    "year": 2024,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "apartment",
+    "parcels": 15,
+    "net_value": 63893400
+  },
+  {
+    "year": 2024,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "commercial",
+    "parcels": 264,
+    "net_value": 880153275
+  },
+  {
+    "year": 2024,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "exempt",
+    "parcels": 223,
+    "net_value": 577830500
+  },
+  {
+    "year": 2024,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "industrial",
+    "parcels": 153,
+    "net_value": 989190500
+  },
+  {
+    "year": 2024,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "other",
+    "parcels": 20,
+    "net_value": 3731668
+  },
+  {
+    "year": 2024,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "residential",
+    "parcels": 4808,
+    "net_value": 861601750
+  },
+  {
+    "year": 2024,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "vacant",
+    "parcels": 132,
+    "net_value": 53989900
+  },
+  {
+    "year": 2024,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "apartment",
+    "parcels": 693,
+    "net_value": 1515892100
+  },
+  {
+    "year": 2024,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "commercial",
+    "parcels": 1367,
+    "net_value": 1648157500
+  },
+  {
+    "year": 2024,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "exempt",
+    "parcels": 579,
+    "net_value": 1395032700
+  },
+  {
+    "year": 2024,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "industrial",
+    "parcels": 71,
+    "net_value": 105756500
+  },
+  {
+    "year": 2024,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "other",
+    "parcels": 2,
+    "net_value": 17131776
+  },
+  {
+    "year": 2024,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "residential",
+    "parcels": 6764,
+    "net_value": 3344715100
+  },
+  {
+    "year": 2024,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "vacant",
+    "parcels": 136,
+    "net_value": 56350400
+  },
+  {
+    "year": 2024,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "apartment",
+    "parcels": 104,
+    "net_value": 389954900
+  },
+  {
+    "year": 2024,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "commercial",
+    "parcels": 124,
+    "net_value": 709747384
+  },
+  {
+    "year": 2024,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "exempt",
+    "parcels": 189,
+    "net_value": 908521457
+  },
+  {
+    "year": 2024,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "industrial",
+    "parcels": 16,
+    "net_value": 133710800
+  },
+  {
+    "year": 2024,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "other",
+    "parcels": 9,
+    "net_value": 3235084
+  },
+  {
+    "year": 2024,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "residential",
+    "parcels": 3289,
+    "net_value": 2520264200
+  },
+  {
+    "year": 2024,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "vacant",
+    "parcels": 109,
+    "net_value": 308204900
+  },
+  {
+    "year": 2024,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "apartment",
+    "parcels": 450,
+    "net_value": 252143295
+  },
+  {
+    "year": 2024,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "commercial",
+    "parcels": 720,
+    "net_value": 185518900
+  },
+  {
+    "year": 2024,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "exempt",
+    "parcels": 1629,
+    "net_value": 834408500
+  },
+  {
+    "year": 2024,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "industrial",
+    "parcels": 82,
+    "net_value": 18858300
+  },
+  {
+    "year": 2024,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 729629
+  },
+  {
+    "year": 2024,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "residential",
+    "parcels": 4629,
+    "net_value": 456481230
+  },
+  {
+    "year": 2024,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "vacant",
+    "parcels": 1488,
+    "net_value": 34926300
+  },
+  {
+    "year": 2025,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "apartment",
+    "parcels": 369,
+    "net_value": 428110900
+  },
+  {
+    "year": 2025,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "commercial",
+    "parcels": 1091,
+    "net_value": 917270100
+  },
+  {
+    "year": 2025,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "exempt",
+    "parcels": 779,
+    "net_value": 3183884600
+  },
+  {
+    "year": 2025,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "industrial",
+    "parcels": 85,
+    "net_value": 890141800
+  },
+  {
+    "year": 2025,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "other",
+    "parcels": 53,
+    "net_value": 41533100
+  },
+  {
+    "year": 2025,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "residential",
+    "parcels": 11197,
+    "net_value": 4507142600
+  },
+  {
+    "year": 2025,
+    "mun": "0901",
+    "name": "Bayonne",
+    "group": "vacant",
+    "parcels": 412,
+    "net_value": 827351000
+  },
+  {
+    "year": 2025,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "apartment",
+    "parcels": 14,
+    "net_value": 15175900
+  },
+  {
+    "year": 2025,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "commercial",
+    "parcels": 27,
+    "net_value": 12485400
+  },
+  {
+    "year": 2025,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "exempt",
+    "parcels": 15,
+    "net_value": 6232400
+  },
+  {
+    "year": 2025,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "industrial",
+    "parcels": 5,
+    "net_value": 33638100
+  },
+  {
+    "year": 2025,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 0
+  },
+  {
+    "year": 2025,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "residential",
+    "parcels": 352,
+    "net_value": 97907200
+  },
+  {
+    "year": 2025,
+    "mun": "0902",
+    "name": "East Newark",
+    "group": "vacant",
+    "parcels": 7,
+    "net_value": 3492600
+  },
+  {
+    "year": 2025,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "apartment",
+    "parcels": 87,
+    "net_value": 89145600
+  },
+  {
+    "year": 2025,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "commercial",
+    "parcels": 165,
+    "net_value": 76018600
+  },
+  {
+    "year": 2025,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "exempt",
+    "parcels": 89,
+    "net_value": 83795302
+  },
+  {
+    "year": 2025,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "industrial",
+    "parcels": 33,
+    "net_value": 14480200
+  },
+  {
+    "year": 2025,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 465960
+  },
+  {
+    "year": 2025,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "residential",
+    "parcels": 2354,
+    "net_value": 590656276
+  },
+  {
+    "year": 2025,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "group": "vacant",
+    "parcels": 67,
+    "net_value": 5889399
+  },
+  {
+    "year": 2025,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "apartment",
+    "parcels": 90,
+    "net_value": 89521679
+  },
+  {
+    "year": 2025,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "commercial",
+    "parcels": 245,
+    "net_value": 210236250
+  },
+  {
+    "year": 2025,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "exempt",
+    "parcels": 297,
+    "net_value": 1519790208
+  },
+  {
+    "year": 2025,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "industrial",
+    "parcels": 46,
+    "net_value": 244949874
+  },
+  {
+    "year": 2025,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "other",
+    "parcels": 52,
+    "net_value": 2234099
+  },
+  {
+    "year": 2025,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "residential",
+    "parcels": 2003,
+    "net_value": 916840318
+  },
+  {
+    "year": 2025,
+    "mun": "0904",
+    "name": "Harrison",
+    "group": "vacant",
+    "parcels": 64,
+    "net_value": 100528931
+  },
+  {
+    "year": 2025,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "apartment",
+    "parcels": 336,
+    "net_value": 1568111600
+  },
+  {
+    "year": 2025,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "commercial",
+    "parcels": 940,
+    "net_value": 1923582900
+  },
+  {
+    "year": 2025,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "exempt",
+    "parcels": 1987,
+    "net_value": 3034078500
+  },
+  {
+    "year": 2025,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "industrial",
+    "parcels": 21,
+    "net_value": 74279300
+  },
+  {
+    "year": 2025,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "other",
+    "parcels": 26,
+    "net_value": 11826159
+  },
+  {
+    "year": 2025,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "residential",
+    "parcels": 16245,
+    "net_value": 8578111800
+  },
+  {
+    "year": 2025,
+    "mun": "0905",
+    "name": "Hoboken",
+    "group": "vacant",
+    "parcels": 113,
+    "net_value": 49167800
+  },
+  {
+    "year": 2025,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "apartment",
+    "parcels": 1771,
+    "net_value": 6636837200
+  },
+  {
+    "year": 2025,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "commercial",
+    "parcels": 4617,
+    "net_value": 15090389400
+  },
+  {
+    "year": 2025,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "exempt",
+    "parcels": 8973,
+    "net_value": 17041780282
+  },
+  {
+    "year": 2025,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "industrial",
+    "parcels": 446,
+    "net_value": 2274606500
+  },
+  {
+    "year": 2025,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "other",
+    "parcels": 128,
+    "net_value": 63563863
+  },
+  {
+    "year": 2025,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "residential",
+    "parcels": 42138,
+    "net_value": 20305715585
+  },
+  {
+    "year": 2025,
+    "mun": "0906",
+    "name": "Jersey City",
+    "group": "vacant",
+    "parcels": 6812,
+    "net_value": 2642919472
+  },
+  {
+    "year": 2025,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "apartment",
+    "parcels": 147,
+    "net_value": 40534600
+  },
+  {
+    "year": 2025,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "commercial",
+    "parcels": 486,
+    "net_value": 120822800
+  },
+  {
+    "year": 2025,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "exempt",
+    "parcels": 364,
+    "net_value": 354521150
+  },
+  {
+    "year": 2025,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "industrial",
+    "parcels": 214,
+    "net_value": 269620350
+  },
+  {
+    "year": 2025,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "other",
+    "parcels": 136,
+    "net_value": 114907394
+  },
+  {
+    "year": 2025,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "residential",
+    "parcels": 7138,
+    "net_value": 707306450
+  },
+  {
+    "year": 2025,
+    "mun": "0907",
+    "name": "Kearny",
+    "group": "vacant",
+    "parcels": 191,
+    "net_value": 34760900
+  },
+  {
+    "year": 2025,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "apartment",
+    "parcels": 169,
+    "net_value": 726755500
+  },
+  {
+    "year": 2025,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "commercial",
+    "parcels": 796,
+    "net_value": 1758977502
+  },
+  {
+    "year": 2025,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "exempt",
+    "parcels": 425,
+    "net_value": 1780405000
+  },
+  {
+    "year": 2025,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "industrial",
+    "parcels": 187,
+    "net_value": 1749976095
+  },
+  {
+    "year": 2025,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "other",
+    "parcels": 47,
+    "net_value": 25097067
+  },
+  {
+    "year": 2025,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "residential",
+    "parcels": 10851,
+    "net_value": 5304478100
+  },
+  {
+    "year": 2025,
+    "mun": "0908",
+    "name": "North Bergen",
+    "group": "vacant",
+    "parcels": 237,
+    "net_value": 154391400
+  },
+  {
+    "year": 2025,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "apartment",
+    "parcels": 15,
+    "net_value": 63893400
+  },
+  {
+    "year": 2025,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "commercial",
+    "parcels": 263,
+    "net_value": 847615975
+  },
+  {
+    "year": 2025,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "exempt",
+    "parcels": 235,
+    "net_value": 580482100
+  },
+  {
+    "year": 2025,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "industrial",
+    "parcels": 154,
+    "net_value": 1048641600
+  },
+  {
+    "year": 2025,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "other",
+    "parcels": 20,
+    "net_value": 2743170
+  },
+  {
+    "year": 2025,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "residential",
+    "parcels": 4804,
+    "net_value": 862767450
+  },
+  {
+    "year": 2025,
+    "mun": "0909",
+    "name": "Secaucus",
+    "group": "vacant",
+    "parcels": 132,
+    "net_value": 39618400
+  },
+  {
+    "year": 2025,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "apartment",
+    "parcels": 685,
+    "net_value": 1455173600
+  },
+  {
+    "year": 2025,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "commercial",
+    "parcels": 1371,
+    "net_value": 1738199600
+  },
+  {
+    "year": 2025,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "exempt",
+    "parcels": 602,
+    "net_value": 1408675200
+  },
+  {
+    "year": 2025,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "industrial",
+    "parcels": 70,
+    "net_value": 106746600
+  },
+  {
+    "year": 2025,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "other",
+    "parcels": 2,
+    "net_value": 17671195
+  },
+  {
+    "year": 2025,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "residential",
+    "parcels": 6784,
+    "net_value": 3444553700
+  },
+  {
+    "year": 2025,
+    "mun": "0910",
+    "name": "Union City",
+    "group": "vacant",
+    "parcels": 126,
+    "net_value": 54472000
+  },
+  {
+    "year": 2025,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "apartment",
+    "parcels": 104,
+    "net_value": 390494900
+  },
+  {
+    "year": 2025,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "commercial",
+    "parcels": 124,
+    "net_value": 658470184
+  },
+  {
+    "year": 2025,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "exempt",
+    "parcels": 194,
+    "net_value": 1075905557
+  },
+  {
+    "year": 2025,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "industrial",
+    "parcels": 16,
+    "net_value": 133710800
+  },
+  {
+    "year": 2025,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "other",
+    "parcels": 9,
+    "net_value": 3235084
+  },
+  {
+    "year": 2025,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "residential",
+    "parcels": 3287,
+    "net_value": 2522299900
+  },
+  {
+    "year": 2025,
+    "mun": "0911",
+    "name": "Weehawken",
+    "group": "vacant",
+    "parcels": 110,
+    "net_value": 306531100
+  },
+  {
+    "year": 2025,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "apartment",
+    "parcels": 451,
+    "net_value": 256335695
+  },
+  {
+    "year": 2025,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "commercial",
+    "parcels": 715,
+    "net_value": 182997800
+  },
+  {
+    "year": 2025,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "exempt",
+    "parcels": 1632,
+    "net_value": 839157200
+  },
+  {
+    "year": 2025,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "industrial",
+    "parcels": 79,
+    "net_value": 18258300
+  },
+  {
+    "year": 2025,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "other",
+    "parcels": 1,
+    "net_value": 657946
+  },
+  {
+    "year": 2025,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "residential",
+    "parcels": 4629,
+    "net_value": 456862130
+  },
+  {
+    "year": 2025,
+    "mun": "0912",
+    "name": "West New York",
+    "group": "vacant",
+    "parcels": 1487,
+    "net_value": 34989400
+  }
+]

@@ -1,0 +1,542 @@
+[
+  {
+    "year": 2021,
+    "mun": "0901",
+    "name": "Bayonne",
+    "parcels": 13936,
+    "net_value": 9969902206,
+    "land_value": 4503431982,
+    "improvement_value": 5473855069
+  },
+  {
+    "year": 2021,
+    "mun": "0902",
+    "name": "East Newark",
+    "parcels": 420,
+    "net_value": 165667217,
+    "land_value": 54181460,
+    "improvement_value": 111540030
+  },
+  {
+    "year": 2021,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "parcels": 2805,
+    "net_value": 851134518,
+    "land_value": 309390944,
+    "improvement_value": 542019808
+  },
+  {
+    "year": 2021,
+    "mun": "0904",
+    "name": "Harrison",
+    "parcels": 2784,
+    "net_value": 2691292894,
+    "land_value": 1049685495,
+    "improvement_value": 1641669549
+  },
+  {
+    "year": 2021,
+    "mun": "0905",
+    "name": "Hoboken",
+    "parcels": 18367,
+    "net_value": 15014018766,
+    "land_value": 5808930128,
+    "improvement_value": 9209012263
+  },
+  {
+    "year": 2021,
+    "mun": "0906",
+    "name": "Jersey City",
+    "parcels": 63341,
+    "net_value": 57563766274,
+    "land_value": 20807821264,
+    "improvement_value": 37456173065
+  },
+  {
+    "year": 2021,
+    "mun": "0907",
+    "name": "Kearny",
+    "parcels": 8636,
+    "net_value": 1558007462,
+    "land_value": 590258108,
+    "improvement_value": 978716135
+  },
+  {
+    "year": 2021,
+    "mun": "0908",
+    "name": "North Bergen",
+    "parcels": 12683,
+    "net_value": 3122080373,
+    "land_value": 1134893018,
+    "improvement_value": 1994640497
+  },
+  {
+    "year": 2021,
+    "mun": "0909",
+    "name": "Secaucus",
+    "parcels": 5588,
+    "net_value": 3382877534,
+    "land_value": 1000464872,
+    "improvement_value": 2392243926
+  },
+  {
+    "year": 2021,
+    "mun": "0910",
+    "name": "Union City",
+    "parcels": 9634,
+    "net_value": 1922159827,
+    "land_value": 860874612,
+    "improvement_value": 1073049561
+  },
+  {
+    "year": 2021,
+    "mun": "0911",
+    "name": "Weehawken",
+    "parcels": 3828,
+    "net_value": 4826922595,
+    "land_value": 1866328138,
+    "improvement_value": 2960604457
+  },
+  {
+    "year": 2021,
+    "mun": "0912",
+    "name": "West New York",
+    "parcels": 8997,
+    "net_value": 1756341101,
+    "land_value": 487018866,
+    "improvement_value": 1273802927
+  },
+  {
+    "year": 2022,
+    "mun": "0901",
+    "name": "Bayonne",
+    "parcels": 13918,
+    "net_value": 10052999577,
+    "land_value": 4512526995,
+    "improvement_value": 5548902324
+  },
+  {
+    "year": 2022,
+    "mun": "0902",
+    "name": "East Newark",
+    "parcels": 419,
+    "net_value": 165520694,
+    "land_value": 55050857,
+    "improvement_value": 110518397
+  },
+  {
+    "year": 2022,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "parcels": 2806,
+    "net_value": 851912818,
+    "land_value": 309657244,
+    "improvement_value": 542531808
+  },
+  {
+    "year": 2022,
+    "mun": "0904",
+    "name": "Harrison",
+    "parcels": 2791,
+    "net_value": 2831552228,
+    "land_value": 1053525099,
+    "improvement_value": 1778135039
+  },
+  {
+    "year": 2022,
+    "mun": "0905",
+    "name": "Hoboken",
+    "parcels": 19266,
+    "net_value": 15038219878,
+    "land_value": 5798841947,
+    "improvement_value": 9243065596
+  },
+  {
+    "year": 2022,
+    "mun": "0906",
+    "name": "Jersey City",
+    "parcels": 63944,
+    "net_value": 58774410646,
+    "land_value": 21104395852,
+    "improvement_value": 38358293104
+  },
+  {
+    "year": 2022,
+    "mun": "0907",
+    "name": "Kearny",
+    "parcels": 8651,
+    "net_value": 1590181060,
+    "land_value": 597314928,
+    "improvement_value": 1004297259
+  },
+  {
+    "year": 2022,
+    "mun": "0908",
+    "name": "North Bergen",
+    "parcels": 12744,
+    "net_value": 11482686554,
+    "land_value": 5062377957,
+    "improvement_value": 6422890300
+  },
+  {
+    "year": 2022,
+    "mun": "0909",
+    "name": "Secaucus",
+    "parcels": 5612,
+    "net_value": 3401478282,
+    "land_value": 997213506,
+    "improvement_value": 2413964476
+  },
+  {
+    "year": 2022,
+    "mun": "0910",
+    "name": "Union City",
+    "parcels": 9641,
+    "net_value": 1937913772,
+    "land_value": 860495766,
+    "improvement_value": 1089110441
+  },
+  {
+    "year": 2022,
+    "mun": "0911",
+    "name": "Weehawken",
+    "parcels": 3833,
+    "net_value": 5067671325,
+    "land_value": 1863971384,
+    "improvement_value": 3203709941
+  },
+  {
+    "year": 2022,
+    "mun": "0912",
+    "name": "West New York",
+    "parcels": 9007,
+    "net_value": 1757757398,
+    "land_value": 487198075,
+    "improvement_value": 1275050937
+  },
+  {
+    "year": 2023,
+    "mun": "0901",
+    "name": "Bayonne",
+    "parcels": 13926,
+    "net_value": 10320470786,
+    "land_value": 4574996392,
+    "improvement_value": 5755268213
+  },
+  {
+    "year": 2023,
+    "mun": "0902",
+    "name": "East Newark",
+    "parcels": 419,
+    "net_value": 168380298,
+    "land_value": 55051157,
+    "improvement_value": 113395358
+  },
+  {
+    "year": 2023,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "parcels": 2803,
+    "net_value": 855301223,
+    "land_value": 309158239,
+    "improvement_value": 546433813
+  },
+  {
+    "year": 2023,
+    "mun": "0904",
+    "name": "Harrison",
+    "parcels": 2787,
+    "net_value": 2975375322,
+    "land_value": 1053750373,
+    "improvement_value": 1921889413
+  },
+  {
+    "year": 2023,
+    "mun": "0905",
+    "name": "Hoboken",
+    "parcels": 19513,
+    "net_value": 15233856875,
+    "land_value": 5811167099,
+    "improvement_value": 9426818188
+  },
+  {
+    "year": 2023,
+    "mun": "0906",
+    "name": "Jersey City",
+    "parcels": 64068,
+    "net_value": 61437670192,
+    "land_value": 22759561450,
+    "improvement_value": 39168826258
+  },
+  {
+    "year": 2023,
+    "mun": "0907",
+    "name": "Kearny",
+    "parcels": 8654,
+    "net_value": 1612750030,
+    "land_value": 607111262,
+    "improvement_value": 1017940403
+  },
+  {
+    "year": 2023,
+    "mun": "0908",
+    "name": "North Bergen",
+    "parcels": 12739,
+    "net_value": 11475940143,
+    "land_value": 5042905446,
+    "improvement_value": 6435616400
+  },
+  {
+    "year": 2023,
+    "mun": "0909",
+    "name": "Secaucus",
+    "parcels": 5616,
+    "net_value": 3435848183,
+    "land_value": 995904263,
+    "improvement_value": 2450028624
+  },
+  {
+    "year": 2023,
+    "mun": "0910",
+    "name": "Union City",
+    "parcels": 9655,
+    "net_value": 1943866943,
+    "land_value": 860365866,
+    "improvement_value": 1095678058
+  },
+  {
+    "year": 2023,
+    "mun": "0911",
+    "name": "Weehawken",
+    "parcels": 3851,
+    "net_value": 5007479125,
+    "land_value": 1858427684,
+    "improvement_value": 3149061441
+  },
+  {
+    "year": 2023,
+    "mun": "0912",
+    "name": "West New York",
+    "parcels": 9013,
+    "net_value": 1772419836,
+    "land_value": 487226075,
+    "improvement_value": 1289350834
+  },
+  {
+    "year": 2024,
+    "mun": "0901",
+    "name": "Bayonne",
+    "parcels": 13972,
+    "net_value": 10621306276,
+    "land_value": 4611087055,
+    "improvement_value": 6019615765
+  },
+  {
+    "year": 2024,
+    "mun": "0902",
+    "name": "East Newark",
+    "parcels": 419,
+    "net_value": 168124500,
+    "land_value": 54886800,
+    "improvement_value": 113237700
+  },
+  {
+    "year": 2024,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "parcels": 2805,
+    "net_value": 860302623,
+    "land_value": 309207239,
+    "improvement_value": 551386213
+  },
+  {
+    "year": 2024,
+    "mun": "0904",
+    "name": "Harrison",
+    "parcels": 2792,
+    "net_value": 2979738660,
+    "land_value": 1054052989,
+    "improvement_value": 1926135681
+  },
+  {
+    "year": 2024,
+    "mun": "0905",
+    "name": "Hoboken",
+    "parcels": 19536,
+    "net_value": 15247515518,
+    "land_value": 5810550133,
+    "improvement_value": 9441339640
+  },
+  {
+    "year": 2024,
+    "mun": "0906",
+    "name": "Jersey City",
+    "parcels": 64294,
+    "net_value": 62832382284,
+    "land_value": 23651843195,
+    "improvement_value": 39644111522
+  },
+  {
+    "year": 2024,
+    "mun": "0907",
+    "name": "Kearny",
+    "parcels": 8668,
+    "net_value": 1630617596,
+    "land_value": 615397274,
+    "improvement_value": 1027191088
+  },
+  {
+    "year": 2024,
+    "mun": "0908",
+    "name": "North Bergen",
+    "parcels": 12708,
+    "net_value": 11407154323,
+    "land_value": 5048351726,
+    "improvement_value": 6361384300
+  },
+  {
+    "year": 2024,
+    "mun": "0909",
+    "name": "Secaucus",
+    "parcels": 5615,
+    "net_value": 3430390993,
+    "land_value": 996439154,
+    "improvement_value": 2444094656
+  },
+  {
+    "year": 2024,
+    "mun": "0910",
+    "name": "Union City",
+    "parcels": 9612,
+    "net_value": 8083036076,
+    "land_value": 3098692176,
+    "improvement_value": 4984452300
+  },
+  {
+    "year": 2024,
+    "mun": "0911",
+    "name": "Weehawken",
+    "parcels": 3840,
+    "net_value": 4973638725,
+    "land_value": 1825600784,
+    "improvement_value": 3148047941
+  },
+  {
+    "year": 2024,
+    "mun": "0912",
+    "name": "West New York",
+    "parcels": 8999,
+    "net_value": 1783066154,
+    "land_value": 487363875,
+    "improvement_value": 1299840855
+  },
+  {
+    "year": 2025,
+    "mun": "0901",
+    "name": "Bayonne",
+    "parcels": 13986,
+    "net_value": 10795434100,
+    "land_value": 4625361386,
+    "improvement_value": 6178695182
+  },
+  {
+    "year": 2025,
+    "mun": "0902",
+    "name": "East Newark",
+    "parcels": 421,
+    "net_value": 168931600,
+    "land_value": 54087800,
+    "improvement_value": 114843800
+  },
+  {
+    "year": 2025,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "parcels": 2796,
+    "net_value": 860451337,
+    "land_value": 309060339,
+    "improvement_value": 551728619
+  },
+  {
+    "year": 2025,
+    "mun": "0904",
+    "name": "Harrison",
+    "parcels": 2797,
+    "net_value": 3084101359,
+    "land_value": 1058667389,
+    "improvement_value": 2026349708
+  },
+  {
+    "year": 2025,
+    "mun": "0905",
+    "name": "Hoboken",
+    "parcels": 19668,
+    "net_value": 15239158059,
+    "land_value": 5812990523,
+    "improvement_value": 9430861476
+  },
+  {
+    "year": 2025,
+    "mun": "0906",
+    "name": "Jersey City",
+    "parcels": 64885,
+    "net_value": 64055812302,
+    "land_value": 23551282205,
+    "improvement_value": 40750152126
+  },
+  {
+    "year": 2025,
+    "mun": "0907",
+    "name": "Kearny",
+    "parcels": 8676,
+    "net_value": 1642473644,
+    "land_value": 606632492,
+    "improvement_value": 1047725609
+  },
+  {
+    "year": 2025,
+    "mun": "0908",
+    "name": "North Bergen",
+    "parcels": 12712,
+    "net_value": 11500080664,
+    "land_value": 5035492955,
+    "improvement_value": 6468032445
+  },
+  {
+    "year": 2025,
+    "mun": "0909",
+    "name": "Secaucus",
+    "parcels": 5623,
+    "net_value": 3445762095,
+    "land_value": 996585725,
+    "improvement_value": 2460873018
+  },
+  {
+    "year": 2025,
+    "mun": "0910",
+    "name": "Union City",
+    "parcels": 9640,
+    "net_value": 8225491895,
+    "land_value": 3181737176,
+    "improvement_value": 5043847709
+  },
+  {
+    "year": 2025,
+    "mun": "0911",
+    "name": "Weehawken",
+    "parcels": 3844,
+    "net_value": 5090647525,
+    "land_value": 1823684684,
+    "improvement_value": 3266972841
+  },
+  {
+    "year": 2025,
+    "mun": "0912",
+    "name": "West New York",
+    "parcels": 8994,
+    "net_value": 1789258471,
+    "land_value": 487197875,
+    "improvement_value": 1305038131
+  }
+]

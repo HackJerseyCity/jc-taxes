@@ -1,5 +1,8 @@
 """Tests for the fixed-width MOD-IV record parser (`jc_taxes.modiv`)."""
-from jc_taxes.modiv import _decode_tax, _decode_int, _decode_acre, parse_record
+from jc_taxes.modiv import (
+    _decode_tax, _decode_int, _decode_acre, parse_record,
+    class_group, _muni_display,
+)
 
 
 def test_decode_tax_zoned_positive_zero():
@@ -52,3 +55,22 @@ def test_parse_record_key_fields():
     assert rec["property_location"] == "1075 SECAUCUS RD."
     assert rec["building_description"] == "PROP.1S-IN-W-P"
     assert rec["calculated_acreage"] == 39.408
+
+
+def test_class_group():
+    assert class_group("1") == "vacant"
+    assert class_group("2") == "residential"
+    assert class_group("4A") == "commercial"
+    assert class_group("4C") == "apartment"
+    assert class_group("15F") == "exempt"
+    assert class_group("15C") == "exempt"
+    assert class_group("5A") == "other"  # railroad — unmapped
+    assert class_group("") == "other"
+    assert class_group(None) == "other"
+
+
+def test_muni_display():
+    assert _muni_display("JERSEY CITY CITY") == "Jersey City"
+    assert _muni_display("UNION CITY CITY") == "Union City"
+    assert _muni_display("EAST NEWARK BORO") == "East Newark"
+    assert _muni_display("NORTH BERGEN TWP") == "North Bergen"

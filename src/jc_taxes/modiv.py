@@ -332,9 +332,10 @@ def cmd_pull_treasury(years: tuple[int, ...], force: bool, layout: bool, extract
 
 
 @modiv.command("parse")
-@click.option("-m", "--mun", default="0906", show_default=True,
-              help='County-district (MUN) code to keep, e.g. "0906" for Jersey '
-                   'City. Pass "" to keep all of Hudson county.')
+@click.option("-m", "--mun", default="all", show_default=True,
+              help='County-district (MUN) code(s) to keep: "all" for every '
+                   'district in the file (all of Hudson county), a single code '
+                   'like "0906" (Jersey City), or a comma-separated list.')
 @click.option("-o", "--out-dir", default=None,
               help="Output dir for {year}.parquet (default: data/modiv/treasury/)")
 def cmd_parse(mun: str, out_dir: str):
@@ -343,10 +344,13 @@ def cmd_parse(mun: str, out_dir: str):
     Walks `data/modiv/treasury/*/Hudson*re.txt`, decodes each record per the
     `modivlayout.pdf` field offsets, filters to `--mun`, and writes one
     `{year}.parquet` per source year. The source year is the parent dir name.
+    The `county_district` column is retained so downstream consumers can filter
+    by municipality (e.g. JC = "0906").
     """
     import pandas as pd
     out_root = Path(out_dir) if out_dir else TREASURY_ROOT
     out_root.mkdir(parents=True, exist_ok=True)
+    keep = None if mun.strip().lower() in ("", "all") else set(mun.split(","))
     txts = sorted(
         p for p in TREASURY_ROOT.glob("*/*")
         if p.is_file() and p.name.lower().startswith("hudson")
@@ -365,7 +369,7 @@ def cmd_parse(mun: str, out_dir: str):
                 if not line.rstrip("\r\n"):
                     continue
                 total += 1
-                if mun and not line.startswith(mun):
+                if keep is not None and line[:4] not in keep:
                     continue
                 rec = parse_record(line)
                 rec["year"] = int(year)
@@ -374,18 +378,112 @@ def cmd_parse(mun: str, out_dir: str):
         df = pd.DataFrame(records)
         out = out_root / f"{year}.parquet"
         df.to_parquet(out, index=False)
-        err(f"[modiv] {txt.name}: {kept:,}/{total:,} records (MUN={mun or 'all'}) "
+        err(f"[modiv] {txt.name}: {kept:,}/{total:,} records (MUN={mun}) "
             f"→ {out.relative_to(DATA.parent)} ({out.stat().st_size / 1e6:.1f}MB)")
+
+
+# NJ property-class code → coarse group for homepage charts. Class 15* (all
+# subclasses) is tax-exempt; everything unmapped (e.g. 5A/5B railroad, 6A/6B
+# telecom) falls to "other".
+_CLASS_GROUPS = {
+    "1": "vacant",
+    "2": "residential",
+    "3A": "farm", "3B": "farm",
+    "4A": "commercial",
+    "4B": "industrial",
+    "4C": "apartment",
+}
+_MUNI_SUFFIXES = {"CITY", "TOWN", "TWP", "TOWNSHIP", "BORO", "BOROUGH", "VILLAGE"}
+
+
+def class_group(pc: str | None) -> str:
+    """Map a raw `property_class` (e.g. "2", "4A", "15F") to a chart group."""
+    if not pc:
+        return "other"
+    pc = pc.strip().upper()
+    if pc.startswith("15"):
+        return "exempt"
+    return _CLASS_GROUPS.get(pc, "other")
+
+
+def _muni_display(mun_name: str) -> str:
+    """"JERSEY CITY CITY" → "Jersey City"; drop the trailing type suffix."""
+    toks = mun_name.split()
+    if len(toks) > 1 and toks[-1] in _MUNI_SUFFIXES:
+        toks = toks[:-1]
+    return " ".join(t.capitalize() for t in toks)
+
+
+def _write_json(path: Path, df) -> None:
+    """Write a DataFrame as pretty, diff-friendly records JSON (native types)."""
+    recs = json.loads(df.to_json(orient="records"))
+    path.write_text(json.dumps(recs, indent=2) + "\n")
+
+
+@modiv.command("aggregate")
+@click.option("-o", "--out-dir", default=None,
+              help="Output dir for the JSON rollups (default: www/public/data/)")
+@click.option("-t", "--treasury-dir", default=None,
+              help="Dir of {year}.parquet (default: data/modiv/treasury/)")
+def cmd_aggregate(out_dir: str, treasury_dir: str):
+    """Emit small per-(year, muni) JSON rollups for the homepage charts.
+
+    Reads the all-Hudson `{year}.parquet` files and writes three tiny JSON
+    files the frontend loads directly (committed, not DVC-tracked):
+
+    \b
+    - `modiv_tax_base.json`          net/land/improvement value + parcels
+    - `modiv_class_composition.json` parcels + net value by class group
+    - `modiv_exempt_share.json`      exempt vs total net value + share
+    """
+    import pandas as pd
+    troot = Path(treasury_dir) if treasury_dir else TREASURY_ROOT
+    out = Path(out_dir) if out_dir else DATA.parent / "www" / "public" / "data"
+    out.mkdir(parents=True, exist_ok=True)
+    code_to_name = {m.mun_code: _muni_display(m.mun_name) for m in MUNIS.values()}
+    frames = [pd.read_parquet(p) for p in sorted(troot.glob("[0-9][0-9][0-9][0-9].parquet"))]
+    if not frames:
+        err(f"[aggregate] no {{year}}.parquet under {troot} — run parse first")
+        sys.exit(1)
+    df = pd.concat(frames, ignore_index=True)
+    df["mun"] = df.county_district
+    df["name"] = df.mun.map(code_to_name)
+    df["group"] = df.property_class.map(class_group)
+
+    tb = (df.groupby(["year", "mun", "name"], as_index=False)
+            .agg(parcels=("blq", "size"),
+                 net_value=("net_value", "sum"),
+                 land_value=("land_value", "sum"),
+                 improvement_value=("improvement_value", "sum")))
+    _write_json(out / "modiv_tax_base.json", tb)
+
+    cc = (df.groupby(["year", "mun", "name", "group"], as_index=False)
+            .agg(parcels=("blq", "size"), net_value=("net_value", "sum")))
+    _write_json(out / "modiv_class_composition.json", cc)
+
+    tot = tb[["year", "mun", "name", "net_value"]].rename(columns={"net_value": "total_value"})
+    exm = (cc[cc.group == "exempt"].groupby(["year", "mun"], as_index=False)
+             .agg(exempt_value=("net_value", "sum")))
+    es = tot.merge(exm, on=["year", "mun"], how="left").fillna({"exempt_value": 0})
+    es["exempt_value"] = es.exempt_value.astype(int)
+    es["exempt_share"] = (es.exempt_value / es.total_value).round(4)
+    _write_json(out / "modiv_exempt_share.json", es)
+
+    err(f"[aggregate] {len(df):,} records → {out.relative_to(DATA.parent)}/modiv_*.json "
+        f"({len(tb)} tax-base, {len(cc)} class, {len(es)} exempt rows)")
 
 
 @modiv.command("crossval")
 @click.option("-H", "--hls", "hls_path", default=None,
               help="HLS payments parquet (default: data/payments.parquet)")
+@click.option("-m", "--mun", default="0906", show_default=True,
+              help='County-district to compare (HLS payments are JC-only); '
+                   '"all" to skip the filter.')
 @click.option("-o", "--out-dir", default="tmp", show_default=True,
               help="Dir for per-year modiv-vs-hls-{tax_year}.parquet")
 @click.option("-t", "--treasury-dir", default=None,
               help="Dir of {year}.parquet (default: data/modiv/treasury/)")
-def cmd_crossval(hls_path: str, out_dir: str, treasury_dir: str):
+def cmd_crossval(hls_path: str, mun: str, out_dir: str, treasury_dir: str):
     """Cross-validate Treasury tax vs HLS Billed/Paid, per (BLQ, tax-year).
 
     The Treasury assessment file published in year Y carries the *prior*
@@ -408,6 +506,8 @@ def cmd_crossval(hls_path: str, out_dir: str, treasury_dir: str):
         fy = int(tpath.stem)
         tax_year = fy - 1
         t = pd.read_parquet(tpath)
+        if mun.lower() != "all":
+            t = t[t.county_district == mun]
         t = t[t.last_year_tax.notna()].copy()
         t["key"] = [norm_blq(b, l, q) for b, l, q in zip(t.block, t.lot, t.qualifier)]
         t = t.drop_duplicates("key")[["key", "blq", "last_year_tax"]]
@@ -446,10 +546,12 @@ def split_old_property_id(raw: str) -> tuple[str, str, str]:
 
 
 @modiv.command("blq-history")
+@click.option("-m", "--mun", default="0906", show_default=True,
+              help='County-district to map; "all" for every district in the file.')
 @click.option("-n", "--sample", default=20, show_default=True, help="Sample N (current, old) pairs to stderr")
 @click.option("-o", "--out", default=None, help="Output parquet (default: data/modiv/blq_history.parquet)")
 @click.option("-t", "--treasury-dir", default=None, help="Dir of {year}.parquet (default: data/modiv/treasury/)")
-def cmd_blq_history(sample: int, out: str, treasury_dir: str):
+def cmd_blq_history(mun: str, sample: int, out: str, treasury_dir: str):
     """Build a cross-year BLQ-renumbering map from `old_property_id`.
 
     For each Treasury year, decodes `old_property_id` (the prior BLQ for
@@ -464,6 +566,8 @@ def cmd_blq_history(sample: int, out: str, treasury_dir: str):
     for tpath in sorted(troot.glob("[0-9][0-9][0-9][0-9].parquet")):
         year = int(tpath.stem)
         t = pd.read_parquet(tpath)
+        if mun.lower() != "all":
+            t = t[t.county_district == mun]
         opid = t.old_property_id.fillna("").str.strip()
         nonempty = opid.str.len() > 0
         n_renum = 0

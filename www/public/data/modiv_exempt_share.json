@@ -1,0 +1,482 @@
+[
+  {
+    "year": 2021,
+    "mun": "0901",
+    "name": "Bayonne",
+    "total_value": 9969902206,
+    "exempt_value": 2394594700,
+    "exempt_share": 0.2402
+  },
+  {
+    "year": 2021,
+    "mun": "0902",
+    "name": "East Newark",
+    "total_value": 165667217,
+    "exempt_value": 6993300,
+    "exempt_share": 0.0422
+  },
+  {
+    "year": 2021,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "total_value": 851134518,
+    "exempt_value": 67819202,
+    "exempt_share": 0.0797
+  },
+  {
+    "year": 2021,
+    "mun": "0904",
+    "name": "Harrison",
+    "total_value": 2691292894,
+    "exempt_value": 1140467400,
+    "exempt_share": 0.4238
+  },
+  {
+    "year": 2021,
+    "mun": "0905",
+    "name": "Hoboken",
+    "total_value": 15014018766,
+    "exempt_value": 3147902200,
+    "exempt_share": 0.2097
+  },
+  {
+    "year": 2021,
+    "mun": "0906",
+    "name": "Jersey City",
+    "total_value": 57563766274,
+    "exempt_value": 17923090382,
+    "exempt_share": 0.3114
+  },
+  {
+    "year": 2021,
+    "mun": "0907",
+    "name": "Kearny",
+    "total_value": 1558007462,
+    "exempt_value": 337613100,
+    "exempt_share": 0.2167
+  },
+  {
+    "year": 2021,
+    "mun": "0908",
+    "name": "North Bergen",
+    "total_value": 3122080373,
+    "exempt_value": 540202500,
+    "exempt_share": 0.173
+  },
+  {
+    "year": 2021,
+    "mun": "0909",
+    "name": "Secaucus",
+    "total_value": 3382877534,
+    "exempt_value": 553479500,
+    "exempt_share": 0.1636
+  },
+  {
+    "year": 2021,
+    "mun": "0910",
+    "name": "Union City",
+    "total_value": 1922159827,
+    "exempt_value": 385662390,
+    "exempt_share": 0.2006
+  },
+  {
+    "year": 2021,
+    "mun": "0911",
+    "name": "Weehawken",
+    "total_value": 4826922595,
+    "exempt_value": 724945357,
+    "exempt_share": 0.1502
+  },
+  {
+    "year": 2021,
+    "mun": "0912",
+    "name": "West New York",
+    "total_value": 1756341101,
+    "exempt_value": 830259100,
+    "exempt_share": 0.4727
+  },
+  {
+    "year": 2022,
+    "mun": "0901",
+    "name": "Bayonne",
+    "total_value": 10052999577,
+    "exempt_value": 2483361300,
+    "exempt_share": 0.247
+  },
+  {
+    "year": 2022,
+    "mun": "0902",
+    "name": "East Newark",
+    "total_value": 165520694,
+    "exempt_value": 8004000,
+    "exempt_share": 0.0484
+  },
+  {
+    "year": 2022,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "total_value": 851912818,
+    "exempt_value": 67819202,
+    "exempt_share": 0.0796
+  },
+  {
+    "year": 2022,
+    "mun": "0904",
+    "name": "Harrison",
+    "total_value": 2831552228,
+    "exempt_value": 1290686908,
+    "exempt_share": 0.4558
+  },
+  {
+    "year": 2022,
+    "mun": "0905",
+    "name": "Hoboken",
+    "total_value": 15038219878,
+    "exempt_value": 3149687600,
+    "exempt_share": 0.2094
+  },
+  {
+    "year": 2022,
+    "mun": "0906",
+    "name": "Jersey City",
+    "total_value": 58774410646,
+    "exempt_value": 17822268582,
+    "exempt_share": 0.3032
+  },
+  {
+    "year": 2022,
+    "mun": "0907",
+    "name": "Kearny",
+    "total_value": 1590181060,
+    "exempt_value": 348728900,
+    "exempt_share": 0.2193
+  },
+  {
+    "year": 2022,
+    "mun": "0908",
+    "name": "North Bergen",
+    "total_value": 11482686554,
+    "exempt_value": 1629349400,
+    "exempt_share": 0.1419
+  },
+  {
+    "year": 2022,
+    "mun": "0909",
+    "name": "Secaucus",
+    "total_value": 3401478282,
+    "exempt_value": 551617800,
+    "exempt_share": 0.1622
+  },
+  {
+    "year": 2022,
+    "mun": "0910",
+    "name": "Union City",
+    "total_value": 1937913772,
+    "exempt_value": 385768990,
+    "exempt_share": 0.1991
+  },
+  {
+    "year": 2022,
+    "mun": "0911",
+    "name": "Weehawken",
+    "total_value": 5067671325,
+    "exempt_value": 973687657,
+    "exempt_share": 0.1921
+  },
+  {
+    "year": 2022,
+    "mun": "0912",
+    "name": "West New York",
+    "total_value": 1757757398,
+    "exempt_value": 829106300,
+    "exempt_share": 0.4717
+  },
+  {
+    "year": 2023,
+    "mun": "0901",
+    "name": "Bayonne",
+    "total_value": 10320470786,
+    "exempt_value": 2681100950,
+    "exempt_share": 0.2598
+  },
+  {
+    "year": 2023,
+    "mun": "0902",
+    "name": "East Newark",
+    "total_value": 168380298,
+    "exempt_value": 8004000,
+    "exempt_share": 0.0475
+  },
+  {
+    "year": 2023,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "total_value": 855301223,
+    "exempt_value": 71808002,
+    "exempt_share": 0.084
+  },
+  {
+    "year": 2023,
+    "mun": "0904",
+    "name": "Harrison",
+    "total_value": 2975375322,
+    "exempt_value": 1429157908,
+    "exempt_share": 0.4803
+  },
+  {
+    "year": 2023,
+    "mun": "0905",
+    "name": "Hoboken",
+    "total_value": 15233856875,
+    "exempt_value": 3191982900,
+    "exempt_share": 0.2095
+  },
+  {
+    "year": 2023,
+    "mun": "0906",
+    "name": "Jersey City",
+    "total_value": 61437670192,
+    "exempt_value": 17478101982,
+    "exempt_share": 0.2845
+  },
+  {
+    "year": 2023,
+    "mun": "0907",
+    "name": "Kearny",
+    "total_value": 1612750030,
+    "exempt_value": 354042800,
+    "exempt_share": 0.2195
+  },
+  {
+    "year": 2023,
+    "mun": "0908",
+    "name": "North Bergen",
+    "total_value": 11475940143,
+    "exempt_value": 1714200400,
+    "exempt_share": 0.1494
+  },
+  {
+    "year": 2023,
+    "mun": "0909",
+    "name": "Secaucus",
+    "total_value": 3435848183,
+    "exempt_value": 577168900,
+    "exempt_share": 0.168
+  },
+  {
+    "year": 2023,
+    "mun": "0910",
+    "name": "Union City",
+    "total_value": 1943866943,
+    "exempt_value": 380284890,
+    "exempt_share": 0.1956
+  },
+  {
+    "year": 2023,
+    "mun": "0911",
+    "name": "Weehawken",
+    "total_value": 5007479125,
+    "exempt_value": 924831157,
+    "exempt_share": 0.1847
+  },
+  {
+    "year": 2023,
+    "mun": "0912",
+    "name": "West New York",
+    "total_value": 1772419836,
+    "exempt_value": 837577400,
+    "exempt_share": 0.4726
+  },
+  {
+    "year": 2024,
+    "mun": "0901",
+    "name": "Bayonne",
+    "total_value": 10621306276,
+    "exempt_value": 3015387900,
+    "exempt_share": 0.2839
+  },
+  {
+    "year": 2024,
+    "mun": "0902",
+    "name": "East Newark",
+    "total_value": 168124500,
+    "exempt_value": 6585300,
+    "exempt_share": 0.0392
+  },
+  {
+    "year": 2024,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "total_value": 860302623,
+    "exempt_value": 77807402,
+    "exempt_share": 0.0904
+  },
+  {
+    "year": 2024,
+    "mun": "0904",
+    "name": "Harrison",
+    "total_value": 2979738660,
+    "exempt_value": 1430248608,
+    "exempt_share": 0.48
+  },
+  {
+    "year": 2024,
+    "mun": "0905",
+    "name": "Hoboken",
+    "total_value": 15247515518,
+    "exempt_value": 3143461700,
+    "exempt_share": 0.2062
+  },
+  {
+    "year": 2024,
+    "mun": "0906",
+    "name": "Jersey City",
+    "total_value": 62832382284,
+    "exempt_value": 17440017282,
+    "exempt_share": 0.2776
+  },
+  {
+    "year": 2024,
+    "mun": "0907",
+    "name": "Kearny",
+    "total_value": 1630617596,
+    "exempt_value": 354199450,
+    "exempt_share": 0.2172
+  },
+  {
+    "year": 2024,
+    "mun": "0908",
+    "name": "North Bergen",
+    "total_value": 11407154323,
+    "exempt_value": 1736272400,
+    "exempt_share": 0.1522
+  },
+  {
+    "year": 2024,
+    "mun": "0909",
+    "name": "Secaucus",
+    "total_value": 3430390993,
+    "exempt_value": 577830500,
+    "exempt_share": 0.1684
+  },
+  {
+    "year": 2024,
+    "mun": "0910",
+    "name": "Union City",
+    "total_value": 8083036076,
+    "exempt_value": 1395032700,
+    "exempt_share": 0.1726
+  },
+  {
+    "year": 2024,
+    "mun": "0911",
+    "name": "Weehawken",
+    "total_value": 4973638725,
+    "exempt_value": 908521457,
+    "exempt_share": 0.1827
+  },
+  {
+    "year": 2024,
+    "mun": "0912",
+    "name": "West New York",
+    "total_value": 1783066154,
+    "exempt_value": 834408500,
+    "exempt_share": 0.468
+  },
+  {
+    "year": 2025,
+    "mun": "0901",
+    "name": "Bayonne",
+    "total_value": 10795434100,
+    "exempt_value": 3183884600,
+    "exempt_share": 0.2949
+  },
+  {
+    "year": 2025,
+    "mun": "0902",
+    "name": "East Newark",
+    "total_value": 168931600,
+    "exempt_value": 6232400,
+    "exempt_share": 0.0369
+  },
+  {
+    "year": 2025,
+    "mun": "0903",
+    "name": "Guttenberg",
+    "total_value": 860451337,
+    "exempt_value": 83795302,
+    "exempt_share": 0.0974
+  },
+  {
+    "year": 2025,
+    "mun": "0904",
+    "name": "Harrison",
+    "total_value": 3084101359,
+    "exempt_value": 1519790208,
+    "exempt_share": 0.4928
+  },
+  {
+    "year": 2025,
+    "mun": "0905",
+    "name": "Hoboken",
+    "total_value": 15239158059,
+    "exempt_value": 3034078500,
+    "exempt_share": 0.1991
+  },
+  {
+    "year": 2025,
+    "mun": "0906",
+    "name": "Jersey City",
+    "total_value": 64055812302,
+    "exempt_value": 17041780282,
+    "exempt_share": 0.266
+  },
+  {
+    "year": 2025,
+    "mun": "0907",
+    "name": "Kearny",
+    "total_value": 1642473644,
+    "exempt_value": 354521150,
+    "exempt_share": 0.2158
+  },
+  {
+    "year": 2025,
+    "mun": "0908",
+    "name": "North Bergen",
+    "total_value": 11500080664,
+    "exempt_value": 1780405000,
+    "exempt_share": 0.1548
+  },
+  {
+    "year": 2025,
+    "mun": "0909",
+    "name": "Secaucus",
+    "total_value": 3445762095,
+    "exempt_value": 580482100,
+    "exempt_share": 0.1685
+  },
+  {
+    "year": 2025,
+    "mun": "0910",
+    "name": "Union City",
+    "total_value": 8225491895,
+    "exempt_value": 1408675200,
+    "exempt_share": 0.1713
+  },
+  {
+    "year": 2025,
+    "mun": "0911",
+    "name": "Weehawken",
+    "total_value": 5090647525,
+    "exempt_value": 1075905557,
+    "exempt_share": 0.2113
+  },
+  {
+    "year": 2025,
+    "mun": "0912",
+    "name": "West New York",
+    "total_value": 1789258471,
+    "exempt_value": 839157200,
+    "exempt_share": 0.469
+  }
+]
