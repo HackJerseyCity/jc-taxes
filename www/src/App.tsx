@@ -1144,7 +1144,7 @@ export default function App() {
   )
 
   return (
-    <div style={{ width: '100vw', height: '100vh', WebkitTouchCallout: 'none' }} onContextMenu={e => e.preventDefault()} {...(!loading && { 'data-loaded': '' })}>
+    <div style={{ width: '100vw', height: '100vh', WebkitTouchCallout: 'none' }} onContextMenu={e => e.preventDefault()} {...(!loading && { 'data-loaded': aggregateMode })}>
       <DeckGL
         viewState={viewState}
         onViewStateChange={({ viewState: vs }) => {

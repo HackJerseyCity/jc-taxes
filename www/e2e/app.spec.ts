@@ -79,13 +79,14 @@ async function waitForLoad(page: Page) {
 }
 
 /**
- * Wait for a view switch to complete: data-loaded disappears (loading starts),
- * then reappears (new data loaded). Avoids race where stale data-loaded is
- * still present from the previous view.
+ * Wait for a view switch to complete by waiting for the loaded view to *be*
+ * the target aggregation: `data-loaded` carries the current aggregateMode (and
+ * is absent while loading), so `[data-loaded="<agg>"]` is the unambiguous
+ * end-state. Robust even when the load is instant (mocked) or short-circuited
+ * by the cache — both of which made the old detach/reattach catch flaky.
  */
-async function waitForReload(page: Page) {
-  await page.locator('[data-loaded]').waitFor({ state: 'detached' })
-  await page.locator('[data-loaded]').waitFor()
+async function waitForView(page: Page, agg: string) {
+  await page.locator(`[data-loaded="${agg}"]`).waitFor()
 }
 
 test.describe('Loading & data', () => {
@@ -230,7 +231,7 @@ test.describe('Color by year built', () => {
     await expect(page.getByText('Color by year built')).toBeVisible()
 
     await page.keyboard.press('b')
-    await waitForReload(page)
+    await waitForView(page, 'block')
     await expect(page.getByText('Color by year built')).not.toBeVisible()
   })
 
@@ -277,7 +278,7 @@ test.describe('Color by year built', () => {
     await page.goto('/?agg=lot&cb=yr_built')
     await waitForLoad(page)
     await page.keyboard.press('b')
-    await waitForReload(page)
+    await waitForView(page, 'block')
     await expect(page).not.toHaveURL(/[?&]cb=yr_built/)
   })
 })
