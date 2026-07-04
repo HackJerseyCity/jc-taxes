@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom'
+import { PlotlyProvider } from 'pltly/react'
+import { loadPlotly } from './charts/plotly'
 import { TaxBaseChart } from './charts/TaxBaseChart'
 import { ClassCompositionChart } from './charts/ClassCompositionChart'
 import { ExemptShareChart } from './charts/ExemptShareChart'
@@ -26,6 +28,7 @@ function Section({ id, title, blurb, children }: { id?: string, title: string, b
 
 export default function Home() {
   return (
+    <PlotlyProvider loader={loadPlotly}>
     <main className="home">
       <header className="home-hero">
         <h1 className="home-h1">Jersey City Property Taxes</h1>
@@ -87,5 +90,6 @@ export default function Home() {
         </p>
       </footer>
     </main>
+    </PlotlyProvider>
   )
 }
