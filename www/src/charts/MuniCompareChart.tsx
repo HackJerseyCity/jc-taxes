@@ -25,7 +25,13 @@ export function MuniCompareChart({ year = 2025, highlight = '0906' }: { year?: n
       color: { domain: [true, false], range: [p.jc, p.other], legend: false },
       style: { background: 'transparent', color: p.text, fontSize: '12px' },
       marks: [
-        Plot.barX(rows, { x: 'net_value', y: 'name', fill: '_highlight', tip: true }),
+        Plot.barX(rows, {
+          x: 'net_value',
+          y: 'name',
+          fill: '_highlight',
+          channels: { Municipality: 'name', 'Assessed value': 'net_value' },
+          tip: { format: { x: false, y: false, fill: false, Municipality: true, 'Assessed value': billions } },
+        }),
         Plot.text(rows, { x: 'net_value', y: 'name', text: (d: typeof rows[number]) => billions(d.net_value), textAnchor: 'start', dx: 6, fill: p.text }),
         Plot.ruleX([0], { stroke: p.muted }),
       ],

@@ -22,10 +22,18 @@ export function PlotChart({ build, height = 360, ariaLabel }: {
     const host = ref.current
     if (!host) return
     let cur: (SVGElement | HTMLElement) | null = null
+    // Plot's tip fills from `var(--plot-background)`, which Plot sets to white
+    // on the generated <svg> via a `:where(.plot-xxx)` rule. Set it inline on the
+    // svg itself (inline beats the zero-specificity `:where` rule) so the tip
+    // box is dark in dark mode instead of light text on white.
+    const tipBg = actualTheme === 'dark' ? '#242424' : '#ffffff'
     const render = () => {
       const w = host.clientWidth || 720
       const spec = build(actualTheme, w)
       const next = Plot.plot({ height, ...spec })
+      next.style.setProperty('--plot-background', tipBg)
+      next.querySelectorAll('svg').forEach(svg => svg.style.setProperty('--plot-background', tipBg))
+      if (next instanceof SVGElement) next.style.setProperty('--plot-background', tipBg)
       if (cur) cur.replaceWith(next)
       else host.appendChild(next)
       cur = next
@@ -37,6 +45,35 @@ export function PlotChart({ build, height = 360, ariaLabel }: {
   }, [build, height, actualTheme])
 
   return <div ref={ref} role="img" aria-label={ariaLabel} style={{ width: '100%' }} />
+}
+
+/**
+ * A single "unified" hover tooltip: hovering anywhere over an x-value shows one
+ * tip listing every series at that x (instead of Plot's default per-mark tip).
+ * `wide` is one row per x with a numeric field per series (+ optional total).
+ * Series values render as aligned label/value rows; `header` is the bold title.
+ */
+export function unifiedTip(
+  wide: Record<string, unknown>[],
+  opts: {
+    x: string
+    y: string
+    series: string[]
+    format: (v: number) => string
+    header: (d: Record<string, unknown>) => string
+    total?: string
+  },
+) {
+  const title = (d: Record<string, unknown>) => {
+    const lines = [opts.header(d)]
+    for (const s of opts.series) lines.push(`${s}: ${opts.format(d[s] as number)}`)
+    if (opts.total) lines.push(`Total: ${opts.format(d[opts.total] as number)}`)
+    return lines.join('\n')
+  }
+  return Plot.tip(
+    wide,
+    Plot.pointerX({ x: opts.x, y: opts.y, title, fontSize: 12, lineHeight: 1.3 }),
+  )
 }
 
 // Shared color palettes per theme — each chart picks from these so the suite

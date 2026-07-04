@@ -117,6 +117,41 @@ function RollingYear({ year, fontSize = 56 }: { year: number, fontSize?: number 
   )
 }
 
+// Status-bar summary tooltip. `usd` is the exact dollar amount (commas, no
+// cents) for cross-checking against official figures; `abbr` is a compact form.
+const usd = (n: number) => `$${Math.round(n).toLocaleString()}`
+const abbr = (n: number) =>
+  n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` :
+  n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` :
+  n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${Math.round(n)}`
+type Summary = { count: number, paid: number, billed: number, area: number, withPaid: number, yr: number }
+function SummaryStats({ s, aggLabel }: { s: Summary, aggLabel: string }) {
+  const collected = s.billed > 0 ? (s.paid / s.billed) * 100 : null
+  const row = (label: string, value: string, sub?: string) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+      <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+        {value}{sub && <span style={{ color: 'var(--text-secondary)' }}> {sub}</span>}
+      </span>
+    </div>
+  )
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 230 }}>
+      <div style={{ fontWeight: 600, marginBottom: 2 }}>
+        {s.yr} · {s.count.toLocaleString()} {aggLabel}
+      </div>
+      {row('Total paid', usd(s.paid), `(${abbr(s.paid)})`)}
+      {s.billed > 0 && row('Total billed', usd(s.billed), `(${abbr(s.billed)})`)}
+      {collected != null && row('Collected', `${collected.toFixed(2)}%`)}
+      {row('With tax > 0', `${s.withPaid.toLocaleString()} / ${s.count.toLocaleString()}`)}
+      {s.area > 0 && row('Total area', `${abbr(s.area).replace('$', '')} sqft`)}
+      <div style={{ color: 'var(--text-secondary)', fontSize: 11, marginTop: 4, fontWeight: 400 }}>
+        Sum over the current view; totals vary by view (coverage).
+      </div>
+    </div>
+  )
+}
+
 // Stable across the file: used by both the accessor closures and the data cache.
 function featureIdOf(f: ParcelFeature): string {
   const p = f.properties
@@ -327,6 +362,26 @@ export default function MapView() {
     if (percentile == null || sortedVals.length === 0) return null
     return sortedVals[Math.floor(sortedVals.length * percentile / 100)]
   }, [percentile, sortedVals])
+  // Summary stats for the current view (status-bar tooltip). Sums the displayed
+  // features; for integer years `data` is that year's set so `paid`/`billed` are
+  // exact. Totals differ by view — block view has the fullest coverage; lot/unit
+  // views drop parcels lacking geometry — so we label the view + coverage.
+  const summary = useMemo(() => {
+    if (!data || data.length === 0) return null
+    let paid = 0, billed = 0, area = 0, withPaid = 0
+    for (const f of data) {
+      const p = f.properties
+      if (p?.paid) { paid += p.paid; withPaid++ }
+      if (p?.billed) billed += p.billed
+      if (p?.area_sqft) area += p.area_sqft
+    }
+    const yr = data[0]?.properties?.year ?? Math.round(year)
+    return { count: data.length, paid, billed, area, withPaid, yr }
+  }, [data, year])
+  const summaryAggLabel = ({
+    'block': 'blocks', 'lot': 'lots', 'unit': 'units',
+    'census-block': 'census blocks', 'ward': 'wards',
+  } as Record<string, string>)[aggregateMode] ?? aggregateMode
   const heightScale = maxHeight / dataMax
   // Freeze height scale while loading to prevent stale data rendered with new-mode elevation
   const stableHeightScaleRef = useRef(heightScale)
@@ -1512,9 +1567,18 @@ export default function MapView() {
           padding: '8px 12px',
           borderRadius: 4,
           fontSize: 12,
+          cursor: summary ? 'help' : undefined,
         }}
       >
-        {loading ? 'Loading...' : `${data?.length.toLocaleString()} parcels`}
+        {loading || !summary ? (
+          'Loading...'
+        ) : (
+          <Tooltip content={<SummaryStats s={summary} aggLabel={summaryAggLabel} />}>
+            <span style={{ borderBottom: '1px dotted var(--input-border)' }}>
+              {summary.count.toLocaleString()} parcels
+            </span>
+          </Tooltip>
+        )}
       </div>
     </div>
   )

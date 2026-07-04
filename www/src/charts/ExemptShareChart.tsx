@@ -1,6 +1,6 @@
 import * as Plot from '@observablehq/plot'
 import { useCallback } from 'react'
-import { PlotChart, palette } from './PlotChart'
+import { PlotChart, palette, unifiedTip } from './PlotChart'
 import exemptRaw from '../../public/data/modiv_exempt_share.json'
 
 type Row = { year: number, mun: string, name: string, total_value: number, exempt_value: number, exempt_share: number }
@@ -26,11 +26,18 @@ export function ExemptShareChart({ mun = '0906' }: { mun?: string }) {
       series: r.name,
       exempt_share: r.exempt_share,
     }))
+    const muniName = muni[0]?.series ?? 'Jersey City'
+    const pct = (v: number) => `${(v * 100).toFixed(1)}%`
+    const wide = years.map(y => ({
+      year: y,
+      [muniName]: muni.find(r => r.year === y)?.exempt_share ?? 0,
+      'Hudson County': hudson.find(r => r.year === y)?.exempt_share ?? 0,
+    }))
     return {
       width,
       marginLeft: 56,
       marginBottom: 36,
-      x: { label: null, tickFormat: (d: number) => String(d) },
+      x: { label: null, ticks: years, tickFormat: (d: number) => String(d) },
       y: { label: 'Exempt share of assessed value', tickFormat: '.0%', grid: true, domain: [0, 0.35] },
       color: {
         domain: [muni[0]?.series ?? 'Jersey City', 'Hudson County'],
@@ -39,8 +46,16 @@ export function ExemptShareChart({ mun = '0906' }: { mun?: string }) {
       },
       style: { background: 'transparent', color: p.text, fontSize: '12px' },
       marks: [
-        Plot.lineY([...muni, ...hudson], { x: 'year', y: 'exempt_share', stroke: 'series', strokeWidth: 2.5, curve: 'monotone-x', marker: 'circle', tip: true }),
+        Plot.lineY([...muni, ...hudson], { x: 'year', y: 'exempt_share', stroke: 'series', strokeWidth: 2.5, curve: 'monotone-x', marker: 'circle' }),
         Plot.ruleY([0], { stroke: p.muted }),
+        Plot.ruleX(wide, Plot.pointerX({ x: 'year', stroke: p.muted, strokeOpacity: 0.4 })),
+        unifiedTip(wide, {
+          x: 'year',
+          y: muniName,
+          series: [muniName, 'Hudson County'],
+          format: pct,
+          header: d => String(d.year),
+        }),
       ],
     } as Plot.PlotOptions
   }, [mun])

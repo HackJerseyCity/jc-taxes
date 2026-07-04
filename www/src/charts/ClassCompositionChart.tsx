@@ -1,6 +1,6 @@
 import * as Plot from '@observablehq/plot'
 import { useCallback } from 'react'
-import { PlotChart, palette } from './PlotChart'
+import { PlotChart, palette, unifiedTip } from './PlotChart'
 import classRaw from '../../public/data/modiv_class_composition.json'
 
 type Row = { year: number, mun: string, name: string, group: string, parcels: number, net_value: number }
@@ -15,6 +15,23 @@ export function ClassCompositionChart({ mun = '0906', mode = 'absolute' as 'abso
     const p = palette(theme)
     const rows = ALL.filter(r => r.mun === mun)
     const range = GROUP_ORDER.map(g => p.classes[g])
+    // One row per year with a field per group (+ total) for the unified tip.
+    const years = Array.from(new Set(rows.map(r => r.year))).sort((a, b) => a - b)
+    const wide = years.map(y => {
+      const rs = rows.filter(r => r.year === y)
+      const o: Record<string, unknown> = { year: y }
+      let total = 0
+      for (const g of GROUP_ORDER) {
+        const v = rs.find(r => r.group === g)?.net_value ?? 0
+        o[g] = v
+        total += v
+      }
+      o.total = total
+      return mode === 'share'
+        ? { ...Object.fromEntries(GROUP_ORDER.map(g => [g, total ? (o[g] as number) / total : 0])), year: y, total: 1 }
+        : o
+    })
+    const tipFmt = mode === 'share' ? (v: number) => `${(v * 100).toFixed(1)}%` : billions
     return {
       width,
       marginLeft: 56,
@@ -34,9 +51,18 @@ export function ClassCompositionChart({ mun = '0906', mode = 'absolute' as 'abso
           fill: 'group',
           order: GROUP_ORDER,
           offset: mode === 'share' ? 'normalize' : undefined,
-          tip: true,
         }),
         Plot.ruleY([0], { stroke: p.muted }),
+        unifiedTip(wide, {
+          x: 'year',
+          y: 'total',
+          // Top-to-bottom of the visual stack (barY stacks GROUP_ORDER[0] at the
+          // bottom), so the tip reads in the same order as the segments.
+          series: [...GROUP_ORDER].reverse(),
+          format: tipFmt,
+          header: d => String(d.year),
+          total: mode === 'share' ? undefined : 'total',
+        }),
       ],
     } as Plot.PlotOptions
   }, [mun, mode])
