@@ -7,23 +7,26 @@ export const loadPlotly = () =>
   import('plotly.js-basic-dist-min') as unknown as Promise<typeof import('plotly.js')>
 
 // Series colors per theme. Mirrors the map's palette so the suite reads as one
-// piece. `classes` keys match `group` values in modiv_class_composition.json.
+// piece. The levy split (school / municipal / county) is the page's spine, so
+// those get the three most distinct hues; `pilot` reuses the amber accent.
 export function chartColors(isDark: boolean) {
   return {
-    land:        isDark ? '#f4a261' : '#d97706',
-    improvement: isDark ? '#4ecdc4' : '#0a7572',
-    jc:          isDark ? '#4ecdc4' : '#0a7572',
+    school:      isDark ? '#4ecdc4' : '#0a7572',
+    municipal:   isDark ? '#f4a261' : '#d97706',
+    county:      isDark ? '#a78bfa' : '#7c3aed',
+    pilot:       isDark ? '#f4a261' : '#d97706',
+    total:       isDark ? '#e8e8e8' : '#1a1a1a',
     other:       isDark ? '#555'    : '#bbb',
-    classes: {
-      residential: isDark ? '#4ecdc4' : '#0a7572',
-      commercial:  isDark ? '#f4a261' : '#d97706',
-      apartment:   isDark ? '#a78bfa' : '#7c3aed',
-      industrial:  isDark ? '#fb7185' : '#be123c',
-      exempt:      isDark ? '#94a3b8' : '#475569',
-      vacant:      isDark ? '#facc15' : '#a16207',
-      other:       isDark ? '#666'    : '#999',
-    } as Record<string, string>,
   }
+}
+
+// Qualitative palette for the per-development expiration chart — mid-tones that
+// stay legible on both the dark and light panel backgrounds. `projectColor`
+// maps a project label to a stable color; "Other" is the neutral grey.
+const PROJECT_PALETTE = ['#4ecdc4', '#f4a261', '#a78bfa', '#fb7185', '#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#38bdf8', '#c084fc']
+export function projectColor(label: string, index: number, isDark: boolean): string {
+  if (label === 'Other') return isDark ? '#555' : '#c4c4c4'
+  return PROJECT_PALETTE[index % PROJECT_PALETTE.length]
 }
 
 // Structural layout shared across the /about charts. pltly deep-merges its

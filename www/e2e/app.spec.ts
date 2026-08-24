@@ -319,7 +319,7 @@ test.describe('Routing', () => {
 
   test('GET /about shows the landing page', async ({ page }) => {
     await page.goto('/about')
-    await expect(page.getByRole('heading', { level: 1, name: /Jersey City Property Taxes/i })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: /Where Your Property Taxes Go/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /Explore the 3D map/i })).toBeVisible()
     expect(new URL(page.url()).pathname).toBe('/about')
   })

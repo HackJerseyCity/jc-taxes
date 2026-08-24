@@ -10,7 +10,9 @@ import pandas as pd
 from utz import err
 
 from .api import HLSClient
+from .dlgs import dlgs
 from .modiv import modiv
+from .pilots import pilots
 from .paths import (
     HUDSON_PARCELS, MUNIS, PARCELS,
     accounts_index as muni_accounts_index,
@@ -31,7 +33,9 @@ def main():
     pass
 
 
+main.add_command(dlgs)
 main.add_command(modiv)
+main.add_command(pilots)
 
 
 def _block_list_for_muni(muni: str) -> list[str]:

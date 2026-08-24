@@ -1,0 +1,42 @@
+[
+  {
+    "year": 2021,
+    "school": 236154248,
+    "municipal": 223129847,
+    "municipal_budget": 207394643,
+    "county": 176301994,
+    "total_levy": 635586089
+  },
+  {
+    "year": 2022,
+    "school": 353811782,
+    "municipal": 335710613,
+    "municipal_budget": 319566148,
+    "county": 177514845,
+    "total_levy": 867037239
+  },
+  {
+    "year": 2023,
+    "school": 432264269,
+    "municipal": 367485314,
+    "municipal_budget": 349926169,
+    "county": 187619094,
+    "total_levy": 987368678
+  },
+  {
+    "year": 2024,
+    "school": 440907837,
+    "municipal": 386364048,
+    "municipal_budget": 368302283,
+    "county": 186132366,
+    "total_levy": 1013404251
+  },
+  {
+    "year": 2025,
+    "school": 490803695,
+    "municipal": 405155030,
+    "municipal_budget": 384974613,
+    "county": 201498477,
+    "total_levy": 1097457202
+  }
+]

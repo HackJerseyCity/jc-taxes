@@ -35,6 +35,41 @@ The city's own operating budget is ~$668M (the slide's lines sum to that:
 $385M tax + $82M PILOTs + $65M state aid + $55M fees + $33M MUA + $21M library +
 $13M levy increase + $14M other).
 
+### 2a. Authoritative levy split (NJ DLGS Abstract of Ratables)
+
+The social-media "City 36% / BOE 43% / County 17%" split is directionally right
+but not the primary source. The authoritative one is the **NJ Division of Local
+Government Services "Abstract of Ratables"** — a per-county xlsx published yearly
+with every municipality's levy broken into school / municipal / county (Section
+12 of the abstract). We parse Hudson County's and emit `www/public/data/
+jc_levy_split.json` via a reproducible CLI: **`jct dlgs levy`** (`src/jc_taxes/
+dlgs.py`; validates that school+municipal+county == the abstract's total-levy
+checksum for every row). DLGS hosts xlsx abstracts for **2021–2025 only** (older
+years are statewide `.xls`).
+
+Jersey City (muni code 0906), $M, from the abstracts:
+
+| Year | Schools | City | County | **Total** | Muni budget¹ |
+|------|--------:|-----:|-------:|----------:|-------------:|
+| 2021 |   236.2 | 223.1 |  176.3 |     635.6 |        207.4 |
+| 2022 |   353.8 | 335.7 |  177.5 |     867.0 |        319.6 |
+| 2023 |   432.3 | 367.5 |  187.6 |     987.4 |        349.9 |
+| 2024 |   440.9 | 386.4 |  186.1 |   1,013.4 |        368.3 |
+| 2025 |   490.8 | 405.2 |  201.5 |   1,097.5 |        385.0 |
+
+Shares 2021→2025: **schools 37%→45%**, city ~35%→37%, county 28%→18%.
+¹ "Municipal Budget" (Section 12Cii-A) alone — the **$385.0M** that exactly
+matches Griffin's "$385M" figure; the full city *share* ($405.2M) adds municipal
+open-space + library. 2021 is ARP-depressed (federal relief let JC cut the 2021
+tax bill), so the 2021→2025 growth overstates the underlying trend somewhat.
+
+**Reconciliation with our scrape:** DLGS total levy ($1,097.5M for 2025) is the
+*conventional* tax levy. Our block-view scrape ($1,227M) exceeds it by ~$130M/yr
+(stable across years) because the scrape additionally sweeps in billed PILOT
+service charges, added assessments, and some water/sewer — i.e.
+scrape ≈ levy + PILOTs + extras. Both are internally consistent; they measure
+different universes.
+
 ## 3. Abatements / PILOTs — how they show up here
 
 - **PILOTs are NOT missing from our totals — they're partly included.** Class-15F

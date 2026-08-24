@@ -1,0 +1,128 @@
+[
+  {
+    "year": 2005,
+    "billed": 32233467,
+    "paid": 50358871,
+    "n_accounts": 1607
+  },
+  {
+    "year": 2006,
+    "billed": 34550619,
+    "paid": 51721273,
+    "n_accounts": 1717
+  },
+  {
+    "year": 2007,
+    "billed": 35303346,
+    "paid": 56367730,
+    "n_accounts": 1905
+  },
+  {
+    "year": 2008,
+    "billed": 41774083,
+    "paid": 63862755,
+    "n_accounts": 2680
+  },
+  {
+    "year": 2009,
+    "billed": 45986718,
+    "paid": 65935346,
+    "n_accounts": 2860
+  },
+  {
+    "year": 2010,
+    "billed": 50747632,
+    "paid": 70570753,
+    "n_accounts": 3463
+  },
+  {
+    "year": 2011,
+    "billed": 54643368,
+    "paid": 84230154,
+    "n_accounts": 3966
+  },
+  {
+    "year": 2012,
+    "billed": 60060225,
+    "paid": 92483981,
+    "n_accounts": 4024
+  },
+  {
+    "year": 2013,
+    "billed": 65770079,
+    "paid": 93413347,
+    "n_accounts": 4029
+  },
+  {
+    "year": 2014,
+    "billed": 63653950,
+    "paid": 95992384,
+    "n_accounts": 4034
+  },
+  {
+    "year": 2015,
+    "billed": 66600384,
+    "paid": 103870931,
+    "n_accounts": 4050
+  },
+  {
+    "year": 2016,
+    "billed": 71280774,
+    "paid": 111148346,
+    "n_accounts": 4065
+  },
+  {
+    "year": 2017,
+    "billed": 75549453,
+    "paid": 116875108,
+    "n_accounts": 3705
+  },
+  {
+    "year": 2018,
+    "billed": 80911629,
+    "paid": 118169893,
+    "n_accounts": 3721
+  },
+  {
+    "year": 2019,
+    "billed": 66499010,
+    "paid": 97569277,
+    "n_accounts": 3243
+  },
+  {
+    "year": 2020,
+    "billed": 58513817,
+    "paid": 84540641,
+    "n_accounts": 3210
+  },
+  {
+    "year": 2021,
+    "billed": 59114194,
+    "paid": 79483396,
+    "n_accounts": 3075
+  },
+  {
+    "year": 2022,
+    "billed": 61228366,
+    "paid": 81108524,
+    "n_accounts": 3009
+  },
+  {
+    "year": 2023,
+    "billed": 58478270,
+    "paid": 82436479,
+    "n_accounts": 2877
+  },
+  {
+    "year": 2024,
+    "billed": 56536535,
+    "paid": 79671617,
+    "n_accounts": 2794
+  },
+  {
+    "year": 2025,
+    "billed": 53255849,
+    "paid": 72340141,
+    "n_accounts": 2688
+  }
+]
