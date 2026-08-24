@@ -30,17 +30,36 @@ Each `data/cache/{AccountNumber}.json` contains:
 
 There is no bulk/zip download from HLS; all data is fetched one account at a time via the `GetAccountDetails` API.
 
-## 2. Parcel Geometries — JC Open Data + NJGIN
+## 2. Parcel Geometries & Tax List — NJGIN + JC Open Data
 
-**Local**: `data/jc_parcels.parquet` (legacy), `data/jc_parcels_combined.parquet` (preferred)
+**Local**: `data/jc_parcels.parquet` (legacy), `data/jc_parcels_combined.parquet` (preferred), `data/njgin/HudsonCountyParcels.shp`, `data/njgin/HudsonTaxList.dbf`
+**Code**: `src/jc_taxes/geojson_county.py` (countywide join)
 
-Two sources of lot/parcel geometry, combined into one file:
+Lot/parcel geometry, combined into one file:
 
 - **JC Open Data** (legacy, Dec 2018): `https://data.jerseycitynj.gov/explore/dataset/jersey-city-parcels/export/` — Downloaded as Shapefile/GeoJSON, converted to `data/jc_parcels.parquet`. ~23K parcels with block/lot/qualifier and polygon geometries.
 
-- **NJGIN** (2024): NJ Geographic Information Network statewide parcel data. Hudson County parcels downloaded as `parcels_shp_dbf_Hudson.zip`. Provides more up-to-date boundaries.
+- **NJGIN** (2024): NJ Geographic Information Network statewide parcel data. Hudson County parcels downloaded as `parcels_shp_dbf_Hudson.zip` → `HudsonCountyParcels.shp` (polygons, all 12 Hudson munis). Provides more up-to-date boundaries.
 
-`data/jc_parcels_combined.parquet` merges both: NJGIN 2024 geometries preferred, falling back to JC 2018 for parcels not in NJGIN. The code (`geojson_yearly.py:182-183`) auto-selects the combined file when available.
+`data/jc_parcels_combined.parquet` merges both: NJGIN 2024 geometries preferred, falling back to JC 2018 for parcels not in NJGIN.
+
+NJGIN also ships **`HudsonTaxList.dbf`** — a countywide bulk **tax list** (TY2024, all 12 munis): per-account assessed values, class, owner, and exemption fields. This is a bulk download (not the per-account HLS scrape); `geojson_county.py` joins it to `HudsonCountyParcels.shp` for the multi-municipality county view.
+
+## 2b. Assessor Bulk Extract — NJ Treasury MOD-IV
+
+**Source**: `https://www.nj.gov/treasury/taxation/lpt/lpt-year.shtml` (NJ Division of Taxation MOD-IV); per-block records also via the Rutgers MOD-IV DB API (`https://modiv.rutgers.edu/api/v2/findByDbId/{MUN}_{BLOCK}/`)
+**Code**: `src/jc_taxes/modiv.py`
+**Local**: `data/modiv/treasury/modiv-20{21..25}.zip` → `HudsonRE.txt` (~108MB/yr), `data/modiv/JerseyCity/*.json.gz` (per-block API pulls)
+
+Statewide assessor (MOD-IV) bulk extracts, 2021–2025. Provides assessed values, building descriptions, and PILOT/exemption fields — notably `initial_date`/`further_date` (in-lieu payment start/end dates) and `statute_number` for abated (class 15x) parcels. Used for building-description enrichment and abatement analysis.
+
+## 2c. Levy Splits — NJ DLGS Abstract of Ratables
+
+**Source**: `https://www.nj.gov/dca/dlgs/resources/property_tax.shtml` (NJ Division of Local Government Services)
+**Code**: `src/jc_taxes/dlgs.py` (`jct dlgs levy`)
+**Local**: `data/dlgs/abstracts/Hudson20{21..25}.xlsx` → `www/public/data/jc_levy_split.json`
+
+Authoritative school / city / county levy breakdown from the annual Abstract of Ratables. Feeds the `/about` page levy charts.
 
 ## 3. Census Geography & Population — Census TIGER/Line + Decennial
 
@@ -70,9 +89,12 @@ This data is superseded by the HLS cache and can be removed.
 
 | Source | What | Records | File(s) |
 |--------|------|---------|---------|
-| HLS API | Tax payments, owners, assessments | 70,180 accounts | `data/cache/*.json` |
-| JC Open Data | Parcel geometries (2018) | ~23K parcels | `data/jc_parcels.parquet` |
-| NJGIN | Parcel geometries (2024) | ~23K parcels | `data/jc_parcels_combined.parquet` |
+| HLS API | Tax payments, owners, assessments (per-account scrape) | 70,180 accounts | `data/cache/*.json` |
+| NJGIN | Parcel geometries (2024) | ~23K parcels | `data/jc_parcels_combined.parquet`, `data/njgin/HudsonCountyParcels.shp` |
+| NJGIN | Countywide tax list, TY2024 (bulk) | 12 munis | `data/njgin/HudsonTaxList.dbf` |
+| NJ Treasury MOD-IV | Assessor bulk extract, 2021–2025 (assessments, exemptions, PILOT dates) | statewide | `data/modiv/treasury/modiv-20*.zip` |
+| NJ DLGS | Abstract of Ratables — levy splits | 2021–2025 | `data/dlgs/abstracts/Hudson20*.xlsx` |
+| JC Open Data | Parcel geometries (2018, fallback) | ~23K parcels | `data/jc_parcels.parquet` |
 | Census TIGER/Line | Block geometries + population | ~1,502 blocks | `census/hudson-blocks-*.{geojson,json}` |
 | bikejc/JC Open Data | Ward boundaries | 6 wards | `census/jc-wards.geojson` |
 | Old JC tax site | Legacy partial scrape | 45 accounts | `accounts/` (defunct) |

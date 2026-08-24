@@ -19,7 +19,7 @@ All view state is URL-encoded via [use-prms] (`v`iew, `agg`regation, `sel`ection
 
 Every property tax payment in Jersey City, visualized as extruded polygons on a map. Color and height encode $/sqft (or $/capita). Parcels can be viewed at five aggregation levels: wards, census blocks, tax blocks, dissolved lots, and individual units.
 
-Data is scraped from the [HLS property tax inquiry system][HLS] (70K+ accounts), joined with parcel geometries from [NJGIN] and [JC Open Data], and census population data from [Census TIGER/Line][TIGER].
+Payment history (billed/paid per account) is scraped per-account from the [HLS property tax inquiry system][HLS] (~70K JC accounts; Bayonne/Hoboken partially too). Parcel geometry and countywide tax-list attributes (assessments, class, owner, exemptions) come from [NJGIN] (`HudsonCountyParcels` + `HudsonTaxList`, TY2024) and the [NJ Treasury MOD-IV][MODIV] bulk extract (2021–2025), with older [JC Open Data] geometries as fallback. Levy splits (school/city/county) come from the [NJ DLGS Abstract of Ratables][DLGS], and population from [Census TIGER/Line][TIGER].
 
 ## Structure
 
@@ -74,6 +74,8 @@ cd www && pnpm install
 [NJGIN]: https://njgin.nj.gov/
 [JC Open Data]: https://data.jerseycitynj.gov/
 [TIGER]: https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html
+[MODIV]: https://www.nj.gov/treasury/taxation/lpt/lpt-year.shtml
+[DLGS]: https://www.nj.gov/dca/dlgs/resources/property_tax.shtml
 [ROADMAP.md]: ROADMAP.md
 [DATA-SOURCES.md]: DATA-SOURCES.md
 
