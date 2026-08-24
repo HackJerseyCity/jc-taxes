@@ -1,0 +1,14 @@
+FROM ghcr.io/puppeteer/puppeteer:24.42.0
+
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY docker/package.json /app/package.json
+RUN npm install --omit=dev --no-audit --no-fund
+
+USER pptruser
+ENV CHROME_PATH="/home/pptruser/.cache/puppeteer/chrome-headless-shell"
+
+CMD ["node", "/app/scripts/capture-animation.mjs"]
