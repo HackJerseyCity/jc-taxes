@@ -50,6 +50,10 @@ jobs:
 
       - name: Build
         working-directory: ./www
+        env:
+          # Serve the DVC cache (map geojsons) from Cloudflare R2 (free egress)
+          # via the bucket's custom domain, instead of the plugin's S3 default.
+          VITE_DVC_BASE_URL: https://data.jct.rbw.sh/.dvc/cache
         run: pnpm run build
 
       - name: Install Playwright

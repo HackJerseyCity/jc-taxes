@@ -6,6 +6,11 @@ import dvc from 'vite-plugin-dvc'
 
 const allowedHosts = ['host.docker.internal', ...(process.env.VITE_ALLOWED_HOSTS?.split(',') ?? [])]
 
+// Public base URL the DVC cache is served from. Unset → the plugin derives it
+// from the DVC remote (currently AWS S3). Set to the R2 custom-domain cache
+// root (e.g. `https://data.jct.rbw.sh/.dvc/cache`) to cut prod over to R2.
+const dvcBaseUrl = process.env.VITE_DVC_BASE_URL || undefined
+
 // GH Pages doesn't natively serve SPA routes — visiting /map directly would
 // 404 without a fallback. Emit a copy of index.html as 404.html so any
 // unknown path serves the SPA, which then routes client-side.
@@ -22,7 +27,7 @@ function ghPagesSpaFallback() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), dvc({ root: 'public' }), ghPagesSpaFallback()],
+  plugins: [react(), dvc({ root: 'public', baseUrl: dvcBaseUrl }), ghPagesSpaFallback()],
 
   server: {
     port: 3201,  // JC area code

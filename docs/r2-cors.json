@@ -1,0 +1,15 @@
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": [
+        "https://jct.rbw.sh",
+        "http://localhost:3201",
+        "http://localhost:4173"
+      ],
+      "AllowedMethods": ["GET", "HEAD"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["Content-Length", "Content-Range", "Content-Type", "ETag", "Accept-Ranges"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}
