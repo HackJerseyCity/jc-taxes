@@ -7,7 +7,10 @@ Goal: serve the map's public data (the DVC cache) from **Cloudflare R2** instead
 - ✅ **Data already fully on R2** — the `jc-taxes` R2 bucket holds the whole DVC cache (70,277 objects / 2.86 GB; all geojsons + NJGIN + county). Nothing to copy.
 - ✅ **CORS applied** to the R2 bucket (`docs/r2-cors.json`: `GET`/`HEAD` from `jct.rbw.sh` + localhost, Range headers exposed).
 - ✅ **App is R2-ready** — `www/vite.config.ts` reads `VITE_DVC_BASE_URL`; unset keeps today's S3 behavior, so nothing breaks until we flip it.
-- ⏳ **Blocked on DNS** — R2 custom domains require the zone on Cloudflare, and `rbw.sh` is on Namecheap. Steps 1–3 below are yours (account logins).
+- ✅ **`rbw.sh` on Cloudflare** — zone Active; all 21 records imported DNS-only (Steps 1–2).
+- ✅ **`data.jct.rbw.sh` live** — R2 custom domain connected + TLS active; verified 200 + CORS + range (Step 3).
+- ✅ **Prod cut over to R2** — `VITE_DVC_BASE_URL` set in `deploy.yml`; deployed bundle has 55 R2 URLs / 0 S3; live map renders from R2 (Step 4, commit `a1fb234`).
+- ⏳ **Soak, then Steps 5–6** — S3 kept as passive fallback; decommission after soak; file-tree browser next.
 
 ## Why R2
 
