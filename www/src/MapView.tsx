@@ -7,7 +7,7 @@ import { useUrlState, intParam, stringParam, viewStateParam } from 'use-prms'
 import { useHotkeysContext, SpeedDial } from 'use-kbd'
 import { FaGithub } from 'react-icons/fa'
 import { SiBluesky } from 'react-icons/si'
-import { MdDarkMode, MdLightMode, MdKeyboard, MdSettingsBrightness } from 'react-icons/md'
+import { MdDarkMode, MdLightMode, MdKeyboard, MdSettingsBrightness, MdFolderOpen } from 'react-icons/md'
 import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
@@ -1321,6 +1321,12 @@ export default function MapView() {
               label: `Theme: ${themeMode}`,
               icon: themeMode === 'dark' ? <MdDarkMode /> : themeMode === 'light' ? <MdLightMode /> : <MdSettingsBrightness />,
               onClick: toggleTheme,
+            },
+            {
+              key: 'data',
+              label: 'Browse the data',
+              icon: <MdFolderOpen />,
+              href: 'https://jct-files.rbw.sh',
             },
             {
               key: 'bluesky',
