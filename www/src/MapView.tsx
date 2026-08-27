@@ -1326,7 +1326,7 @@ export default function MapView() {
               key: 'data',
               label: 'Browse the data',
               icon: <MdFolderOpen />,
-              href: 'https://jct-files.rbw.sh',
+              href: '/files',
             },
             {
               key: 'bluesky',
