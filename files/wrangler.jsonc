@@ -1,7 +1,7 @@
 {
   // Combined Worker: serves the file-tree UI (static assets) AND the
-  // `/api/files/*` R2-listing API, so `files.jct.rbw.sh` is one origin
-  // (no cross-origin API hop). The `files.jct.rbw.sh` custom domain is
+  // `/api/files/*` R2-listing API, so `jct-files.rbw.sh` is one origin
+  // (no cross-origin API hop). The `jct-files.rbw.sh` custom domain is
   // attached to this Worker in the Cloudflare dashboard and deliberately
   // NOT declared here — declaring `routes`/`custom_domain` would make
   // every `wrangler deploy` hit the workers-domains API (ctbk's pattern).

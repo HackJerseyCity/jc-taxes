@@ -1,4 +1,4 @@
-/** `files.jct.rbw.sh` — combined Worker.
+/** `jct-files.rbw.sh` — combined Worker.
  *
  * Serves the file-tree UI (static assets via the `ASSETS` binding) and the
  * file-tree HTTP protocol at `/api/files/*`, backed by the `jc-taxes` R2

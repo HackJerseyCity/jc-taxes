@@ -10,7 +10,7 @@ Goal: serve the map's public data (the DVC cache) from **Cloudflare R2** instead
 - ✅ **`rbw.sh` on Cloudflare** — zone Active; all 21 records imported DNS-only (Steps 1–2).
 - ✅ **`data.jct.rbw.sh` live** — R2 custom domain connected + TLS active; verified 200 + CORS + range (Step 3).
 - ✅ **Prod cut over to R2** — `VITE_DVC_BASE_URL` set in `deploy.yml`; deployed bundle has 55 R2 URLs / 0 S3; live map renders from R2 (Step 4, commit `a1fb234`).
-- ✅ **File-tree browser live** — `jct r2 publish` copies a friendly `data/` tree into R2; the `jct-files` Worker (`files/`) serves `@rdub/file-tree` at **`files.jct.rbw.sh`** (Step 6).
+- ✅ **File-tree browser live** — `jct r2 publish` copies a friendly `data/` tree into R2; the `jct-files` Worker (`files/`) serves `@rdub/file-tree` at **`jct-files.rbw.sh`** (Step 6).
 - ⏳ **Soak, then Step 5** — S3 kept as passive fallback; decommission after soak.
 
 ## Why R2
@@ -62,7 +62,9 @@ Once R2 is confirmed serving all 55 geojsons: stop pushing to the `s3` remote (d
 The R2 bucket is content-addressed (`.dvc/cache/files/md5/…`) — useless to browse directly, and `@rdub/file-tree` lists raw keys (no name remapping). So:
 
 - **`jct r2 publish`** (`src/jc_taxes/r2.py`) server-side-copies (no egress) each tracked artifact to a friendly `data/` key: the 55 yearly geojsons → `data/geojson/<year>/<name>`, the 5 MOD-IV parquets → `data/modiv/<year>.parquet`. Idempotent. Instantly browsable at clean URLs, e.g. `https://data.jct.rbw.sh/data/geojson/2025/taxes-2025-blocks.geojson`.
-- **`files/`** is a combined Cloudflare Worker (`jct-files`): serves the `@rdub/file-tree` UI (Vite build, `[assets]`) *and* the `/api/files/*` R2 protocol via `R2Store(env.R2, { prefixes: ['data/'], publicBaseUrl: 'https://data.jct.rbw.sh' })`. Downloads go direct from R2 (public custom domain), list/get proxy through the Worker (powers in-browser parquet/geojson rendering). Deployed with an account-scoped API token (`CLOUDFLARE_API_TOKEN`); the `files.jct.rbw.sh` custom domain is attached in the dashboard (kept out of `wrangler.jsonc`, ctbk pattern).
+- **`files/`** is a combined Cloudflare Worker (`jct-files`): serves the `@rdub/file-tree` UI (Vite build, `[assets]`) *and* the `/api/files/*` R2 protocol via `R2Store(env.R2, { prefixes: ['data/'], publicBaseUrl: 'https://data.jct.rbw.sh' })`. Downloads go direct from R2 (public custom domain), list/get proxy through the Worker (powers in-browser parquet/geojson rendering). Deployed with an account-scoped API token (`CLOUDFLARE_API_TOKEN`); the `jct-files.rbw.sh` custom domain is attached in the dashboard (kept out of `wrangler.jsonc`, ctbk pattern).
+
+**Why `jct-files.rbw.sh` (1-level) and not `files.jct.rbw.sh`:** a Workers custom domain on a 2-level subdomain needs an Advanced cert (paid ACM) — the free Universal cert only covers `*.rbw.sh`, so the 2-level cert sits in "Pending Validation (Error)". (`data.jct.rbw.sh` works at 2 levels only because **R2** custom domains use a separate free per-hostname cert path that Workers domains don't share.) A 1-level host is covered by the active Universal cert → instant HTTPS, no cost.
 
 Re-run `jct r2 publish` whenever the tracked data changes; `cd files && pnpm deploy` (with the token in env) to redeploy the browser.
 
