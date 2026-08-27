@@ -72,7 +72,10 @@ def extract_payments(
     df = pd.DataFrame(records)
     err(f"Extracted {len(df):,} year-account records")
 
-    df.to_parquet(output, index=False)
+    # Small row groups: the parquet browsers (hyparquet/@rdub/file-tree) fetch a
+    # whole row group to render any page, so ~1M-row groups mean an ~11MB fetch
+    # per view. 50k rows keeps each group ~0.5MB for snappy browsing.
+    df.to_parquet(output, index=False, row_group_size=50_000)
     err(f"Wrote {output}")
 
     return df

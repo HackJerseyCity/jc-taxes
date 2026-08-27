@@ -329,7 +329,7 @@ def export(muni: str, input_dir: str, output: str):
             err(f"  Error parsing {path.name}: {e}")
 
     df = pd.DataFrame(records)
-    df.to_parquet(output)
+    df.to_parquet(output, row_group_size=50_000)  # small groups → snappy parquet browsing
     err(f"\nWrote {len(df)} accounts to {output}")
 
 
