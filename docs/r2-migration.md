@@ -10,7 +10,8 @@ Goal: serve the map's public data (the DVC cache) from **Cloudflare R2** instead
 - ✅ **`rbw.sh` on Cloudflare** — zone Active; all 21 records imported DNS-only (Steps 1–2).
 - ✅ **`data.jct.rbw.sh` live** — R2 custom domain connected + TLS active; verified 200 + CORS + range (Step 3).
 - ✅ **Prod cut over to R2** — `VITE_DVC_BASE_URL` set in `deploy.yml`; deployed bundle has 55 R2 URLs / 0 S3; live map renders from R2 (Step 4, commit `a1fb234`).
-- ⏳ **Soak, then Steps 5–6** — S3 kept as passive fallback; decommission after soak; file-tree browser next.
+- ✅ **File-tree browser live** — `jct r2 publish` copies a friendly `data/` tree into R2; the `jct-files` Worker (`files/`) serves `@rdub/file-tree` at **`files.jct.rbw.sh`** (Step 6).
+- ⏳ **Soak, then Step 5** — S3 kept as passive fallback; decommission after soak.
 
 ## Why R2
 
@@ -56,9 +57,14 @@ Set `VITE_DVC_BASE_URL=https://data.jct.rbw.sh/.dvc/cache` in the GH Actions dep
 
 Once R2 is confirmed serving all 55 geojsons: stop pushing to the `s3` remote (drop it from `.dvc/config` or make `r2` the only remote), then delete the AWS `jc-taxes` bucket after a grace period.
 
-## Step 6 — Friendly data tree + file-tree browser *(me)*
+## Step 6 — Friendly data tree + file-tree browser ✅
 
-The R2 bucket is content-addressed (`.dvc/cache/files/md5/…`) — useless to browse directly. Publish a **friendly-named tree** under a `data/` prefix (e.g. `data/geojson/taxes-2025-blocks.geojson`, `data/parquet/payments.parquet`) via a new `jct publish-r2` command, then deploy a `@rdub/file-tree` Worker (the ctbk.dev / nj-crashes.com pattern) bound to the bucket at **`files.jct.rbw.sh`**.
+The R2 bucket is content-addressed (`.dvc/cache/files/md5/…`) — useless to browse directly, and `@rdub/file-tree` lists raw keys (no name remapping). So:
+
+- **`jct r2 publish`** (`src/jc_taxes/r2.py`) server-side-copies (no egress) each tracked artifact to a friendly `data/` key: the 55 yearly geojsons → `data/geojson/<year>/<name>`, the 5 MOD-IV parquets → `data/modiv/<year>.parquet`. Idempotent. Instantly browsable at clean URLs, e.g. `https://data.jct.rbw.sh/data/geojson/2025/taxes-2025-blocks.geojson`.
+- **`files/`** is a combined Cloudflare Worker (`jct-files`): serves the `@rdub/file-tree` UI (Vite build, `[assets]`) *and* the `/api/files/*` R2 protocol via `R2Store(env.R2, { prefixes: ['data/'], publicBaseUrl: 'https://data.jct.rbw.sh' })`. Downloads go direct from R2 (public custom domain), list/get proxy through the Worker (powers in-browser parquet/geojson rendering). Deployed with an account-scoped API token (`CLOUDFLARE_API_TOKEN`); the `files.jct.rbw.sh` custom domain is attached in the dashboard (kept out of `wrangler.jsonc`, ctbk pattern).
+
+Re-run `jct r2 publish` whenever the tracked data changes; `cd files && pnpm deploy` (with the token in env) to redeploy the browser.
 
 ## Rollback
 

@@ -1,0 +1,37 @@
+{
+  "name": "jct-files",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:worker": "wrangler dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tc": "tsc --noEmit",
+    "deploy": "pnpm build && wrangler deploy"
+  },
+  "dependencies": {
+    "@rdub/file-tree": "https://github.com/runsascoded/file-tree#579fe01e8b18e20eed8b3f443fb99fb607328e97",
+    "highlight.js": "^11.11.1",
+    "hyparquet": "^1.25.8",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^6.30.0",
+    "remark-gfm": "^4.0.1",
+    "use-prms": "^0.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250719.0",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^5.9.0",
+    "vite": "^6.4.1",
+    "wrangler": "^4.20.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "workerd"]
+  }
+}

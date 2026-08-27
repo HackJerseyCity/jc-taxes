@@ -1,0 +1,34 @@
+{
+  // Combined Worker: serves the file-tree UI (static assets) AND the
+  // `/api/files/*` R2-listing API, so `files.jct.rbw.sh` is one origin
+  // (no cross-origin API hop). The `files.jct.rbw.sh` custom domain is
+  // attached to this Worker in the Cloudflare dashboard and deliberately
+  // NOT declared here — declaring `routes`/`custom_domain` would make
+  // every `wrangler deploy` hit the workers-domains API (ctbk's pattern).
+  "name": "jct-files",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-04-01",
+  // Personal account (owns the `jc-taxes` R2 bucket + `rbw.sh` zone). Same
+  // id as the R2 S3 endpoint host; pinned so deploys can't target the wrong
+  // account when wrangler is logged into a different one.
+  "account_id": "0dcad5654e9744de6616f74b8df4af63",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "jc-taxes",
+      // Let `wrangler dev` hit the real bucket without deploying.
+      "remote": true
+    }
+  ],
+  "dev": {
+    "port": 3204
+  },
+  "observability": {
+    "enabled": true
+  }
+}
