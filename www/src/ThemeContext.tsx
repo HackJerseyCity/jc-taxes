@@ -83,6 +83,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', actualTheme)
+    // Also drive `color-scheme` so components that lean on system/semantic
+    // colors (e.g. the @rdub/file-tree table on /files) follow the app theme
+    // instead of defaulting to light.
+    document.documentElement.style.colorScheme = actualTheme
   }, [actualTheme])
 
   const light = actualTheme === 'light'

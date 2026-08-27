@@ -4,10 +4,9 @@ import DeckGL from '@deck.gl/react'
 import { WebMercatorViewport, FlyToInterpolator, LinearInterpolator } from '@deck.gl/core'
 import { GeoJsonLayer } from '@deck.gl/layers'
 import { useUrlState, intParam, stringParam, viewStateParam } from 'use-prms'
-import { useHotkeysContext, SpeedDial } from 'use-kbd'
-import { FaGithub } from 'react-icons/fa'
-import { SiBluesky } from 'react-icons/si'
-import { MdDarkMode, MdLightMode, MdKeyboard, MdSettingsBrightness, MdFolderOpen } from 'react-icons/md'
+import { useHotkeysContext } from 'use-kbd'
+import { MdFolderOpen } from 'react-icons/md'
+import AppSpeedDial from './AppSpeedDial'
 import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
@@ -394,7 +393,7 @@ export default function MapView() {
   const colorScale = colorScaleRaw ?? colorConf.scale ?? 'log'
 
   // Color stops: use custom (from URL `c`) → mode-specific → theme defaults
-  const { actualTheme, themeMode, toggleTheme, colorStops: themeStops, hasCustomStops, setColorStops, resetColorStops: resetColorStopsRaw } = useTheme()
+  const { actualTheme, toggleTheme, colorStops: themeStops, hasCustomStops, setColorStops, resetColorStops: resetColorStopsRaw } = useTheme()
   const modeStops = useMemo(() => {
     if (colorConf.stops) return actualTheme === 'light' ? colorConf.stops.light : colorConf.stops.dark
     return null
@@ -1306,40 +1305,10 @@ export default function MapView() {
         zIndex: 1,
       }}>
         {posBottom && settingsPanel}
-        <SpeedDial
+        <AppSpeedDial
           className="speed-dial-inline"
-          showShortcuts={false}
-          actions={[
-            {
-              key: 'shortcuts',
-              label: 'Keyboard shortcuts',
-              icon: <MdKeyboard />,
-              onClick: () => kbdCtx.openModal(),
-            },
-            {
-              key: 'theme',
-              label: `Theme: ${themeMode}`,
-              icon: themeMode === 'dark' ? <MdDarkMode /> : themeMode === 'light' ? <MdLightMode /> : <MdSettingsBrightness />,
-              onClick: toggleTheme,
-            },
-            {
-              key: 'data',
-              label: 'Browse the data',
-              icon: <MdFolderOpen />,
-              href: '/files',
-            },
-            {
-              key: 'bluesky',
-              label: 'Follow on Bluesky',
-              icon: <SiBluesky />,
-              href: 'https://bsky.app/profile/jct.rbw.sh',
-            },
-            {
-              key: 'github',
-              label: 'View on GitHub',
-              icon: <FaGithub />,
-              href: 'https://github.com/HackJerseyCity/jc-taxes',
-            },
+          extraActions={[
+            { key: 'data', label: 'Browse the data', icon: <MdFolderOpen />, href: '/files' },
           ]}
         />
         <div style={{ fontSize: 10, color: 'var(--text-secondary)', whiteSpace: 'nowrap', padding: '2px 4px' }}>

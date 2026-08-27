@@ -9,6 +9,8 @@ import { renderJsonTree } from '@rdub/file-tree/renderers/json'
 import { CsvViewer } from '@rdub/file-tree/renderers/csv'
 import { renderCode } from '@rdub/file-tree/renderers/code'
 import { useUrlPersistedState } from '@rdub/file-tree/url-state'
+import { MdMap } from 'react-icons/md'
+import AppSpeedDial from './AppSpeedDial'
 
 // The R2 listing API is served by the `jct-files` Worker — GitHub Pages can't
 // serve `/api/files`. This is cross-origin from jct.rbw.sh (the Worker's CORS
@@ -71,6 +73,11 @@ export default function Files() {
         csvRenderer={CsvViewer}
         codeRenderer={renderCode}
         usePersistedState={useUrlPersistedState}
+      />
+      <AppSpeedDial
+        extraActions={[
+          { key: 'map', label: 'Back to the map', icon: <MdMap />, href: '/' },
+        ]}
       />
     </div>
   )
