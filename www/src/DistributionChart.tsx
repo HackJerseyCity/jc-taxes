@@ -6,6 +6,13 @@ type Props = {
   max: number
   prefix: string
   metricLabel: string
+  // Compact formatter for wide-range metrics (e.g. total $: "$1.2M"); replaces
+  // `prefix` + raw number in axis ticks and the hover readout.
+  format?: (n: number) => string
+  // Bin spacing. Linear bins collapse into a single spike for metrics spanning
+  // orders of magnitude (total $ per block: $525k median, $80.8M max — 97% of
+  // blocks land in bin 0), so those pass 'log'.
+  binScale?: 'linear' | 'log'
 }
 
 const NUM_BINS = 40
@@ -17,24 +24,38 @@ const PLOT_H = H - PAD.top - PAD.bottom
 
 type BinData = { lo: number; hi: number; count: number; cumPct: number }
 
-export default function DistributionChart({ values, percentile, max, prefix, metricLabel }: Props) {
+export default function DistributionChart({ values, percentile, max, prefix, metricLabel, format, binScale = 'linear' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const n = values.length
   const [hoverBin, setHoverBin] = useState<number | null>(null)
+  const fmt = useCallback(
+    (v: number) => format ? format(v) : `${prefix}${v < 10 ? v.toFixed(1) : Math.round(v)}`,
+    [format, prefix],
+  )
+
+  // Value ⇄ x-position (0-1). Log bins use log1p so 0 still maps to 0.
+  const logMax = Math.log1p(max)
+  const toPos = useCallback(
+    (v: number) => binScale === 'log' ? (v <= 0 ? 0 : Math.log1p(v) / logMax) : v / max,
+    [binScale, logMax, max],
+  )
+  const fromPos = useCallback(
+    (p: number) => binScale === 'log' ? Math.expm1(p * logMax) : p * max,
+    [binScale, logMax, max],
+  )
 
   const bins = useMemo((): BinData[] => {
     if (n === 0) return []
-    const binWidth = max / NUM_BINS
     const counts = new Array(NUM_BINS).fill(0)
     for (const v of values) {
-      counts[Math.min(Math.floor(v / binWidth), NUM_BINS - 1)]++
+      counts[Math.min(Math.floor(toPos(v) * NUM_BINS), NUM_BINS - 1)]++
     }
     let cum = 0
     return counts.map((count, i) => {
       cum += count
-      return { lo: i * binWidth, hi: (i + 1) * binWidth, count, cumPct: cum / n * 100 }
+      return { lo: fromPos(i / NUM_BINS), hi: fromPos((i + 1) / NUM_BINS), count, cumPct: cum / n * 100 }
     })
-  }, [values, n, max])
+  }, [values, n, toPos, fromPos])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -91,7 +112,7 @@ export default function DistributionChart({ values, percentile, max, prefix, met
     if (percentile != null && percentile < 100) {
       const pctIdx = Math.floor(n * percentile / 100)
       const pctVal = values[Math.min(pctIdx, n - 1)]
-      const x = PAD.left + Math.min(pctVal / max, 1) * PLOT_W
+      const x = PAD.left + Math.min(toPos(pctVal), 1) * PLOT_W
       ctx.setLineDash([3, 3])
       ctx.strokeStyle = '#ff9800'
       ctx.lineWidth = 1.5
@@ -107,14 +128,12 @@ export default function DistributionChart({ values, percentile, max, prefix, met
     ctx.globalAlpha = 0.7
     ctx.font = '9px system-ui'
     ctx.textAlign = 'center'
-    const ticks = [0, max / 2, max]
-    for (const tick of ticks) {
-      const x = PAD.left + (tick / max) * PLOT_W
-      const label = `${prefix}${tick < 10 ? tick.toFixed(1) : Math.round(tick)}`
-      ctx.fillText(label, x, H - 2)
+    // Ticks are evenly spaced on screen, so their values follow the bin scale
+    for (const p of [0, 0.5, 1]) {
+      ctx.fillText(fmt(fromPos(p)), PAD.left + p * PLOT_W, H - 2)
     }
     ctx.globalAlpha = 1
-  }, [values, bins, n, percentile, max, prefix, metricLabel, hoverBin])
+  }, [values, bins, n, percentile, max, prefix, metricLabel, hoverBin, fmt, toPos, fromPos])
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -154,7 +173,7 @@ export default function DistributionChart({ values, percentile, max, prefix, met
           pointerEvents: 'none',
           lineHeight: 1.4,
         }}>
-          <div>{prefix}{hovered.lo.toFixed(1)}–{prefix}{hovered.hi.toFixed(1)}{metricLabel}</div>
+          <div>{fmt(hovered.lo)}–{fmt(hovered.hi)}{metricLabel}</div>
           <div>{hovered.count.toLocaleString()} parcels ({hovered.cumPct.toFixed(0)}%)</div>
         </div>
       )}

@@ -17,6 +17,9 @@ type Props = {
   prefix?: string
   onReset?: () => void
   metricLabel?: string
+  // Compact formatter for wide-range metrics (e.g. total $: "$1.2M"). When set,
+  // it replaces `prefix` + raw number in the axis labels.
+  format?: (n: number) => string
 }
 
 // Convert value to position (0-1) based on scale
@@ -104,10 +107,25 @@ function hexToRgb(hex: string): [number, number, number] {
   ]
 }
 
-export default function GradientEditor({ stops, setStops, scale, setScale, max, min = 0, prefix = '$', onReset, metricLabel = '/sqft' }: Props) {
+export default function GradientEditor({ stops, setStops, scale, setScale, max, min = 0, prefix = '$', onReset, metricLabel = '/sqft', format }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState<number | null>(null)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
+
+  // Coarse stops for wide-range metrics only (i.e. whoever passes `format`):
+  // 0.1 steps are meaningful for $/sqft and years, meaningless for
+  // million-dollar totals. Keyed off `format` rather than `max` so the existing
+  // $/capita (max 15k) and year-built (max 2025) editors keep 1-unit steps.
+  const coarse = format != null
+  const roundStop = useCallback(
+    (v: number) => coarse ? Math.round(v) : Math.round(v * 10) / 10,
+    [coarse],
+  )
+  const stopStep = coarse ? Math.max(1, Math.round(max / 1000)) : 1
+  const fmt = useCallback(
+    (v: number) => format ? format(v) : `${prefix}${v}`,
+    [format, prefix],
+  )
 
   const sortedStops = useMemo(() =>
     [...stops].sort((a, b) => a.value - b.value),
@@ -138,10 +156,10 @@ export default function GradientEditor({ stops, setStops, scale, setScale, max, 
     if (dragging === null || !barRef.current) return
     const rect = barRef.current.getBoundingClientRect()
     const pos = Math.max(0, Math.min((e.clientX - rect.left) / rect.width, 1))
-    const newValue = Math.round(positionToValue(pos, max, scale, min) * 10) / 10
+    const newValue = roundStop(positionToValue(pos, max, scale, min))
 
     setStops(stops.map((s, i) => i === dragging ? { ...s, value: newValue } : s))
-  }, [dragging, stops, setStops, max, min, scale])
+  }, [dragging, stops, setStops, max, min, scale, roundStop])
 
   const handleMouseUp = useCallback(() => {
     setDragging(null)
@@ -233,7 +251,7 @@ export default function GradientEditor({ stops, setStops, scale, setScale, max, 
           const rect = barRef.current?.getBoundingClientRect()
           if (!rect) return
           const pos = (e.clientX - rect.left) / rect.width
-          const newValue = Math.round(positionToValue(pos, max, scale, min) * 10) / 10
+          const newValue = roundStop(positionToValue(pos, max, scale, min))
           setStops([...stops, { value: newValue, color: [200, 200, 200] }])
         }}
       >
@@ -286,11 +304,13 @@ export default function GradientEditor({ stops, setStops, scale, setScale, max, 
             type="number"
             value={stops[editingIndex].value}
             onChange={(e) => updateStopValue(editingIndex, Number(e.target.value))}
-            style={{ ...inputStyle, width: 60 }}
-            step={1}
+            style={{ ...inputStyle, width: coarse ? 90 : 60 }}
+            step={stopStep}
             min={min}
           />
-          <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>{metricLabel}</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>
+            {format ? format(stops[editingIndex].value) : null}{metricLabel}
+          </span>
           <button
             onClick={() => {
               removeStop(editingIndex)
@@ -311,8 +331,8 @@ export default function GradientEditor({ stops, setStops, scale, setScale, max, 
 
       {/* Labels */}
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary)' }}>
-        <span>{prefix}{min}</span>
-        <span>{prefix}{max}{metricLabel}</span>
+        <span>{fmt(min)}</span>
+        <span>{fmt(max)}{metricLabel}</span>
       </div>
     </div>
   )

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Map as MaplibreMap } from 'react-map-gl/maplibre'
 import DeckGL from '@deck.gl/react'
 import { WebMercatorViewport, FlyToInterpolator, LinearInterpolator } from '@deck.gl/core'
-import { GeoJsonLayer } from '@deck.gl/layers'
+import { ColumnLayer, GeoJsonLayer } from '@deck.gl/layers'
 import { useUrlState, intParam, stringParam, viewStateParam } from 'use-prms'
 import { useHotkeysContext } from 'use-kbd'
 import { MdFolderOpen } from 'react-icons/md'
@@ -20,7 +20,7 @@ import GradientEditor, {
   encodeStops,
   decodeStops,
 } from './GradientEditor'
-import type { ParcelProperties, ParcelFeature } from './types'
+import type { ParcelProperties, ParcelFeature, ParcelFeatureLike } from './types'
 import { getLotNote } from './notes'
 import DistributionChart from './DistributionChart'
 import Tooltip from './Tooltip'
@@ -152,12 +152,78 @@ function SummaryStats({ s, aggLabel }: { s: Summary, aggLabel: string }) {
 }
 
 // Stable across the file: used by both the accessor closures and the data cache.
-function featureIdOf(f: ParcelFeature): string {
+function featureIdOf(f: ParcelFeatureLike): string {
   const p = f.properties
   if (p?.geoid) return p.geoid
   if (p?.ward && !p?.block) return `ward-${p.ward}`
   return `${p?.block || ''}-${p?.lot || ''}-${p?.qual || ''}`.replace(/-+$/, '')
 }
+type Ring = number[][]
+
+// Signed area × 2 (shoelace). Sign encodes winding; callers use |area|.
+function ringArea2(ring: Ring): number {
+  let a = 0
+  for (let i = 0, n = ring.length - 1; i < n; i++) {
+    a += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1]
+  }
+  return a
+}
+
+function ringCentroid(ring: Ring): [number, number] {
+  let cx = 0, cy = 0, a2 = 0
+  for (let i = 0, n = ring.length - 1; i < n; i++) {
+    const [x0, y0] = ring[i], [x1, y1] = ring[i + 1]
+    const cross = x0 * y1 - x1 * y0
+    a2 += cross
+    cx += (x0 + x1) * cross
+    cy += (y0 + y1) * cross
+  }
+  if (a2 === 0) return [ring[0][0], ring[0][1]]
+  return [cx / (3 * a2), cy / (3 * a2)]
+}
+
+// Ray casting: is (x, y) inside `ring`?
+function pointInRing(x: number, y: number, ring: Ring): boolean {
+  let inside = false
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j]
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside
+  }
+  return inside
+}
+
+// Where to stand a parcel's column. The area-weighted centroid is the natural
+// anchor but it escapes the parcel for L / C / U-shaped blocks and for the
+// disjoint multi-parts a ward can have — which put columns in the middle of the
+// Hackensack. So: take the largest ring, and if its centroid falls outside,
+// slide to the midpoint of the widest interior span on the centroid's latitude
+// (the standard label-point heuristic — always inside, and visually central).
+function columnAnchorOf(geom: ParcelFeature['geometry']): [number, number] {
+  const rings: Ring[] = geom.type === 'Polygon' ? [geom.coordinates[0]] : geom.coordinates.map(p => p[0])
+  let ring = rings[0]
+  if (!ring?.length) return [0, 0]
+  for (const r of rings) {
+    if (r.length > 2 && Math.abs(ringArea2(r)) > Math.abs(ringArea2(ring))) ring = r
+  }
+
+  const [cx, cy] = ringCentroid(ring)
+  if (pointInRing(cx, cy, ring)) return [cx, cy]
+
+  // Collect edge crossings along y = cy, then take the widest inside span.
+  const xs: number[] = []
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j]
+    if ((yi > cy) !== (yj > cy)) xs.push(((xj - xi) * (cy - yi)) / (yj - yi) + xi)
+  }
+  xs.sort((a, b) => a - b)
+  let bestX = cx, bestSpan = -1
+  for (let i = 0; i + 1 < xs.length; i += 2) {
+    const span = xs[i + 1] - xs[i]
+    if (span > bestSpan) { bestSpan = span; bestX = (xs[i] + xs[i + 1]) / 2 }
+  }
+  return [bestX, cy]
+}
+
 const AGGREGATE_MODES = ['block', 'lot', 'unit', 'census-block', 'ward'] as const
 type AggregateMode = typeof AGGREGATE_MODES[number]
 const SUFFIX_MAP: Record<string, string> = {
@@ -167,12 +233,30 @@ const SUFFIX_MAP: Record<string, string> = {
   'census-block': '-census-blocks',
   ward: '-wards',
 }
-type MetricMode = 'per_sqft' | 'per_capita'
+type MetricMode = 'per_sqft' | 'per_capita' | 'total'
 
 // Per-mode defaults for color max and max height (meters)
 function getModeKey(agg: string, metric: string): string {
+  // `total` needs its own config at every aggregation: block totals are ~50x
+  // lot totals, so color stops / heights can't be shared with the /sqft modes.
+  if (metric === 'total') return `${agg}:total`
   if (agg === 'census-block' || agg === 'ward') return `${agg}:${metric}`
   return agg
+}
+// Which feature property each metric reads.
+const METRIC_FIELDS = {
+  per_sqft: 'paid_per_sqft',
+  per_capita: 'paid_per_capita',
+  total: 'paid',
+} as const
+function metricField(metric: string): 'paid_per_sqft' | 'paid_per_capita' | 'paid' {
+  return METRIC_FIELDS[metric as MetricMode] ?? 'paid_per_sqft'
+}
+// `per_capita` needs population data (census-block / ward only); `per_sqft` and
+// `total` are available at every aggregation.
+function effectiveMetricFor(agg: string, metric: string): string {
+  if (metric === 'per_capita' && agg !== 'census-block' && agg !== 'ward') return 'per_sqft'
+  return metric
 }
 // Per-mode color stops: values positioned to differentiate actual data distribution
 // per_sqft: data skewed near zero → stops at ~1-7% of max
@@ -182,8 +266,22 @@ type ModeConfig = {
   max: number
   maxHeight: number
   scale?: ScaleType
+  // `total` metric only: radius (meters) of the uniform-footprint columns.
+  columnRadius?: number
   stops?: { dark: ColorStop[], light: ColorStop[] }
 }
+
+// Shared 4-stop theme ramps (neutral → red → yellow → green). Total-$ modes
+// reuse them at wildly different values, so build stops from a value quadruple.
+const RAMP_DARK: [number, number, number][] = [[96, 96, 96], [255, 0, 0], [255, 217, 26], [0, 255, 0]]
+const RAMP_LIGHT: [number, number, number][] = [[255, 255, 255], [255, 71, 71], [230, 190, 0], [0, 214, 0]]
+function stopsAt(values: [number, number, number, number]): { dark: ColorStop[], light: ColorStop[] } {
+  return {
+    dark: values.map((value, i) => ({ value, color: RAMP_DARK[i] })),
+    light: values.map((value, i) => ({ value, color: RAMP_LIGHT[i] })),
+  }
+}
+
 const MODE_DEFAULTS: Record<string, ModeConfig> = {
   'block':                  { max: 300,   maxHeight: 4500 },
   'lot':                    { max: 300,   maxHeight: 4500 },
@@ -204,6 +302,18 @@ const MODE_DEFAULTS: Record<string, ModeConfig> = {
     dark:  [{ value: 0, color: [96, 96, 96] }, { value: 1273.7, color: [255, 0, 0] }, { value: 3500, color: [255, 217, 26] }, { value: 6834.5, color: [0, 255, 0] }],
     light: [{ value: 0, color: [255, 255, 255] }, { value: 1273.7, color: [255, 71, 71] }, { value: 3500, color: [230, 190, 0] }, { value: 6834.5, color: [0, 214, 0] }],
   }},
+  // Total-$ modes. Height is linear and unclamped so bar height is literally
+  // proportional to dollars — `maxHeight` is therefore what the single tallest
+  // feature gets, sized to stay inside a citywide frame at that level's natural
+  // zoom. The distribution is brutally skewed (2025: median block $525k, top
+  // block $80.8M), so most bars are short by design; the log color ramp does
+  // the discriminating down there. `columnRadius` is ~a third of the typical
+  // inter-feature spacing at each level.
+  'block:total':            { max: 20e6,  maxHeight: 2200, scale: 'log',    columnRadius: 45,  stops: stopsAt([0, 250e3, 1e6, 6e6]) },
+  'lot:total':              { max: 2e6,   maxHeight: 1200, scale: 'log',    columnRadius: 12,  stops: stopsAt([0, 10e3, 50e3, 800e3]) },
+  'unit:total':             { max: 1e6,   maxHeight: 800,  scale: 'log',    columnRadius: 6,   stops: stopsAt([0, 8e3, 30e3, 300e3]) },
+  'census-block:total':     { max: 20e6,  maxHeight: 2000, scale: 'log',    columnRadius: 40,  stops: stopsAt([0, 250e3, 1e6, 6e6]) },
+  'ward:total':             { max: 450e6, maxHeight: 5000, scale: 'linear', columnRadius: 400, stops: stopsAt([0, 100e6, 200e6, 400e6]) },
 }
 const YR_BUILT_CONFIG: ModeConfig = {
   min: 1870, max: 2025, maxHeight: 4500, scale: 'linear',
@@ -271,6 +381,7 @@ export default function MapView() {
   const [extruded, setExtruded] = useUrlState('3d', boolParam)
   const [colorBy, setColorBy] = useUrlState('cb', stringParam('metric'))
   const [percentileRaw, setPercentileRaw] = useUrlState('pct', optNumParam)
+  const [columnRadiusRaw, setColumnRadiusRaw] = useUrlState('cr', optNumParam)
   const [settingsPos, setSettingsPos] = useUrlState('sp', stringParam('tr'))
   const posRight = settingsPos.endsWith('r')
   const posBottom = settingsPos.startsWith('b')
@@ -319,6 +430,9 @@ export default function MapView() {
   }, [animYr]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasPopulation = aggregateMode === 'census-block' || aggregateMode === 'ward'
+  // Total-$ mode: bars share one footprint (height ∝ dollars) instead of
+  // extruding each polygon, so area doesn't smuggle itself into bar volume.
+  const isTotal = metricMode === 'total'
   const modeKey = getModeKey(aggregateMode, metricMode)
   const modeConf = MODE_DEFAULTS[modeKey] ?? MODE_DEFAULTS['block']
 
@@ -327,10 +441,20 @@ export default function MapView() {
   // Effective max height: URL value if explicitly set, else mode default
   const maxHeight = maxHeightRaw ?? modeConf.maxHeight
   const percentile = percentileRaw
-  const metricLabel = metricMode === 'per_capita' ? '/capita' : '/sqft'
+  const modeColumnRadius = modeConf.columnRadius ?? 30
+  // Guard `?cr=0` / negatives from the URL: a zero radius renders nothing, which
+  // reads as a broken map rather than a bad param.
+  const columnRadius = columnRadiusRaw != null && columnRadiusRaw > 0 ? columnRadiusRaw : modeColumnRadius
+  const metricLabel = metricMode === 'per_capita' ? '/capita' : isTotal ? '' : '/sqft'
+  // Total dollars span 5+ orders of magnitude, so gradient/histogram/percentile
+  // readouts get compact ($1.2M) formatting instead of raw 2-decimal dollars.
+  const fmtMetric = useCallback(
+    (v: number) => isTotal ? abbr(v) : `$${v.toFixed(2)}`,
+    [isTotal],
+  )
   const sortedVals = useMemo(() => {
     if (!data || data.length === 0) return []
-    const field = metricMode === 'per_capita' ? 'paid_per_capita' : 'paid_per_sqft'
+    const field = metricField(metricMode)
     const vals: number[] = []
     for (const f of data) {
       const v = f.properties?.[field] ?? 0
@@ -385,6 +509,9 @@ export default function MapView() {
   // Freeze height scale while loading to prevent stale data rendered with new-mode elevation
   const stableHeightScaleRef = useRef(heightScale)
   if (!loading) stableHeightScaleRef.current = heightScale
+  // Polygons are only extruded in per-area/per-capita 3D: total-$ mode keeps
+  // them flat and puts the height on uniform columns instead.
+  const polysExtruded = extruded && !isTotal
   // Effective color scale: URL value if explicitly set, else mode default (overridden by yr_built config)
   const colorByYrBuilt = colorBy === 'yr_built' && (aggregateMode === 'lot' || aggregateMode === 'unit')
   const colorConf = colorByYrBuilt ? YR_BUILT_CONFIG : modeConf
@@ -430,9 +557,10 @@ export default function MapView() {
     if (maxHeightRaw != null) ssSave(oldKey, 'mh', String(maxHeight))
     if (colorScaleRaw != null) ssSave(oldKey, 'scale', colorScaleRaw)
     if (percentileRaw != null) ssSave(oldKey, 'pct', String(percentileRaw))
+    if (columnRadiusRaw != null) ssSave(oldKey, 'cr', String(columnRadiusRaw))
 
-    // Reset metric to per_sqft for non-census modes
-    const effectiveMetric = (newAgg === 'census-block' || newAgg === 'ward') ? newMetric : 'per_sqft'
+    // per_capita needs population data; per_sqft / total work everywhere
+    const effectiveMetric = effectiveMetricFor(newAgg, newMetric)
     const newKey = getModeKey(newAgg, effectiveMetric)
 
     // Restore from SS if user previously customized this mode, else clear (use defaults)
@@ -441,11 +569,19 @@ export default function MapView() {
     const savedScale = ssLoad(newKey, 'scale')
     setColorScaleRaw((savedScale as ScaleType) ?? undefined)
     const savedPct = ssLoad(newKey, 'pct')
-    setPercentileRaw(savedPct ? Number(savedPct) : (newAgg === 'unit' ? 99 : undefined))
+    // Total-$ mode must NOT clamp by default: clamping flattens every block
+    // above the cutoff to the same height, so the $80.8M block and the $19.3M
+    // block would render identically — exactly the comparison the mode exists
+    // for. Height stays linear and unclamped; the log color ramp is what keeps
+    // the (much smaller) typical blocks distinguishable.
+    const defaultPct = (newAgg === 'unit' && effectiveMetric !== 'total') ? 99 : undefined
+    setPercentileRaw(savedPct ? Number(savedPct) : defaultPct)
+    const savedCr = ssLoad(newKey, 'cr')
+    setColumnRadiusRaw(savedCr ? Number(savedCr) : undefined)
 
     // Clear custom color stops; mode stops or theme defaults will apply
     if (hasCustomStops) resetColorStopsRaw()
-  }, [aggregateMode, metricMode, maxHeight, maxHeightRaw, colorScaleRaw, percentileRaw, hasCustomStops, resetColorStopsRaw])
+  }, [aggregateMode, metricMode, maxHeight, maxHeightRaw, colorScaleRaw, percentileRaw, columnRadiusRaw, hasCustomStops, resetColorStopsRaw])
 
   const setAggregateMode = useCallback((newAgg: string) => {
     if (newAgg === aggregateMode) return
@@ -454,12 +590,10 @@ export default function MapView() {
     if (colorBy === 'yr_built' && newAgg !== 'lot' && newAgg !== 'unit') {
       switchColorBy('metric')
     }
-    const newMetric = (newAgg === 'census-block' || newAgg === 'ward') ? metricMode : 'per_sqft'
+    const newMetric = effectiveMetricFor(newAgg, metricMode)
     switchToMode(newAgg, newMetric)
     setAggregateModeRaw(newAgg)
-    if (!(newAgg === 'census-block' || newAgg === 'ward') && metricMode === 'per_capita') {
-      setMetricModeRaw('per_sqft')
-    }
+    if (newMetric !== metricMode) setMetricModeRaw(newMetric)
   }, [aggregateMode, switchToMode, metricMode, colorBy, switchColorBy])
 
   const setMetricMode = useCallback((newMetric: string) => {
@@ -619,8 +753,7 @@ export default function MapView() {
           const features = yearCacheRef.current.get(cacheKey(aggregateMode, y))
           if (!features) continue
           for (const f of features) {
-            const p = f.properties
-            const v = (metricMode === 'per_capita' ? p?.paid_per_capita : p?.paid_per_sqft) ?? 0
+            const v = f.properties?.[metricField(metricMode)] ?? 0
             if (v > m) m = v
           }
         }
@@ -637,9 +770,10 @@ export default function MapView() {
   }, [setYear])
 
 
-  // Default unit mode to p99 on initial load
+  // Default unit mode to p99 on initial load (but not unit + total-$; see
+  // the clamp note in `switchToMode`)
   useEffect(() => {
-    if (aggregateMode === 'unit' && percentileRaw == null) {
+    if (aggregateMode === 'unit' && metricMode !== 'total' && percentileRaw == null) {
       setPercentileRaw(99)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -663,7 +797,7 @@ export default function MapView() {
     return data.map(f => {
       const p = f.properties
       if (!p?.ward) return null
-      const metricVal = metricMode === 'per_capita' ? (p.paid_per_capita ?? 0) : (p.paid_per_sqft ?? 0)
+      const metricVal = p[metricField(metricMode)] ?? 0
       const rings = f.geometry.type === 'Polygon' ? [f.geometry.coordinates[0]] : f.geometry.coordinates.map(p => p[0])
       const lines = [`Ward ${p.ward}`]
       if (p.population) lines.push(`Pop: ${p.population.toLocaleString()}`)
@@ -697,7 +831,9 @@ export default function MapView() {
 
     for (let wi = 0; wi < wardLabelInfo.length; wi++) {
       const { metricVal, rings } = wardLabelInfo[wi]
-      const elev = metricVal * heightScale
+      // Match what the layer actually draws: flat polygons in 2D and in
+      // total-$ mode (where the height lives on the columns instead).
+      const elev = polysExtruded ? metricVal * heightScale : 0
 
       for (const ring of rings) {
         const n = ring.length
@@ -867,9 +1003,9 @@ export default function MapView() {
     }
 
     return labels
-  }, [wardLabelInfo, viewState, heightScale])
+  }, [wardLabelInfo, viewState, heightScale, polysExtruded])
 
-  const getFeatureId = useCallback((f: ParcelFeature) => {
+  const getFeatureId = useCallback((f: ParcelFeatureLike) => {
     const p = f.properties
     if (p?.geoid) return p.geoid
     if (p?.ward && !p?.block) return `ward-${p.ward}`
@@ -891,10 +1027,8 @@ export default function MapView() {
     ? [100, 100, 100, 100]
     : [60, 60, 60, 160]
 
-  const metricOf = useCallback((f: ParcelFeature): number => {
-    const p = f.properties
-    if (metricMode === 'per_capita') return p?.paid_per_capita ?? 0
-    return p?.paid_per_sqft ?? 0
+  const metricOf = useCallback((f: ParcelFeatureLike): number => {
+    return f.properties?.[metricField(metricMode)] ?? 0
   }, [metricMode])
 
   // Per-feature metric at the (possibly fractional) `year`. For integer years
@@ -904,7 +1038,7 @@ export default function MapView() {
   // interpolation from whatever year `data` happens to be, so a year-boundary
   // setData swap can't briefly snap bars to the prior floor's values.
   const isFractionalYear = !Number.isInteger(year)
-  const getMetricValue = useCallback((f: ParcelFeature): number => {
+  const getMetricValue = useCallback((f: ParcelFeatureLike): number => {
     if (!isFractionalYear) return metricOf(f)
     const yFloor = Math.floor(year), yCeil = Math.ceil(year)
     const t = year - yFloor
@@ -920,7 +1054,10 @@ export default function MapView() {
   // Gray-out only when geometry actually changes (agg switch). Year-only changes
   // keep the prior bars visible and let deck.gl transitions tween to the new year.
   const staleData = loading && data && !yearOnlyChangeRef.current
-  const getFillColor = useCallback((f: ParcelFeature): [number, number, number, number] => {
+  // In total-$ 3D the columns carry the metric, so the footprints behind them
+  // are dimmed to stay readable as context rather than competing for attention.
+  const polyAlpha = isTotal && extruded ? Math.round(fillAlpha * 0.3) : fillAlpha
+  const colorOf = useCallback((f: ParcelFeatureLike, alpha: number): [number, number, number, number] => {
     if (staleData) return LOADING_COLOR
     const id = getFeatureId(f)
     if (id === selectedId) return id === hoveredId ? SELECTED_HOVER_COLOR : SELECTED_COLOR
@@ -928,23 +1065,59 @@ export default function MapView() {
 
     if (colorByYrBuilt) {
       const yr = f.properties?.yr_built ?? 0
-      return interpolateColor(yr, colorStops, colorMax, colorScale, fillAlpha, colorMin)
+      return interpolateColor(yr, colorStops, colorMax, colorScale, alpha, colorMin)
     }
-    return interpolateColor(getMetricValue(f), colorStops, maxVal, colorScale, fillAlpha)
-  }, [staleData, colorStops, colorScale, maxVal, hoveredId, selectedId, getFeatureId, fillAlpha, getMetricValue, colorByYrBuilt, colorMax, colorMin])
+    return interpolateColor(getMetricValue(f), colorStops, maxVal, colorScale, alpha)
+  }, [staleData, colorStops, colorScale, maxVal, hoveredId, selectedId, getFeatureId, getMetricValue, colorByYrBuilt, colorMax, colorMin])
+  const getFillColor = useCallback((f: ParcelFeatureLike) => colorOf(f, polyAlpha), [colorOf, polyAlpha])
+  const getColumnColor = useCallback((f: ParcelFeatureLike) => colorOf(f, fillAlpha), [colorOf, fillAlpha])
+
+  const getBarElevation = useCallback((f: ParcelFeatureLike): number => {
+    const h = getMetricValue(f) * stableHeightScaleRef.current
+    return percentile != null ? Math.min(h, maxHeight) : h
+  }, [getMetricValue, percentile, maxHeight])
+
+  // Column anchors: cached per feature object (features are shared from the
+  // per-(agg, year) cache, so this is computed once per parcel per geometry).
+  const anchorCache = useRef(new WeakMap<ParcelFeature, [number, number]>())
+  const getColumnPosition = useCallback((f: ParcelFeature): [number, number] => {
+    const cached = anchorCache.current.get(f)
+    if (cached) return cached
+    const c = columnAnchorOf(f.geometry)
+    anchorCache.current.set(f, c)
+    return c
+  }, [])
+
+  const onFeatureHover = useCallback(({ object }: { object?: ParcelFeatureLike }) => {
+    if (suppressHoverRef.current) return
+    if (object) {
+      setHoveredId(getFeatureId(object))
+      setHovered(object.properties ?? null)
+    } else {
+      setHoveredId(null)
+      setHovered(null)
+    }
+  }, [getFeatureId])
+  const onFeatureClick = useCallback(({ object }: { object?: ParcelFeatureLike }) => {
+    if (!object) return false
+    const id = getFeatureId(object)
+    setSelectedId(id === selectedIdRef.current ? undefined : id)
+    suppressHoverRef.current = true
+    setHoveredId(null)
+    setHovered(null)
+    setTimeout(() => { suppressHoverRef.current = false }, 100)
+    return true
+  }, [getFeatureId, setSelectedId])
 
   const layers = [
-    new GeoJsonLayer<ParcelFeature>({
+    new GeoJsonLayer<ParcelProperties>({
       id: 'parcels',
       data: effectiveData ?? [],
       filled: true,
-      extruded,
-      wireframe: extruded,
+      extruded: polysExtruded,
+      wireframe: polysExtruded,
       getFillColor,
-      getElevation: extruded ? (f) => {
-        const h = getMetricValue(f) * stableHeightScaleRef.current
-        return percentile != null ? Math.min(h, maxHeight) : h
-      } : 0,
+      getElevation: polysExtruded ? getBarElevation : 0,
       // No deck.gl tweens — both browser-time year flips and scrns fractional
       // sweeps rely on per-feature interpolation in getMetricValue (instant).
       // Toggling transitions shape per render triggered a luma.gl WebGL init
@@ -953,33 +1126,41 @@ export default function MapView() {
       getLineColor: lineColor,
       lineWidthMinPixels: 1,
       pickable: true,
-      onHover: ({ object }) => {
-        if (suppressHoverRef.current) return
-        if (object) {
-          setHoveredId(getFeatureId(object))
-          setHovered(object.properties ?? null)
-        } else {
-          setHoveredId(null)
-          setHovered(null)
-        }
-      },
-      onClick: ({ object }) => {
-        if (object) {
-          const id = getFeatureId(object)
-          setSelectedId(id === selectedIdRef.current ? undefined : id)
-          suppressHoverRef.current = true
-          setHoveredId(null)
-          setHovered(null)
-          setTimeout(() => { suppressHoverRef.current = false }, 100)
-          return true
-        }
-      },
+      onHover: onFeatureHover,
+      onClick: onFeatureClick,
       updateTriggers: {
-        getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax],
-        getElevation: [year, stableHeightScaleRef.current, aggregateMode, metricMode, percentile],
+        getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, polyAlpha],
+        getElevation: [year, stableHeightScaleRef.current, aggregateMode, metricMode, percentile, maxHeight],
         getLineColor: [actualTheme],
       },
     }),
+    // Total-$ 3D: one uniform footprint per parcel, height ∝ dollars paid.
+    // Extruding the polygons themselves would make bar *volume* ∝ dollars ×
+    // area, so a big cheap lot could out-loom a small expensive one.
+    ...(isTotal && extruded ? [
+      new ColumnLayer<ParcelFeature>({
+        id: 'total-columns',
+        data: effectiveData ?? [],
+        diskResolution: 12,
+        radius: columnRadius,
+        radiusUnits: 'meters',
+        extruded: true,
+        filled: true,
+        stroked: false,
+        pickable: true,
+        getPosition: getColumnPosition,
+        getFillColor: getColumnColor,
+        getElevation: getBarElevation,
+        transitions: undefined,
+        onHover: onFeatureHover,
+        onClick: onFeatureClick,
+        updateTriggers: {
+          getPosition: [aggregateMode, wardGeom],
+          getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax],
+          getElevation: [year, stableHeightScaleRef.current, aggregateMode, metricMode, percentile, maxHeight],
+        },
+      }),
+    ] : []),
   ]
 
   const inputStyle = {
@@ -1043,7 +1224,8 @@ export default function MapView() {
               min={colorMin}
               prefix={colorByYrBuilt ? '' : '$'}
               onReset={hasCustomStops ? resetColorStops : undefined}
-              metricLabel={colorByYrBuilt ? '' : (metricMode === 'per_capita' ? '/capita' : '/sqft')}
+              metricLabel={colorByYrBuilt ? '' : metricLabel}
+              format={isTotal && !colorByYrBuilt ? abbr : undefined}
             />
             <details style={{ marginTop: 4 }}>
               <summary style={{ fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -1055,6 +1237,8 @@ export default function MapView() {
                 max={dataMax}
                 prefix={colorByYrBuilt ? '' : '$'}
                 metricLabel={colorByYrBuilt ? '' : metricLabel}
+                format={isTotal && !colorByYrBuilt ? abbr : undefined}
+                binScale={isTotal && !colorByYrBuilt ? 'log' : 'linear'}
               />
             </details>
           </div>
@@ -1082,19 +1266,18 @@ export default function MapView() {
               Color by year built
             </label>
           )}
-          {hasPopulation && (
-            <label>
-              Metric:{' '}
-              <select
-                value={metricMode}
-                onChange={(e) => setMetricMode(e.target.value as MetricMode)}
-                style={inputStyle}
-              >
-                <option value="per_sqft">$/sqft</option>
-                <option value="per_capita">$/capita</option>
-              </select>
-            </label>
-          )}
+          <label>
+            Metric:{' '}
+            <select
+              value={metricMode}
+              onChange={(e) => setMetricMode(e.target.value as MetricMode)}
+              style={inputStyle}
+            >
+              <option value="per_sqft">$/sqft</option>
+              <option value="total">$ total</option>
+              {hasPopulation && <option value="per_capita">$/capita</option>}
+            </select>
+          </label>
           {aggregateMode === 'ward' && (<>
             <label>
               Geometry:{' '}
@@ -1152,6 +1335,36 @@ export default function MapView() {
               </button>
             )}
           </label>}
+          {extruded && isTotal && <>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              Bar radius:{' '}
+              <input
+                type="number"
+                value={columnRadius}
+                onChange={(e) => {
+                  const m = Number(e.target.value)
+                  if (!m || m <= 0) return
+                  setColumnRadiusRaw(m === modeColumnRadius ? undefined : m)
+                }}
+                style={{ ...inputStyle, width: 60 }}
+                min={1}
+                step={5}
+              />
+              <span>m</span>
+              {columnRadiusRaw !== undefined && (
+                <button
+                  onClick={() => setColumnRadiusRaw(undefined)}
+                  title="Reset to default"
+                  style={{ ...inputStyle, cursor: 'pointer', padding: '2px 6px', fontSize: 14 }}
+                >
+                  ↺
+                </button>
+              )}
+            </label>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -4 }}>
+              Every bar has the same footprint, so height alone tracks total $.
+            </div>
+          </>}
           {extruded && <>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input
@@ -1175,7 +1388,7 @@ export default function MapView() {
                 <span>th percentile</span>
                 {percentilePrice != null && (
                   <span style={{ color: 'var(--text-secondary)' }}>
-                    = ${percentilePrice.toFixed(2)}{metricLabel}
+                    = {fmtMetric(percentilePrice)}{metricLabel}
                   </span>
                 )}
               </div>
@@ -1245,7 +1458,9 @@ export default function MapView() {
         const headline = colorByYrBuilt ? 'Jersey City Parcels' : 'Jersey City Property Taxes'
         const subPrefix = colorByYrBuilt
           ? 'Colored by year built'
-          : `Paid per ${metricMode === 'per_capita' ? 'capita' : 'sq ft'} · by ${aggLabel}`
+          : isTotal
+            ? `Total paid · by ${aggLabel}`
+            : `Paid per ${metricMode === 'per_capita' ? 'capita' : 'sq ft'} · by ${aggLabel}`
         const isAnim = !!animYr
         const titleStyle = {
           position: 'absolute' as const,
@@ -1323,6 +1538,7 @@ export default function MapView() {
         const info = selected ?? hovered!
         const isCensus = !!info.geoid || (!!info.ward && !info.block)
         const sqftActive = metricMode === 'per_sqft'
+        const capitaActive = metricMode === 'per_capita'
         const hasBuilding = !!(info.stories || info.units || info.yr_built || info.bldg_sqft)
         // Compute centroid for map links
         const activeId = selected ? selectedId : hoveredId
@@ -1406,7 +1622,9 @@ export default function MapView() {
               )
             )}
             {info.paid !== undefined && info.paid > 0 && (
-              <div>Paid ({year}): ${info.paid.toLocaleString()}</div>
+              <div style={{ color: isTotal && !colorByYrBuilt ? 'var(--text-accent)' : undefined }}>
+                Paid ({year}): ${info.paid.toLocaleString()}
+              </div>
             )}
             {info.unit_sqft && info.paid ? (<>
               <div style={{ color: sqftActive ? 'var(--text-accent)' : undefined }}>
@@ -1431,7 +1649,7 @@ export default function MapView() {
               </div>
             )}
             {info.paid_per_capita !== undefined && info.paid_per_capita > 0 && (
-              <div style={{ color: !sqftActive ? 'var(--text-accent)' : undefined }}>
+              <div style={{ color: capitaActive ? 'var(--text-accent)' : undefined }}>
                 ${info.paid_per_capita.toLocaleString()}/capita
               </div>
             )}

@@ -16,7 +16,7 @@ Data files (`taxes-{year}-{agg}.geojson`) are [DVC]-tracked in `public/`. In dev
 
 ## Stack
 
-- [deck.gl] — 3D extruded `GeoJsonLayer` on [maplibre-gl] base map
+- [deck.gl] — 3D extruded `GeoJsonLayer` on [maplibre-gl] base map, plus a uniform-footprint `ColumnLayer` for `metric=total`
 - [use-kbd] — omnibar search, editable keyboard shortcuts, shortcuts modal
 - [use-prms] — URL query param state (`v`, `y`, `agg`, `scale`, `mh`, `sel`, ...)
 - [vite-plugin-dvc] — resolves `.dvc` files to local paths (dev) or S3 URLs (build)
@@ -25,8 +25,9 @@ Data files (`taxes-{year}-{agg}.geojson`) are [DVC]-tracked in `public/`. In dev
 
 | File | What |
 |---|---|
-| `src/App.tsx` | Main component: deck.gl map, settings panel, tooltips, ward labels |
-| `src/SpeedDial.tsx` | Unified FAB: hover-peek + click-to-pin, search/shortcuts/theme/GitHub |
+| `src/MapView.tsx` | Main component: deck.gl map, settings panel, tooltips, ward labels |
+| `src/AppSpeedDial.tsx` | Unified FAB: hover-peek + click-to-pin, search/shortcuts/theme/GitHub |
+| `src/DistributionChart.tsx` | Metric histogram + CDF (linear or log bins) in the settings panel |
 | `src/GradientEditor.tsx` | Interactive color gradient editor (draggable stops, scale selector) |
 | `src/useKeyboardShortcuts.ts` | Hotkey definitions (year, view, pitch, zoom, height, theme) |
 | `src/useParcelSearch.ts` | Omnibar endpoint: fuzzy search parcels by address/block/owner |
@@ -42,9 +43,10 @@ Data files (`taxes-{year}-{agg}.geojson`) are [DVC]-tracked in `public/`. In dev
 | `v` | Viewport (lat, lng, zoom, pitch, bearing) | `40.7177 -74.0695 12.8 54 -10` |
 | `y` | Tax year | `2025` |
 | `agg` | Aggregation: `ward`, `census-block`, `block`, `lot`, `unit` | `block` |
-| `metric` | Metric: `per_sqft`, `per_capita` (wards/census blocks only) | `per_sqft` |
+| `metric` | Metric: `per_sqft`, `total`, `per_capita` (wards/census blocks only) | `per_sqft` |
 | `scale` | Color scale: `log`, `sqrt`, `linear` | `log` |
 | `mh` | Max extrusion height (meters) | `4500` |
+| `cr` | Bar radius (meters), `metric=total` in 3D | `45` |
 | `sel` | Selected parcel ID | `11303-00012` |
 | `c` | Custom color stops (theme-specific) | encoded gradient |
 | `wg` | Ward geometry: `merged`, `blocks`, `lots`, `boundary` | `merged` |

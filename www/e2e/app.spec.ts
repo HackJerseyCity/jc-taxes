@@ -24,8 +24,8 @@ function readFixture(name: string): string {
 }
 
 /**
- * Build reverse map from S3 DVC cache URLs → GeoJSON suffix.
- * Only needed for build/preview mode where dvcResolve returns opaque S3 URLs.
+ * Build reverse map from remote DVC cache URLs → GeoJSON suffix.
+ * Only needed for build/preview mode where dvcResolve returns opaque hash URLs.
  */
 let s3Map: Map<string, string> | undefined
 function getS3Map(): Map<string, string> {
@@ -59,10 +59,13 @@ async function mockGeoJSON(page: Page) {
     }
   })
 
-  // Build mode: URLs are opaque S3 hashes; use reverse map from built JS
+  // Build mode: URLs are opaque cache hashes; use reverse map from built JS.
+  // Hosts: S3 (plugin default) and R2 (`VITE_DVC_BASE_URL`, what CI builds
+  // with) — missing the live host means every test downloads the real 20-40 MB
+  // GeoJSONs instead of the fixtures, which times the suite out.
   const map = getS3Map()
   if (map.size > 0) {
-    await page.route(/jc-taxes\.s3\.amazonaws\.com/, async (route) => {
+    await page.route(/jc-taxes\.s3\.amazonaws\.com|data\.jct\.rbw\.sh/, async (route) => {
       const suffix = map.get(route.request().url())
       if (suffix && FIXTURES[suffix]) {
         await route.fulfill({ contentType: 'application/json', body: readFixture(FIXTURES[suffix]) })
@@ -280,6 +283,55 @@ test.describe('Color by year built', () => {
     await page.keyboard.press('b')
     await waitForView(page, 'block')
     await expect(page).not.toHaveURL(/[?&]cb=yr_built/)
+  })
+})
+
+test.describe('Total-$ metric', () => {
+  test('metric=total retitles the map and exposes the bar-radius control', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?metric=total')
+    await waitForLoad(page)
+    await expect(page.getByText(/Total paid · by block/)).toBeVisible()
+    // Uniform-footprint columns only exist in 3D
+    await expect(page.getByText('Bar radius:')).toBeVisible()
+  })
+
+  test('bar-radius control is hidden in 2D', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?metric=total&3d=0')
+    await waitForLoad(page)
+    await expect(page.getByText('Bar radius:')).not.toBeVisible()
+  })
+
+  test('m cycles $/sqft → total → $/sqft in block view', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/')
+    await waitForLoad(page)
+
+    await page.keyboard.press('m')
+    await expect(page).toHaveURL(/[?&]metric=total/)
+
+    await page.keyboard.press('m')
+    // per_sqft is the default metric, so the param drops out of the URL
+    await expect(page).not.toHaveURL(/[?&]metric=/)
+  })
+
+  test('metric=total survives an aggregation switch', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?metric=total')
+    await waitForLoad(page)
+    await page.keyboard.press('l')
+    await waitForView(page, 'lot')
+    await expect(page).toHaveURL(/[?&]metric=total/)
+  })
+
+  test('per_capita downgrades to per_sqft when leaving ward view', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?agg=ward&metric=per_capita')
+    await waitForLoad(page)
+    await page.keyboard.press('b')
+    await waitForView(page, 'block')
+    await expect(page).not.toHaveURL(/[?&]metric=per_capita/)
   })
 })
 

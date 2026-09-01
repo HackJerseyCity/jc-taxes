@@ -16,6 +16,12 @@ export type ViewState = {
 
 const WARD_GEOMS = ['merged', 'blocks', 'lots', 'boundary'] as const
 
+const METRIC_LABELS: Record<string, string> = {
+  per_sqft: '$/sqft',
+  total: 'total $',
+  per_capita: '$/capita',
+}
+
 // Zoom-dependent pan step: constant screen distance across zoom levels
 const panStep = (zoom: number) => 0.01 * Math.pow(2, 12 - zoom)
 
@@ -251,12 +257,14 @@ export function useKeyboardShortcuts({
     handler: () => setAggregateMode('ward'),
   })
 
+  // Cycle metrics: $/sqft → total $ → ($/capita, where population data exists)
+  const metricCycle = hasPopulation ? ['per_sqft', 'total', 'per_capita'] : ['per_sqft', 'total']
+  const nextMetric = metricCycle[(metricCycle.indexOf(metricMode) + 1) % metricCycle.length]
   useAction('metric:toggle', {
-    label: metricMode === 'per_sqft' ? 'Switch to $/capita' : 'Switch to $/sqft',
+    label: `Switch to ${METRIC_LABELS[nextMetric] ?? nextMetric}`,
     group: 'Navigation',
     defaultBindings: ['m'],
-    enabled: hasPopulation,
-    handler: () => setMetricMode(metricMode === 'per_sqft' ? 'per_capita' : 'per_sqft'),
+    handler: () => setMetricMode(nextMetric),
   })
 
   useAction('view:3d', {

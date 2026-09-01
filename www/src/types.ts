@@ -29,3 +29,8 @@ export type ParcelProperties = {
 }
 
 export type ParcelFeature = Feature<Polygon | MultiPolygon, ParcelProperties>
+
+// What deck.gl hands accessors for a `GeoJsonLayer<ParcelProperties>`: same
+// properties, un-narrowed geometry. Accessors that only read `properties`
+// should take this so they're usable from both layer types.
+export type ParcelFeatureLike = Feature<Geometry, ParcelProperties>
