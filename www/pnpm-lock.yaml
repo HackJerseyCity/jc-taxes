@@ -27,8 +27,8 @@ importers:
         specifier: ^9.2.6
         version: 9.2.6(@luma.gl/core@9.2.6)
       '@rdub/file-tree':
-        specifier: https://github.com/runsascoded/file-tree#579fe01e8b18e20eed8b3f443fb99fb607328e97
-        version: https://codeload.github.com/runsascoded/file-tree/tar.gz/579fe01e8b18e20eed8b3f443fb99fb607328e97(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@19.2.4(react@19.2.4))(react-markdown@10.1.0(@types/react@19.2.10)(react@19.2.4))(react-router-dom@7.17.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(remark-gfm@4.0.1)(use-prms@https://codeload.github.com/runsascoded/use-prms/tar.gz/da21b49c98e1ad372f88c4dee07eca483d17f1c8(react@19.2.4))
+        specifier: https://github.com/runsascoded/file-tree#d6d2eeef87ad6a601289bfa7639145d01f38d014
+        version: https://codeload.github.com/runsascoded/file-tree/tar.gz/d6d2eeef87ad6a601289bfa7639145d01f38d014(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@19.2.4(react@19.2.4))(react-markdown@10.1.0(@types/react@19.2.10)(react@19.2.4))(react-router-dom@7.17.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(remark-gfm@4.0.1)(use-prms@https://codeload.github.com/runsascoded/use-prms/tar.gz/da21b49c98e1ad372f88c4dee07eca483d17f1c8(react@19.2.4))(yaml@2.9.0)
       '@types/geojson':
         specifier: ^7946.0.16
         version: 7946.0.16
@@ -98,7 +98,7 @@ importers:
         version: 19.2.3(@types/react@19.2.10)
       '@vitejs/plugin-react':
         specifier: ^5.1.1
-        version: 5.1.2(vite@7.3.1(@types/node@25.2.1)(terser@5.48.0))
+        version: 5.1.2(vite@7.3.1(@types/node@25.2.1)(terser@5.48.0)(yaml@2.9.0))
       eslint:
         specifier: ^9.39.1
         version: 9.39.2
@@ -131,10 +131,10 @@ importers:
         version: 8.54.0(eslint@9.39.2)(typescript@5.9.3)
       vite:
         specifier: ^7.2.4
-        version: 7.3.1(@types/node@25.2.1)(terser@5.48.0)
+        version: 7.3.1(@types/node@25.2.1)(terser@5.48.0)(yaml@2.9.0)
       vite-plugin-dvc:
         specifier: github:runsascoded/vite-plugin-dvc#57d8f5f71582d4fa42914a569541d82473e8e208
-        version: https://codeload.github.com/runsascoded/vite-plugin-dvc/tar.gz/57d8f5f71582d4fa42914a569541d82473e8e208(vite@7.3.1(@types/node@25.2.1)(terser@5.48.0))
+        version: https://codeload.github.com/runsascoded/vite-plugin-dvc/tar.gz/57d8f5f71582d4fa42914a569541d82473e8e208(vite@7.3.1(@types/node@25.2.1)(terser@5.48.0)(yaml@2.9.0))
 
   ../../js/file-tree:
     dependencies:
@@ -1080,19 +1080,20 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/579fe01e8b18e20eed8b3f443fb99fb607328e97':
-    resolution: {tarball: https://codeload.github.com/runsascoded/file-tree/tar.gz/579fe01e8b18e20eed8b3f443fb99fb607328e97}
-    version: 0.0.1-dist.ac38c76
+  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/d6d2eeef87ad6a601289bfa7639145d01f38d014':
+    resolution: {tarball: https://codeload.github.com/runsascoded/file-tree/tar.gz/d6d2eeef87ad6a601289bfa7639145d01f38d014}
+    version: 0.0.1-dist.94a116e
     peerDependencies:
       highlight.js: ^11
       hyparquet: ^1
       jq-web: ^0.6
       react: ^18 || ^19
       react-dom: ^18 || ^19
-      react-markdown: ^9 || ^10
+      react-markdown: ^7 || ^8 || ^9 || ^10
       react-router-dom: ^6 || ^7
-      remark-gfm: ^4
+      remark-gfm: ^3 || ^4
       use-prms: ^0.4
+      yaml: ^2
     peerDependenciesMeta:
       react:
         optional: true
@@ -4840,6 +4841,11 @@ packages:
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
 
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yargs-parser@21.1.1:
     resolution: {integrity: sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==}
     engines: {node: '>=12'}
@@ -5965,7 +5971,7 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/579fe01e8b18e20eed8b3f443fb99fb607328e97(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@19.2.4(react@19.2.4))(react-markdown@10.1.0(@types/react@19.2.10)(react@19.2.4))(react-router-dom@7.17.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(remark-gfm@4.0.1)(use-prms@https://codeload.github.com/runsascoded/use-prms/tar.gz/da21b49c98e1ad372f88c4dee07eca483d17f1c8(react@19.2.4))':
+  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/d6d2eeef87ad6a601289bfa7639145d01f38d014(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@19.2.4(react@19.2.4))(react-markdown@10.1.0(@types/react@19.2.10)(react@19.2.4))(react-router-dom@7.17.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(remark-gfm@4.0.1)(use-prms@https://codeload.github.com/runsascoded/use-prms/tar.gz/da21b49c98e1ad372f88c4dee07eca483d17f1c8(react@19.2.4))(yaml@2.9.0)':
     dependencies:
       aws4fetch: 1.0.20
       highlight.js: 11.12.0
@@ -5974,6 +5980,7 @@ snapshots:
       react-markdown: 10.1.0(@types/react@19.2.10)(react@19.2.4)
       remark-gfm: 4.0.1
       use-prms: https://codeload.github.com/runsascoded/use-prms/tar.gz/da21b49c98e1ad372f88c4dee07eca483d17f1c8(react@19.2.4)
+      yaml: 2.9.0
     optionalDependencies:
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
@@ -6599,7 +6606,7 @@ snapshots:
     optionalDependencies:
       maplibre-gl: 5.17.0
 
-  '@vitejs/plugin-react@5.1.2(vite@7.3.1(@types/node@25.2.1)(terser@5.48.0))':
+  '@vitejs/plugin-react@5.1.2(vite@7.3.1(@types/node@25.2.1)(terser@5.48.0)(yaml@2.9.0))':
     dependencies:
       '@babel/core': 7.29.0
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.0)
@@ -6607,7 +6614,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.53
       '@types/babel__core': 7.20.5
       react-refresh: 0.18.0
-      vite: 7.3.1(@types/node@25.2.1)(terser@5.48.0)
+      vite: 7.3.1(@types/node@25.2.1)(terser@5.48.0)(yaml@2.9.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -10201,11 +10208,11 @@ snapshots:
       - supports-color
       - terser
 
-  vite-plugin-dvc@https://codeload.github.com/runsascoded/vite-plugin-dvc/tar.gz/57d8f5f71582d4fa42914a569541d82473e8e208(vite@7.3.1(@types/node@25.2.1)(terser@5.48.0)):
+  vite-plugin-dvc@https://codeload.github.com/runsascoded/vite-plugin-dvc/tar.gz/57d8f5f71582d4fa42914a569541d82473e8e208(vite@7.3.1(@types/node@25.2.1)(terser@5.48.0)(yaml@2.9.0)):
     dependencies:
       js-yaml: 4.1.1
       tinyglobby: 0.2.15
-      vite: 7.3.1(@types/node@25.2.1)(terser@5.48.0)
+      vite: 7.3.1(@types/node@25.2.1)(terser@5.48.0)(yaml@2.9.0)
 
   vite@5.4.21(@types/node@25.2.1)(terser@5.48.0):
     dependencies:
@@ -10217,7 +10224,7 @@ snapshots:
       fsevents: 2.3.3
       terser: 5.48.0
 
-  vite@7.3.1(@types/node@25.2.1)(terser@5.48.0):
+  vite@7.3.1(@types/node@25.2.1)(terser@5.48.0)(yaml@2.9.0):
     dependencies:
       esbuild: 0.27.2
       fdir: 6.5.0(picomatch@4.0.3)
@@ -10229,6 +10236,7 @@ snapshots:
       '@types/node': 25.2.1
       fsevents: 2.3.3
       terser: 5.48.0
+      yaml: 2.9.0
 
   vitest@2.1.9(@types/node@25.2.1)(happy-dom@20.9.0)(terser@5.48.0):
     dependencies:
@@ -10382,6 +10390,8 @@ snapshots:
   y18n@5.0.8: {}
 
   yallist@3.1.1: {}
+
+  yaml@2.9.0: {}
 
   yargs-parser@21.1.1: {}
 

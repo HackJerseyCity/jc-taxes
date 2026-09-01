@@ -1,8 +1,6 @@
 import { useMemo, type ReactNode } from 'react'
 import { FileTree } from '@rdub/file-tree/react'
 import { HttpStore } from '@rdub/file-tree/stores/http'
-import type { Store } from '@rdub/file-tree/stores'
-import type { PersistedState } from '@rdub/file-tree/react'
 import { renderMarkdown } from '@rdub/file-tree/renderers/markdown'
 import { ParquetViewer, type ParquetCellCtx } from '@rdub/file-tree/renderers/parquet'
 import { renderJsonTree } from '@rdub/file-tree/renderers/json'
@@ -54,10 +52,6 @@ function renderCell({ column, value, row, defaultNode }: ParquetCellCtx): ReactN
   return defaultNode
 }
 
-function TaxParquetViewer(props: { store: Store; path: string; usePersistedState?: PersistedState }) {
-  return <ParquetViewer {...props} renderCell={renderCell} />
-}
-
 export default function Files() {
   const store = useMemo(() => HttpStore(FILES_API), [])
   return (
@@ -68,7 +62,8 @@ export default function Files() {
         rootPrefix="data/"
         title="Jersey City property-tax data"
         markdownRenderer={renderMarkdown}
-        parquetRenderer={TaxParquetViewer}
+        parquetRenderer={ParquetViewer}
+        parquetOptions={{ renderCell }}
         jsonRenderer={renderJsonTree}
         csvRenderer={CsvViewer}
         codeRenderer={renderCode}
