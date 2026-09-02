@@ -3,7 +3,7 @@ import { Map as MaplibreMap } from 'react-map-gl/maplibre'
 import DeckGL from '@deck.gl/react'
 import { WebMercatorViewport, FlyToInterpolator, LinearInterpolator } from '@deck.gl/core'
 import { ColumnLayer, GeoJsonLayer } from '@deck.gl/layers'
-import { useUrlState, intParam, stringParam, viewStateParam } from 'use-prms'
+import { useUrlState, stringParam, viewStateParam } from 'use-prms'
 import { useHotkeysContext } from 'use-kbd'
 import { MdFolderOpen } from 'react-icons/md'
 import AppSpeedDial from './AppSpeedDial'
@@ -12,18 +12,28 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { useTouchPitch } from './useTouchPitch'
 import { useParcelSearch } from './useParcelSearch'
-import { useTheme } from './ThemeContext'
-import GradientEditor, {
+import { useTheme } from './theme'
+import GradientEditor from './GradientEditor'
+import {
   type ScaleType,
   type ColorStop,
   interpolateColor,
   encodeStops,
   decodeStops,
-} from './GradientEditor'
+} from './gradient'
 import type { ParcelProperties, ParcelFeature, ParcelFeatureLike } from './types'
 import { getLotNote } from './notes'
 import DistributionChart from './DistributionChart'
 import Tooltip from './Tooltip'
+
+// Hooks exposed on `window` for scrns automation (screencasts step the year /
+// nudge the viewport from outside React).
+declare global {
+  interface Window {
+    __setViewState?: (partial: Partial<ViewState>) => void
+    __setYear?: (v: number) => void
+  }
+}
 
 // Responsive default views: interpolated by viewport width
 const VIEW_BREAKPOINTS: { width: number, view: ViewState }[] = [
@@ -61,7 +71,6 @@ const viewParam = viewStateParam({
 })
 
 const AVAILABLE_YEARS = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
-const YEAR_MIN = AVAILABLE_YEARS[0]
 const YEAR_MAX = AVAILABLE_YEARS[AVAILABLE_YEARS.length - 1]
 
 // Float-aware ?y param: accepts integer years for normal use and fractional
@@ -224,8 +233,7 @@ function columnAnchorOf(geom: ParcelFeature['geometry']): [number, number] {
   return [bestX, cy]
 }
 
-const AGGREGATE_MODES = ['block', 'lot', 'unit', 'census-block', 'ward'] as const
-type AggregateMode = typeof AGGREGATE_MODES[number]
+type AggregateMode = 'block' | 'lot' | 'unit' | 'census-block' | 'ward'
 const SUFFIX_MAP: Record<string, string> = {
   unit: '-units',
   block: '-blocks',
@@ -368,7 +376,7 @@ export default function MapView() {
   const selectedIdRef = useRef(selectedId)
   selectedIdRef.current = selectedId
   const [loading, setLoading] = useState(true)
-  const [settingsOpenUrl, setSettingsOpenUrl] = useUrlState('so', boolParam)
+  const [settingsOpenUrl] = useUrlState('so', boolParam)
   const [settingsOpen, setSettingsOpen] = useState(() => settingsOpenUrl && window.innerWidth > 768)
 
   // URL-persisted state (mh is optional; absent = use mode default)
@@ -582,7 +590,7 @@ export default function MapView() {
 
     // Clear custom color stops; mode stops or theme defaults will apply
     if (hasCustomStops) resetColorStopsRaw()
-  }, [aggregateMode, metricMode, maxHeight, maxHeightRaw, colorScaleRaw, percentileRaw, columnRadiusRaw, hasCustomStops, resetColorStopsRaw])
+  }, [aggregateMode, metricMode, maxHeight, maxHeightRaw, colorScaleRaw, percentileRaw, columnRadiusRaw, hasCustomStops, resetColorStopsRaw, setColorScaleRaw, setColumnRadiusRaw, setMaxHeightRaw, setPercentileRaw])
 
   const setAggregateMode = useCallback((newAgg: string) => {
     if (newAgg === aggregateMode) return
@@ -595,12 +603,12 @@ export default function MapView() {
     switchToMode(newAgg, newMetric)
     setAggregateModeRaw(newAgg)
     if (newMetric !== metricMode) setMetricModeRaw(newMetric)
-  }, [aggregateMode, switchToMode, metricMode, colorBy, switchColorBy])
+  }, [aggregateMode, switchToMode, metricMode, colorBy, switchColorBy, setAggregateModeRaw, setMetricModeRaw])
 
   const setMetricMode = useCallback((newMetric: string) => {
     switchToMode(aggregateMode, newMetric)
     setMetricModeRaw(newMetric)
-  }, [switchToMode, aggregateMode])
+  }, [switchToMode, aggregateMode, setMetricModeRaw])
 
   // URL is source of truth for initial load; local state for smooth rendering
   const [urlView_, setUrlView] = useUrlState('v', viewParam)
@@ -608,10 +616,10 @@ export default function MapView() {
   const [viewState, setViewState] = useState<ViewState>(urlView)
   // Expose setViewState for external tools (e.g. scrns screencast automation)
   useEffect(() => {
-    (window as any).__setViewState = (partial: Partial<ViewState>) => {
+    window.__setViewState = (partial: Partial<ViewState>) => {
       setViewState(v => ({ ...v, ...partial }))
     }
-    return () => { delete (window as any).__setViewState }
+    return () => { delete window.__setViewState }
   }, [])
   // Debounce URL writes whenever viewState changes (from any source).
   // Skip while omnibar is open: the synthetic popstate from replaceState
@@ -632,9 +640,9 @@ export default function MapView() {
     year, setYear,
     aggregateMode, setAggregateMode,
     hasPopulation, metricMode, setMetricMode,
-    settingsOpen, setSettingsOpen,
+    setSettingsOpen,
     setViewState,
-    maxHeight, setMaxHeightRaw,
+    setMaxHeightRaw,
     modeMaxHeight: modeConf.maxHeight,
     toggleTheme,
     wardLabels, setWardLabels,
@@ -649,7 +657,7 @@ export default function MapView() {
 
   // Omnibar search over parcels
   const onParcelSelect = useCallback((f: ParcelFeature) => {
-    setSelectedId(getFeatureId(f))
+    setSelectedId(featureIdOf(f))
     // Pan to the selected parcel
     if (f.geometry) {
       const coords = f.geometry.type === 'Polygon' ? f.geometry.coordinates[0] : f.geometry.coordinates[0][0]
@@ -666,7 +674,7 @@ export default function MapView() {
         transitionInterpolator: new FlyToInterpolator(),
       }))
     }
-  }, [])
+  }, [setSelectedId, setViewState])
   useParcelSearch({ data, onSelect: onParcelSelect })
 
   // Per-(agg, year) feature cache + id maps. Populated lazily on year/agg
@@ -767,7 +775,7 @@ export default function MapView() {
   // fractional-year stepping). Avoids URL-thrash and matches the existing
   // `window.__setViewState` pattern used by `cast.gif`.
   useEffect(() => {
-    (window as unknown as { __setYear: (v: number) => void }).__setYear = setYear
+    window.__setYear = setYear
   }, [setYear])
 
 
@@ -964,10 +972,6 @@ export default function MapView() {
     const labelH = (text: string) => text.split('\n').length * 17 + 8
     const VW = window.innerWidth, VH = window.innerHeight
     const PAD = 8
-
-    // Center of mass for outward bias when labels coincide
-    const comX = labels.length > 0 ? labels.reduce((s, l) => s + l.x, 0) / labels.length : 0
-    const comY = labels.length > 0 ? labels.reduce((s, l) => s + l.y, 0) / labels.length : 0
 
     for (let iter = 0; iter < 50; iter++) {
       let maxOverlap = 0

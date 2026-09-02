@@ -3,7 +3,7 @@ import { useHotkeysContext, SpeedDial } from 'use-kbd'
 import { FaGithub } from 'react-icons/fa'
 import { SiBluesky } from 'react-icons/si'
 import { MdDarkMode, MdLightMode, MdKeyboard, MdSettingsBrightness } from 'react-icons/md'
-import { useTheme } from './ThemeContext'
+import { useTheme } from './theme'
 
 export type SpeedDialAction = {
   key: string

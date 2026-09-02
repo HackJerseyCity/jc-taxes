@@ -63,10 +63,8 @@ type Props = {
   hasPopulation: boolean
   metricMode: string
   setMetricMode: (m: string) => void
-  settingsOpen: boolean
   setSettingsOpen: (v: boolean | ((v: boolean) => boolean)) => void
   setViewState: Dispatch<SetStateAction<ViewState>>
-  maxHeight: number
   setMaxHeightRaw: (v: number | undefined) => void
   modeMaxHeight: number
   toggleTheme: () => void
@@ -90,10 +88,8 @@ export function useKeyboardShortcuts({
   hasPopulation,
   metricMode,
   setMetricMode,
-  settingsOpen,
   setSettingsOpen,
   setViewState,
-  maxHeight,
   setMaxHeightRaw,
   modeMaxHeight,
   toggleTheme,

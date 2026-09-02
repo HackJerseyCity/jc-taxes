@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Plot } from 'pltly/react'
 import type { Data, Layout } from 'plotly.js'
-import { useTheme } from '../ThemeContext'
+import { useTheme } from '../theme'
 import { baseLayout, plotConfig, projectColor } from './plotly'
 import expRaw from '../../public/data/jc_pilot_expirations.json'
 

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Plot } from 'pltly/react'
 import type { Data, Layout } from 'plotly.js'
-import { useTheme } from '../ThemeContext'
+import { useTheme } from '../theme'
 import { chartColors, baseLayout, plotConfig } from './plotly'
 import levyRaw from '../../public/data/jc_levy_split.json'
 

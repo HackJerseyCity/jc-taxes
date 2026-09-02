@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useUrlState } from 'use-prms'
 import {
   type ColorStop,
@@ -6,9 +6,8 @@ import {
   DEFAULT_STOPS_LIGHT,
   decodeStops,
   encodeStops,
-} from './GradientEditor'
-
-export type ThemeMode = 'dark' | 'light' | 'system'
+} from './gradient'
+import { ThemeContext, type ThemeMode } from './theme'
 
 const STORAGE_KEY = 'jc-taxes-theme'
 const MODES: ThemeMode[] = ['dark', 'light', 'system']
@@ -30,18 +29,6 @@ type ThemeStops = {
   light: boolean
   stops: ColorStop[] | null
 }
-
-interface ThemeContextType {
-  themeMode: ThemeMode
-  actualTheme: 'light' | 'dark'
-  toggleTheme: () => void
-  colorStops: ColorStop[]
-  hasCustomStops: boolean
-  setColorStops: (stops: ColorStop[]) => void
-  resetColorStops: () => void
-}
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 const cParam = {
   decode: (s: string | undefined): ThemeStops => {
@@ -123,12 +110,4 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       {children}
     </ThemeContext.Provider>
   )
-}
-
-export function useTheme() {
-  const context = useContext(ThemeContext)
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider')
-  }
-  return context
 }
