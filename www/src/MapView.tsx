@@ -375,7 +375,7 @@ export default function MapView() {
   const [maxHeightRaw, setMaxHeightRaw] = useUrlState('mh', optNumParam)
   const [aggregateMode, setAggregateModeRaw] = useUrlState('agg', stringParam('block'))
   const [colorScaleRaw, setColorScaleRaw] = useUrlState('scale', optScaleParam)
-  const [metricMode, setMetricModeRaw] = useUrlState('metric', stringParam('per_sqft'))
+  const [metricMode, setMetricModeRaw] = useUrlState('mt', stringParam('per_sqft'))
   const [wardGeom, setWardGeom] = useUrlState('wg', stringParam('merged'))
   const [wardLabels, setWardLabels] = useUrlState('wl', boolParam)
   const [extruded, setExtruded] = useUrlState('3d', boolParam)

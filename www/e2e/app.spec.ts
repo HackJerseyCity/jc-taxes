@@ -287,9 +287,9 @@ test.describe('Color by year built', () => {
 })
 
 test.describe('Total-$ metric', () => {
-  test('metric=total retitles the map and exposes the bar-radius control', async ({ page }) => {
+  test('mt=total retitles the map and exposes the bar-radius control', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/?metric=total')
+    await page.goto('/?mt=total')
     await waitForLoad(page)
     await expect(page.getByText(/Total paid · by block/)).toBeVisible()
     // Uniform-footprint columns only exist in 3D
@@ -298,7 +298,7 @@ test.describe('Total-$ metric', () => {
 
   test('bar-radius control is hidden in 2D', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/?metric=total&3d=0')
+    await page.goto('/?mt=total&3d=0')
     await waitForLoad(page)
     await expect(page.getByText('Bar radius:')).not.toBeVisible()
   })
@@ -309,29 +309,29 @@ test.describe('Total-$ metric', () => {
     await waitForLoad(page)
 
     await page.keyboard.press('m')
-    await expect(page).toHaveURL(/[?&]metric=total/)
+    await expect(page).toHaveURL(/[?&]mt=total/)
 
     await page.keyboard.press('m')
     // per_sqft is the default metric, so the param drops out of the URL
-    await expect(page).not.toHaveURL(/[?&]metric=/)
+    await expect(page).not.toHaveURL(/[?&]mt=/)
   })
 
-  test('metric=total survives an aggregation switch', async ({ page }) => {
+  test('mt=total survives an aggregation switch', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/?metric=total')
+    await page.goto('/?mt=total')
     await waitForLoad(page)
     await page.keyboard.press('l')
     await waitForView(page, 'lot')
-    await expect(page).toHaveURL(/[?&]metric=total/)
+    await expect(page).toHaveURL(/[?&]mt=total/)
   })
 
   test('per_capita downgrades to per_sqft when leaving ward view', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/?agg=ward&metric=per_capita')
+    await page.goto('/?agg=ward&mt=per_capita')
     await waitForLoad(page)
     await page.keyboard.press('b')
     await waitForView(page, 'block')
-    await expect(page).not.toHaveURL(/[?&]metric=per_capita/)
+    await expect(page).not.toHaveURL(/[?&]mt=per_capita/)
   })
 })
 
