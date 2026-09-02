@@ -304,16 +304,17 @@ const MODE_DEFAULTS: Record<string, ModeConfig> = {
   }},
   // Total-$ modes. Height is linear and unclamped so bar height is literally
   // proportional to dollars — `maxHeight` is therefore what the single tallest
-  // feature gets, sized to stay inside a citywide frame at that level's natural
-  // zoom. The distribution is brutally skewed (2025: median block $525k, top
-  // block $80.8M), so most bars are short by design; the log color ramp does
-  // the discriminating down there. `columnRadius` is ~a third of the typical
+  // feature gets. It's set tall on purpose: the story of this metric is *how
+  // far* the handful of downtown towers out-pay everything else, so the top
+  // bars should soar while the (brutally skewed — 2025: median block $525k, top
+  // block $80.8M) long tail stays near-flat; the log color ramp does the
+  // discriminating down there. `columnRadius` is ~a third of the typical
   // inter-feature spacing at each level.
-  'block:total':            { max: 20e6,  maxHeight: 2200, scale: 'log',    columnRadius: 45,  stops: stopsAt([0, 250e3, 1e6, 6e6]) },
-  'lot:total':              { max: 2e6,   maxHeight: 1200, scale: 'log',    columnRadius: 12,  stops: stopsAt([0, 10e3, 50e3, 800e3]) },
-  'unit:total':             { max: 1e6,   maxHeight: 800,  scale: 'log',    columnRadius: 6,   stops: stopsAt([0, 8e3, 30e3, 300e3]) },
-  'census-block:total':     { max: 20e6,  maxHeight: 2000, scale: 'log',    columnRadius: 40,  stops: stopsAt([0, 250e3, 1e6, 6e6]) },
-  'ward:total':             { max: 450e6, maxHeight: 5000, scale: 'linear', columnRadius: 400, stops: stopsAt([0, 100e6, 200e6, 400e6]) },
+  'block:total':            { max: 20e6,  maxHeight: 7000, scale: 'log',    columnRadius: 45,  stops: stopsAt([0, 250e3, 1e6, 6e6]) },
+  'lot:total':              { max: 2e6,   maxHeight: 7000, scale: 'log',    columnRadius: 12,  stops: stopsAt([0, 10e3, 50e3, 800e3]) },
+  'unit:total':             { max: 1e6,   maxHeight: 5000, scale: 'log',    columnRadius: 6,   stops: stopsAt([0, 8e3, 30e3, 300e3]) },
+  'census-block:total':     { max: 20e6,  maxHeight: 7000, scale: 'log',    columnRadius: 40,  stops: stopsAt([0, 250e3, 1e6, 6e6]) },
+  'ward:total':             { max: 450e6, maxHeight: 6500, scale: 'linear', columnRadius: 400, stops: stopsAt([0, 100e6, 200e6, 400e6]) },
 }
 const YR_BUILT_CONFIG: ModeConfig = {
   min: 1870, max: 2025, maxHeight: 4500, scale: 'linear',
