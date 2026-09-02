@@ -29,6 +29,16 @@ function ghPagesSpaFallback() {
 export default defineConfig({
   plugins: [react(), dvc({ root: 'public', baseUrl: dvcBaseUrl }), ghPagesSpaFallback()],
 
+  // deck.gl + maplibre are large; left to lazy discovery, Vite pre-bundles them
+  // during the first cold page load and then forces a client reload when it
+  // finishes ("optimized dependencies changed. reloading"). That reload can race
+  // the in-flight geojson fetch, so the first visit sometimes hangs on the
+  // loading spinner while a refresh (deps already bundled) loads instantly.
+  // Pre-declaring them bundles everything at server start, before the first load.
+  optimizeDeps: {
+    include: ['@deck.gl/core', '@deck.gl/layers', '@deck.gl/react', 'react-map-gl/maplibre', 'maplibre-gl'],
+  },
+
   server: {
     port: 3201,  // JC area code
     host: true,
