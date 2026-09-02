@@ -9,11 +9,21 @@ Interactive 3D choropleth of Jersey City property tax payments, from 2018 to 202
 | [![Wards](www/public/og-ward.png)](www/public/og-ward.png) | [![Units](www/public/og-unit.png)](www/public/og-unit.png) |
 | [![From the west](www/public/og-west-lot.png)](www/public/og-west-lot.png) | [![Lots](www/public/og-lot.png)](www/public/og-lot.png) |
 
-All view state is URL-encoded via [use-prms] (`v`iew, `agg`regation, `sel`ection, `mh` max height, `pct` percentile, `sp` settings position, ...):
+### Total taxes paid
+
+The default views color by tax density (`$/sqft`). Switch the metric to **total dollars** (`mt=total`) and every parcel becomes a uniform-footprint column whose height is its actual tax bill — so a handful of downtown towers stand up against a near-flat periphery, and you can see at a glance where the city's money comes from rather than just how dense it is.
+
+| | |
+|---|---|
+| [![Total paid, by block](www/public/total-block.png)][total-block-view] | [![Total paid, by lot](www/public/total-lot.png)][total-lot-view] |
+
+All view state is URL-encoded via [use-prms] (`v`iew, `agg`regation, `mt` metric, `sel`ection, `mh` max height, `pct` percentile, `sp` settings position, ...):
 - [**Lots**][lot-view] — [`?agg=lot&sel=14507-1`][lot-view]
 - [**Wards**][ward-view] — [`?agg=ward&sel=ward-E&wg=blocks`][ward-view]
 - [**Units**][unit-view] — [`?agg=unit&mh=1100&pct=99&sp=br`][unit-view]
 - [**From the west**][west-view] — [`?v=…+106&agg=lot`][west-view]
+- [**Total paid, by block**][total-block-view] — [`?mt=total`][total-block-view]
+- [**Total paid, by lot**][total-lot-view] — [`?mt=total&agg=lot`][total-lot-view]
 
 ## What it shows
 
@@ -69,6 +79,8 @@ cd www && pnpm install
 [ward-view]: https://jct.rbw.sh/?v=40.7085-74.0300+11.8+54+100&agg=ward&sel=ward-E&wg=blocks
 [unit-view]: https://jct.rbw.sh/?v=40.7188-74.0563+13.6+66-34&agg=unit&mh=1100&pct=99&sp=br
 [west-view]: https://jct.rbw.sh/?v=40.7192-74.0411+12.5+57+106&agg=lot&sel=14507-1
+[total-block-view]: https://jct.rbw.sh/?v=40.7426-74.0587+12.3+47-21&mt=total
+[total-lot-view]: https://jct.rbw.sh/?v=40.7299-74.0632+12.3+40-26&mt=total&agg=lot
 [use-prms]: https://github.com/runsascoded/use-prms
 [HLS]: https://apps.hlssystems.com/JerseyCity/PropertyTaxInquiry
 [NJGIN]: https://njgin.nj.gov/

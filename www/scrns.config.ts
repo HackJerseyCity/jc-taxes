@@ -2,6 +2,11 @@ const defaultView = '?v=40.7309-74.0630+12.3+52-28'
 const westView = '?v=40.7192-74.0411+12.5+57+106'
 const wardView = '?v=40.7085-74.0300+11.8+54+100'
 const unitView = '?v=40.7188-74.0563+13.6+66-34&agg=unit&mh=1100&pct=99&sp=br&so=0&sel=11604-1'
+// Total-$ hero views: uniform-footprint columns, height ∝ dollars paid. `so=0`
+// hides the settings panel; the on-screen title stays for README context.
+// `mh` is omitted — the `mt=total` mode defaults (block/lot 7km) are the point.
+const totalBlockView = '?v=40.7426-74.0587+12.3+47-21&mt=total&so=0'
+const totalLotView = '?v=40.7299-74.0632+12.3+40-26&mt=total&agg=lot&so=0'
 // OGI captures suppress the on-screen title (overlap with og:title / og:description).
 const noTitle = '&ti=0'
 
@@ -24,6 +29,20 @@ export default {
   selector: '[data-loaded]',
   browserArgs: ['--enable-webgl', '--ignore-gpu-blocklist', '--use-angle=swiftshader'],
   screenshots: {
+    'total-block': {
+      query: totalBlockView,
+      width: 1400,
+      height: 1000,
+      preScreenshotSleep: 6000,
+      path: 'total-block.png',
+    },
+    'total-lot': {
+      query: totalLotView,
+      width: 1400,
+      height: 1000,
+      preScreenshotSleep: 7000,
+      path: 'total-lot.png',
+    },
     'og-lot': {
       query: `${defaultView}&agg=lot&sel=14507-1${noTitle}`,
       width: 1200,
