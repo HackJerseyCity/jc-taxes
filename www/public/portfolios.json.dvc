@@ -1,0 +1,5 @@
+outs:
+- md5: 2cf2aa207cc99113b5dcba490d25cc47
+  size: 3032
+  hash: md5
+  path: portfolios.json
