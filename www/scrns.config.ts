@@ -29,6 +29,28 @@ export default {
   selector: '[data-loaded]',
   browserArgs: ['--enable-webgl', '--ignore-gpu-blocklist', '--use-angle=swiftshader'],
   screenshots: {
+    // /story section images: each matches its section's deep link, with the
+    // settings panel (`so=0`) and on-screen title (`ti=0`) hidden.
+    'story-99hudson': {
+      query: `${defaultView}&agg=lot&sel=14507-1&so=0${noTitle}`,
+      width: 1200, height: 800, preScreenshotSleep: 7000, path: 'story/99hudson.png',
+    },
+    'story-newport': {
+      query: `?v=40.7271-74.0350+14.2+37-30&pf=newport&so=0${noTitle}`,
+      width: 1200, height: 800, preScreenshotSleep: 7000, path: 'story/newport.png',
+    },
+    'story-harborside': {
+      query: `?v=40.7165-74.0370+13.9+45-25&agg=block&sel=11603&so=0${noTitle}`,
+      width: 1200, height: 800, preScreenshotSleep: 7000, path: 'story/harborside.png',
+    },
+    'story-ward-e': {
+      query: `${wardView}&agg=ward&sel=ward-E&wg=blocks&so=0${noTitle}`,
+      width: 1200, height: 800, preScreenshotSleep: 7000, path: 'story/ward-e.png',
+    },
+    'story-total': {
+      query: `${totalBlockView}${noTitle}`,
+      width: 1200, height: 800, preScreenshotSleep: 7000, path: 'story/total-block.png',
+    },
     'total-block': {
       query: totalBlockView,
       width: 1400,

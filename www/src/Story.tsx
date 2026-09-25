@@ -1,23 +1,22 @@
 import { Link } from 'react-router-dom'
 
-// A personal, show-off walkthrough of the map's most surprising views — the
-// "here's what I found building this" narrative, complementary to the civic
-// explainer at /about. Deep-links jump straight into the live map (jct.rbw.sh)
-// with the exact camera + settings for each view.
+// Findings: a terse walkthrough of notable views, each deep-linked into the
+// live map (jct.rbw.sh) with its camera + settings. Complements the levy /
+// PILOT explainer at /about.
 //
-// All dollar figures are 2025 "paid" totals, verified against
-// data/payments.parquet (per-account billing) and the ward GeoJSON.
+// Figures are taxes paid (HLS billing ledger), computed from the published
+// per-year GeoJSONs; shares are of the citywide total for the same year.
 
 const MAP = 'https://jct.rbw.sh/'
 
-// Verified 2025 ward "paid" totals ($M), from taxes-2025-wards.geojson.
-const WARDS: { ward: string, paid: number, cp: string }[] = [
-  { ward: 'E', paid: 400.7, cp: 'downtown / waterfront' },
-  { ward: 'F', paid: 193.8, cp: 'Bergen-Lafayette / Greenville' },
-  { ward: 'D', paid: 186.8, cp: 'the Heights' },
-  { ward: 'C', paid: 170.4, cp: 'Journal Square / McGinley' },
-  { ward: 'A', paid: 124.4, cp: 'Greenville' },
-  { ward: 'B', paid: 111.3, cp: 'West Side' },
+// 2025 "paid" totals by ward ($M), from taxes-2025-wards.geojson.
+const WARDS: { ward: string, paid: number }[] = [
+  { ward: 'E', paid: 414.9 },
+  { ward: 'D', paid: 199.1 },
+  { ward: 'F', paid: 195.6 },
+  { ward: 'C', paid: 176.4 },
+  { ward: 'A', paid: 128.1 },
+  { ward: 'B', paid: 112.5 },
 ]
 const WARD_MAX = Math.max(...WARDS.map(w => w.paid))
 
@@ -57,73 +56,65 @@ export default function Story() {
   return (
     <main className="story">
       <header className="story-hero">
-        <h1 className="story-h1">I mapped where my property taxes go</h1>
+        <h1 className="story-h1">Jersey City property taxes: findings</h1>
         <p className="story-tag">
-          I live in Jersey City and got curious about who actually pays the
-          city's property taxes — so I scraped every account, joined it to the
-          parcel map, and built a 3D view of it. A few things genuinely surprised
-          me. Here are my favorite views.
+          Per-account billing and payment history for ~70k accounts (2015–2025),
+          scraped from the city's HLS tax portal and joined to NJGIN parcel
+          geometry. Figures are taxes paid; citywide 2025 total: <strong>$1.227B</strong>,
+          up from $589.7M in 2015 (×2.08).
         </p>
         <div className="story-hero-ctas">
           <a className="story-cta" href={MAP} target="_blank" rel="noopener noreferrer">
-            Open the interactive map →
+            Map →
           </a>
           <Link to="/about" className="story-cta story-cta-ghost">
-            Or: where the money actually goes →
+            Levy split, PILOTs →
           </Link>
         </div>
       </header>
 
       <View
-        title="99 Hudson: one tower, $17M"
-        stat="$16.6M"
-        statLabel="paid by a single downtown condo tower in 2025"
-        img="/og.gif"
-        imgAlt="3D map of downtown Jersey City lots and blocks, extruded by tax density"
+        title="99 Hudson St: 1.35% of the city's taxes on one lot"
+        stat="$16.59M"
+        statLabel="2025 · 787 units · 76.5k sqft lot · $217/sqft"
+        img="/story/99hudson.png"
+        imgAlt="99 Hudson St selected in the lot view, extruded by tax paid per sqft"
         href={`${MAP}?v=40.7309-74.0630+12.3+52-28&agg=lot&sel=14507-1`}
       >
         <p>
-          The first thing I clicked was 99 Hudson — New Jersey's tallest building,
-          a single supertall condo tower on the waterfront. It's one tax "lot"
-          made of 786 individual condos, and together they paid{' '}
-          <strong>$16.6M</strong> in 2025. One building, more property tax than
-          most whole neighborhoods.
+          Block 14507, lot 1. $1.2M (2018, pre-completion) → $8.7M (2020) →
+          $11.4M (2021) → $15.3M (2022) → $16.6M (2025), as units were assessed.
         </p>
       </View>
 
       <View
-        title="Newport is way bigger than I guessed"
+        title="Newport: 9.4% of citywide taxes"
         stat="$114.7M"
-        statLabel="paid by LeFrak's Newport development in 2025"
-        img="/og-west.gif"
-        imgAlt="Orbiting view of the Jersey City waterfront towers from the west"
-        href={`${MAP}?pf=newport`}
+        statLabel="2025 · 6 waterfront tax blocks · mall, offices, ~4,900 condos"
+        img="/story/newport.png"
+        imgAlt="Newport's six tax blocks highlighted; rest of the city dimmed"
+        href={`${MAP}?v=40.7271-74.0350+14.2+37-30&pf=newport`}
         flip
       >
         <p>
-          Newport is LeFrak's master-planned waterfront neighborhood — the mall,
-          the office towers, and roughly 4,900 condos. When I first showed this
-          off I said it paid "$70–80M." I was wrong: highlighting every Newport
-          parcel adds up to <strong>$114.7M</strong> in 2025 — downtown
-          development moves the city's tax base more than I'd realized.
+          $57.0M (2015) → $66.5M (2018) → $114.7M (2025). Share of the city total
+          held at 9–10% throughout. The 2021–23 step (+$35M) coincides with PILOT
+          expirations and reassessment; parcel count is flat (~1,385). Totals
+          include PILOT service charges billed through HLS.
         </p>
       </View>
 
       <View
-        title="Harborside: the office waterfront"
+        title="Harborside (block 11603): 6.6%"
         stat="$80.8M"
-        statLabel="paid around Harborside / Exchange Place in 2025"
-        img="/og-unit.png"
-        imgAlt="Individual units in downtown Jersey City extruded by tax paid"
-        href={`${MAP}?v=40.7188-74.0563+13.6+66-34&agg=unit&mh=1100&pct=99&sp=br`}
+        statLabel="2025 · Second St / Marin Blvd / Hudson St · 3.4M sqft"
+        img="/story/harborside.png"
+        imgAlt="Block 11603 (Harborside) selected in the block view"
+        href={`${MAP}?v=40.7165-74.0370+13.9+45-25&agg=block&sel=11603`}
       >
         <p>
-          Just south of Newport, the Harborside complex (the old Mack-Cali /
-          Veris office waterfront at Exchange Place, now mixed with residential
-          towers) paid about <strong>$80.8M</strong> in 2025 — right in line with
-          the "$70–80M" I'd guessed. Switch to the <em>units</em> view and each
-          apartment becomes its own column, so a single tower fans out into
-          hundreds of tiny bills.
+          $40.9M (2015) → $55.9M (2018) → $80.8M (2025). $23.57/sqft over the
+          whole superblock.
         </p>
       </View>
 
@@ -134,13 +125,13 @@ export default function Story() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <img src="/og-ward.png" alt="Jersey City wards colored by tax paid, Ward E highlighted" loading="lazy" />
+          <img src="/story/ward-e.png" alt="Jersey City wards colored by tax paid, Ward E highlighted" loading="lazy" />
         </a>
         <div className="story-view-body">
-          <h2 className="story-view-h">Ward E out-pays the next two wards combined</h2>
+          <h2 className="story-view-h">Ward E &gt; any two other wards combined</h2>
           <div className="story-view-stat">
-            <span className="story-view-stat-value">$400.7M</span>
-            <span className="story-view-stat-label">paid by Ward E in 2025 — 34% of the whole city</span>
+            <span className="story-view-stat-value">$414.9M</span>
+            <span className="story-view-stat-label">2025 · 33.8% of citywide</span>
           </div>
           <div className="story-view-wards">
             {WARDS.map(w => (
@@ -153,11 +144,8 @@ export default function Story() {
           </div>
           <div className="story-view-p">
             <p>
-              Ward E is the downtown/waterfront ward, and it pays more property
-              tax than <strong>any other two wards combined</strong> — its
-              $400.7M beats Ward F ($193.8M) plus Ward D ($186.8M). All that
-              waterfront development shows up as a single glowing corner of the
-              city.
+              2025: E $414.9M vs. D + F $394.7M. Also true in 2015, narrowly:
+              E $179.8M vs. A + F $178.7M.
             </p>
           </div>
           <a
@@ -172,53 +160,47 @@ export default function Story() {
       </section>
 
       <View
-        title="Height = dollars, not density"
-        stat="mt=total"
-        statLabel="the view that made it all click"
-        img="/total-block.png"
-        imgAlt="Jersey City blocks extruded by total dollars paid — downtown towers tower over a flat periphery"
+        title="Total $ view (mt=total)"
+        stat="height ∝ $"
+        statLabel="uniform column footprint; height = total paid"
+        img="/story/total-block.png"
+        imgAlt="Jersey City blocks extruded by total dollars paid"
         href={`${MAP}?mt=total`}
       >
         <p>
-          By default the map colors by tax <em>density</em> ($/sqft). But flip the
-          metric to <strong>total dollars</strong> and every parcel becomes a
-          uniform footprint whose <em>height</em> is its actual tax bill. Suddenly
-          a handful of downtown towers stand up over a nearly flat rest-of-the-city
-          — you can see at a glance where the money comes from.{' '}
+          The default metric is $/sqft, which favors dense small lots. Total $
+          shows where the money comes from in absolute terms.{' '}
           <a href={`${MAP}?mt=total&agg=lot`} target="_blank" rel="noopener noreferrer">
-            Try it by lot too →
+            By lot →
           </a>
         </p>
       </View>
 
       <section className="story-portfolios">
-        <h2 className="story-view-h">Follow a single developer</h2>
+        <h2 className="story-view-h">Owner portfolios (pf=)</h2>
         <div className="story-view-p">
           <p>
-            The <code>pf</code> views highlight one owner's parcels across the whole
-            city and total up what they paid — handy for seeing how concentrated
-            ownership really is. Two to start with:
+            <code>?pf=&lt;key&gt;</code> highlights a curated set of parcels and
+            reports its parcel count and total paid for the selected year.
           </p>
         </div>
         <div className="story-portfolio-links">
           <a href={`${MAP}?pf=newport`} target="_blank" rel="noopener noreferrer">
-            LeFrak / Newport →
+            pf=newport →
           </a>
           <a href={`${MAP}?pf=silverman`} target="_blank" rel="noopener noreferrer">
-            Silverman Building →
+            pf=silverman →
           </a>
         </div>
       </section>
 
       <footer className="story-foot">
         <p>
-          Payments are scraped per-account from Jersey City's tax portal and
-          joined to the parcel map; figures here are 2025 "paid" totals. Want the
-          civic side — who gets the money (schools, city, county) and what a
-          "PILOT" tax break is? <Link to="/about">Read the explainer →</Link>
-        </p>
-        <p>
-          <a href={MAP} target="_blank" rel="noopener noreferrer">Open the interactive map →</a>
+          Method: "paid" is the HLS per-account ledger (includes PILOT service
+          charges). Payments for sub-lots missing from the parcel geometry are
+          folded into their parent/sibling lot. Parcels are clipped to the
+          shoreline (TIGER AREAWATER), so $/sqft uses land area only. Levy split
+          and PILOT context: <Link to="/about">/about</Link>.
         </p>
       </footer>
     </main>
