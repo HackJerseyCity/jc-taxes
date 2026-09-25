@@ -1,0 +1,25 @@
+{
+  "name": "jct-edge",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "postinstall": "node scripts/extract-yoga.mjs",
+    "dev": "wrangler dev",
+    "tc": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "seed:d1": "node scripts/seed-portfolios.mjs"
+  },
+  "dependencies": {
+    "@resvg/resvg-wasm": "^2.6.2",
+    "satori": "^0.18.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250719.0",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.20.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "workerd"]
+  }
+}

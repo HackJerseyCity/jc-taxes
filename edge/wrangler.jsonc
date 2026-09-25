@@ -1,0 +1,62 @@
+{
+  // `jct-edge` — the Worker+Assets ("W+A") origin for the JC-taxes map app.
+  //
+  // Serves the built Vite SPA (`../www/dist`) via the ASSETS binding with
+  // single-page-application fallback, AND rewrites per-URL Open Graph tags at
+  // the edge (social crawlers don't run JS, so query-string-specific OG needs
+  // the Worker). `/og` renders a 1200×630 stats card (satori + resvg-wasm),
+  // cached in R2. `/api/portfolios` serves the curated developer portfolios.
+  //
+  // TEST deploy only: `workers_dev: true` publishes to
+  // `jct-edge.<subdomain>.workers.dev`. Production cutover (pointing
+  // `jct.rbw.sh` here, off GitHub Pages) is a manual DNS step — see the edge
+  // README. No `routes`/custom domain declared, matching the `jct-files`
+  // pattern (declaring them makes every deploy hit the workers-domains API).
+  "name": "jct-edge",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-04-01",
+  // satori reads `process.env` at module init.
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  // Personal account (owns `jc-taxes`/`jct-og` R2 + the `rbw.sh` zone).
+  "account_id": "0dcad5654e9744de6616f74b8df4af63",
+  "assets": {
+    "directory": "../www/dist",
+    "binding": "ASSETS",
+    // Client-routed paths (/about, /files/*, deep links) fall back to index.html;
+    // the Worker's fetch handler runs first and can intercept before this.
+    "not_found_handling": "single-page-application",
+    // Only the routes that need the Worker invoke it: HTML shells (to rewrite
+    // OG tags per query string) and `/og` + `/api/*` (no static asset). Hashed
+    // JS/CSS/images are served straight from Assets — free, and not counted
+    // against Worker request quotas. Other deep links still get the SPA
+    // fallback, just with the default (static) OG tags.
+    "run_worker_first": ["/", "/index.html", "/about", "/files/*", "/og", "/api/*"]
+  },
+  "r2_buckets": [
+    {
+      // Rendered OG cards + `stats.json` + `portfolios.json` (all derived data;
+      // kept out of git). Separate bucket from prod `jc-taxes` so nothing here
+      // can touch production data.
+      "binding": "OG",
+      "bucket_name": "jct-og",
+      "remote": true
+    }
+  ],
+  // D1 groundwork: the token in use lacks D1 permissions, so the binding is
+  // left commented until the DB is provisioned (see edge/README.md). The
+  // `/api/portfolios` endpoint falls back to R2 `portfolios.json` when D1 is
+  // absent, so it works today; wiring D1 is a drop-in later.
+  // "d1_databases": [
+  //   { "binding": "DB", "database_name": "jct", "database_id": "<from `wrangler d1 create jct`>" }
+  // ],
+  "rules": [
+    { "type": "Data", "globs": ["**/*.ttf"], "fallthrough": true }
+  ],
+  "dev": {
+    "port": 3205
+  },
+  "observability": {
+    "enabled": true
+  }
+}
