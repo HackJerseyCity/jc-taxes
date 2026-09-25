@@ -624,6 +624,9 @@ export default function MapView() {
   // features; for integer years `data` is that year's set so `paid`/`billed` are
   // exact. Totals differ by view — block view has the fullest coverage; lot/unit
   // views drop parcels lacking geometry — so we label the view + coverage.
+  // Keyed on the rounded year so fractional playback frames don't re-scan every
+  // feature (the sums only depend on `data`).
+  const yearRounded = Math.round(year)
   const summary = useMemo(() => {
     if (!data || data.length === 0) return null
     let paid = 0, billed = 0, area = 0, withPaid = 0
@@ -633,9 +636,9 @@ export default function MapView() {
       if (p?.billed) billed += p.billed
       if (p?.area_sqft) area += p.area_sqft
     }
-    const yr = data[0]?.properties?.year ?? Math.round(year)
+    const yr = data[0]?.properties?.year ?? yearRounded
     return { count: data.length, paid, billed, area, withPaid, yr }
-  }, [data, year])
+  }, [data, yearRounded])
   const summaryAggLabel = ({
     'block': 'blocks', 'lot': 'lots', 'unit': 'units',
     'census-block': 'census blocks', 'ward': 'wards',
@@ -1262,18 +1265,32 @@ export default function MapView() {
   // never reading the metric off `f.properties` directly. This decouples the
   // interpolation from whatever year `data` happens to be, so a year-boundary
   // setData swap can't briefly snap bars to the prior floor's values.
+  //
+  // The (floor, ceil) value pair is memoized per feature object for the current
+  // (agg, floor, ceil, metric) bracket, so a playback frame is just a lerp per
+  // accessor call instead of an id-string build + two Map lookups (which made
+  // lot/unit views drop well below 60fps while playing). Pairs are only cached
+  // once both years' id maps are loaded, so an early frame can't pin a 0.
   const isFractionalYear = !Number.isInteger(year)
+  const pairCacheRef = useRef<{ key: string, pairs: WeakMap<object, [number, number]> }>({ key: '', pairs: new WeakMap() })
   const getMetricValue = useCallback((f: ParcelFeatureLike): number => {
     if (!isFractionalYear) return metricOf(f)
     const yFloor = Math.floor(year), yCeil = Math.ceil(year)
     const t = year - yFloor
-    const id = featureIdOf(f)
-    const floorMap = yearIdMapsRef.current.get(cacheKey(aggregateMode, yFloor))
-    const ceilMap = yearIdMapsRef.current.get(cacheKey(aggregateMode, yCeil))
-    const v0 = floorMap?.get(id) ? metricOf(floorMap.get(id)!) : 0
-    const v1 = ceilMap?.get(id) ? metricOf(ceilMap.get(id)!) : 0
-    return v0 + (v1 - v0) * t
-  }, [metricOf, isFractionalYear, year, aggregateMode, cacheKey])
+    const bracket = `${aggregateMode}|${yFloor}|${yCeil}|${metricMode}`
+    if (pairCacheRef.current.key !== bracket) pairCacheRef.current = { key: bracket, pairs: new WeakMap() }
+    const { pairs } = pairCacheRef.current
+    let pair = pairs.get(f)
+    if (!pair) {
+      const floorMap = yearIdMapsRef.current.get(cacheKey(aggregateMode, yFloor))
+      const ceilMap = yearIdMapsRef.current.get(cacheKey(aggregateMode, yCeil))
+      const id = featureIdOf(f)
+      const f0 = floorMap?.get(id), f1 = ceilMap?.get(id)
+      pair = [f0 ? metricOf(f0) : 0, f1 ? metricOf(f1) : 0]
+      if (floorMap && ceilMap) pairs.set(f, pair)
+    }
+    return pair[0] + (pair[1] - pair[0]) * t
+  }, [metricOf, isFractionalYear, year, aggregateMode, metricMode, cacheKey])
 
 
   // Gray-out only when geometry actually changes (agg switch). Year-only changes
