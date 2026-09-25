@@ -416,6 +416,22 @@ const boolParam: Param<boolean> = {
   encode: (v: boolean) => v ? undefined as unknown as string : '0',
 }
 
+// Default-false boolean (opposite of `boolParam`, which defaults true when
+// absent). Used for the animation player's `play` flag so a bare URL is paused.
+const playParam: Param<boolean> = {
+  decode: (s: string | undefined) => s === '1',
+  encode: (v: boolean) => v ? '1' : undefined as unknown as string,
+}
+
+// Playback speed presets (tax-years advanced per real second). Stored raw in
+// `?pspeed`; the transport labels them relative to NORMAL (1×).
+const PLAY_SPEEDS = [0.75, 1.5, 3] as const
+const PLAY_SPEED_DEFAULT = 1.5
+const playSpeedLabel = (s: number) => {
+  const rel = s / PLAY_SPEED_DEFAULT
+  return `${rel < 1 ? rel.toFixed(1).replace(/\.0$/, '') : String(Math.round(rel))}×`
+}
+
 const optNumParam: Param<number | undefined> = {
   decode: (s: string | undefined) => {
     if (s == null) return undefined
@@ -440,7 +456,53 @@ export default function MapView() {
   const [settingsOpen, setSettingsOpen] = useState(() => settingsOpenUrl && window.innerWidth > 768)
 
   // URL-persisted state (mh is optional; absent = use mode default)
-  const [year, setYear] = useUrlState('y', yearParam)
+  const [urlYear, setUrlYear] = useUrlState('y', yearParam)
+  // Transient (uncommitted) year used while the animation player is running or
+  // the scrubber is being dragged. It overrides `urlYear` for rendering without
+  // writing to the URL at 60fps (which history.replaceState throttles). When it
+  // clears, the URL year is authoritative again.
+  const [playYear, setPlayYear] = useState<number | null>(null)
+  const year = playYear ?? urlYear
+  const playYearRef = useRef(playYear)
+  playYearRef.current = playYear
+  // Animation player: URL-linkable play flag (auto-resumes on load) + speed.
+  const [playing, setPlaying] = useUrlState('play', playParam)
+  const [playSpeedRaw, setPlaySpeed] = useUrlState('pspeed', optNumParam)
+  const playSpeed = playSpeedRaw ?? PLAY_SPEED_DEFAULT
+  // Picking a year explicitly (dropdown / stepper / keyboard / search) commits
+  // to the URL and cancels any in-flight playback or scrub.
+  const setYear = useCallback((y: number) => {
+    setPlaying(false)
+    setPlayYear(null)
+    setUrlYear(y)
+  }, [setPlaying, setUrlYear])
+  const togglePlay = useCallback(() => {
+    if (playing) {
+      // Pausing: freeze the current animated year into the URL so the paused
+      // view is shareable (the `play` flag also flips off below).
+      if (playYearRef.current != null) setUrlYear(playYearRef.current)
+      setPlayYear(null)
+      setPlaying(false)
+    } else {
+      setPlaying(true)
+    }
+  }, [playing, setPlaying, setUrlYear])
+  // Scrubbing updates the transient year locally (smooth, no URL writes); the
+  // final value is committed to the URL on pointer release.
+  const onScrub = useCallback((v: number) => {
+    if (playing) setPlaying(false)
+    setPlayYear(v)
+  }, [playing, setPlaying])
+  const commitScrub = useCallback(() => {
+    if (playYearRef.current == null) return
+    setUrlYear(playYearRef.current)
+    setPlayYear(null)
+  }, [setUrlYear])
+  const cycleSpeed = useCallback(() => {
+    const i = PLAY_SPEEDS.indexOf(playSpeed as typeof PLAY_SPEEDS[number])
+    const next = PLAY_SPEEDS[(i + 1) % PLAY_SPEEDS.length]
+    setPlaySpeed(next === PLAY_SPEED_DEFAULT ? undefined : next)
+  }, [playSpeed, setPlaySpeed])
   const [maxHeightRaw, setMaxHeightRaw] = useUrlState('mh', optNumParam)
   const [aggregateMode, setAggregateModeRaw] = useUrlState('agg', stringParam('block'))
   const [portfolio, setPortfolio] = useUrlState('pf', stringParam(''))
@@ -547,13 +609,13 @@ export default function MapView() {
     // Use the cross-year max once it's computed (covers the ward case where
     // mode-default `max=10` is a color clamp but actual Ward E reaches $21+),
     // falling back to the mode default while preload is still in-flight.
-    if (animYr || !Number.isInteger(year)) return crossYearMax ?? modeConf.max
+    if (animYr || playing || !Number.isInteger(year)) return crossYearMax ?? modeConf.max
     if (sortedVals.length === 0) return modeConf.max
     if (percentile != null) {
       return sortedVals[Math.floor(sortedVals.length * percentile / 100)] || modeConf.max
     }
     return sortedVals[sortedVals.length - 1] || modeConf.max
-  }, [sortedVals, modeConf.max, percentile, year, animYr, crossYearMax])
+  }, [sortedVals, modeConf.max, percentile, year, animYr, playing, crossYearMax])
   const percentilePrice = useMemo(() => {
     if (percentile == null || sortedVals.length === 0) return null
     return sortedVals[Math.floor(sortedVals.length * percentile / 100)]
@@ -766,6 +828,7 @@ export default function MapView() {
     settingsPos, setSettingsPos,
     extruded, setExtruded,
     portfolios, setPortfolio,
+    playing, togglePlay,
   })
 
   // Two-finger pitch gesture for mobile (deck.gl's built-in multipan is broken)
@@ -870,7 +933,7 @@ export default function MapView() {
   // (`crossYearMax` state is declared earlier in the file so `dataMax` can read it.)
   useEffect(() => {
     setCrossYearMax(null)
-    if (!animYr) return
+    if (!animYr && !playing) return
     let cancelled = false
     Promise.all(AVAILABLE_YEARS.map(y => fetchYear(aggregateMode, y).catch(() => null)))
       .then(() => {
@@ -887,14 +950,53 @@ export default function MapView() {
         setCrossYearMax(m || null)
       })
     return () => { cancelled = true }
-  }, [animYr, aggregateMode, metricMode, fetchYear, cacheKey])
+  }, [animYr, playing, aggregateMode, metricMode, fetchYear, cacheKey])
+
+  // In-app animation player. When `playing`, a rAF loop advances a fractional
+  // year (`playYear`) in real time, which drives the existing per-feature
+  // interpolation in getMetricValue / getBarElevation / getFillColor. All years
+  // are already preloaded (effect above), so no spinner appears mid-animation.
+  // The loop writes only local state — the URL isn't touched until playback ends
+  // or the user commits — so 60fps ticks don't hit history.replaceState limits.
+  const yearRef = useRef(year)
+  yearRef.current = year
+  useEffect(() => {
+    if (!playing) return
+    const first = AVAILABLE_YEARS[0]
+    const last = YEAR_MAX
+    // Start from the current year, but restart from the first year if we're
+    // already parked at the end (so pressing play always plays something).
+    let pos = yearRef.current
+    if (pos >= last) pos = first
+    setPlayYear(pos)
+    let raf = 0
+    let prev: number | null = null
+    const tick = (t: number) => {
+      if (prev != null) {
+        const dt = Math.min((t - prev) / 1000, 0.1)
+        pos += dt * playSpeed
+        if (pos >= last) {
+          setPlayYear(null)
+          setUrlYear(last)
+          setPlaying(false)
+          return
+        }
+        setPlayYear(pos)
+      }
+      prev = t
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [playing, playSpeed, setPlaying, setUrlYear])
 
   // Expose imperative year setter for scrns `animate` actions (per-frame
-  // fractional-year stepping). Avoids URL-thrash and matches the existing
-  // `window.__setViewState` pattern used by `cast.gif`.
+  // fractional-year stepping). Uses the raw URL setter so it neither cancels
+  // nor is cancelled by the in-app player. Matches the `window.__setViewState`
+  // pattern used by `cast.gif`.
   useEffect(() => {
-    window.__setYear = setYear
-  }, [setYear])
+    window.__setYear = setUrlYear
+  }, [setUrlYear])
 
 
   // Default unit mode to p99 on initial load (but not unit + total-$; see
@@ -1676,6 +1778,64 @@ export default function MapView() {
           </div>
         )
       })()}
+
+      {/* Animation transport (bottom-center): play/pause + year scrubber +
+          speed. Advances `year` fractionally via requestAnimationFrame and
+          drives the existing per-feature interpolation. Hidden in the scrns
+          `?animYr` capture context, which owns the year itself. */}
+      {!animYr && (
+        <div
+          style={{
+            position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 2, display: 'flex', alignItems: 'center', gap: 10,
+            background: 'var(--panel-bg)', color: 'var(--text-primary)',
+            padding: '6px 10px 6px 6px', borderRadius: 999,
+            border: '1px solid var(--input-border)', boxShadow: '0 2px 8px var(--shadow)',
+          }}
+        >
+          <button
+            onClick={togglePlay}
+            aria-label={playing ? 'Pause animation' : 'Play animation'}
+            title={playing ? 'Pause (space)' : 'Play through years (space)'}
+            style={{
+              width: 30, height: 30, borderRadius: '50%', border: 'none', cursor: 'pointer',
+              background: 'var(--text-accent)', color: 'white', fontSize: 13,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+              lineHeight: 1,
+            }}
+          >
+            {playing ? '❚❚' : '▶'}
+          </button>
+          <input
+            type="range"
+            min={AVAILABLE_YEARS[0]}
+            max={YEAR_MAX}
+            step={0.01}
+            value={year}
+            onChange={(e) => onScrub(Number(e.target.value))}
+            onPointerUp={commitScrub}
+            onKeyUp={commitScrub}
+            aria-label="Tax year scrubber"
+            title="Drag to scrub through years"
+            style={{ width: 170, cursor: 'pointer' }}
+          />
+          <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, minWidth: 40, textAlign: 'center' }}>
+            {Math.round(year)}
+          </span>
+          <button
+            onClick={cycleSpeed}
+            title="Playback speed"
+            aria-label="Cycle playback speed"
+            style={{
+              minWidth: 34, height: 24, borderRadius: 12, cursor: 'pointer',
+              background: 'var(--input-bg)', color: 'var(--text-primary)',
+              border: '1px solid var(--input-border)', fontSize: 12, fontWeight: 600, padding: '0 6px',
+            }}
+          >
+            {playSpeedLabel(playSpeed)}
+          </button>
+        </div>
+      )}
 
       {/* Settings panel (when at top) */}
       {!posBottom && (

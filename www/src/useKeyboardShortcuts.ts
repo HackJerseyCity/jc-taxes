@@ -81,6 +81,8 @@ type Props = {
   setExtruded: (v: boolean) => void
   portfolios: Portfolio[]
   setPortfolio: (v: string) => void
+  playing: boolean
+  togglePlay: () => void
 }
 
 export function useKeyboardShortcuts({
@@ -108,6 +110,8 @@ export function useKeyboardShortcuts({
   setExtruded,
   portfolios,
   setPortfolio,
+  playing,
+  togglePlay,
 }: Props) {
   const isWardMode = aggregateMode === 'ward'
   const isLotOrUnit = aggregateMode === 'lot' || aggregateMode === 'unit'
@@ -233,6 +237,14 @@ export function useKeyboardShortcuts({
     group: 'UI',
     defaultBindings: ['s'],
     handler: () => setSettingsOpen((v: boolean) => !v),
+  })
+
+  useAction('anim:play', {
+    label: playing ? 'Pause year animation' : 'Play year animation',
+    group: 'Navigation',
+    defaultBindings: ['space'],
+    keywords: ['play', 'pause', 'animate', 'animation', 'timeline', 'scrub'],
+    handler: () => togglePlay(),
   })
 
   const PANEL_POSITIONS = ['tr', 'tl', 'bl', 'br'] as const
