@@ -20,7 +20,7 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^6.30.0",
     "remark-gfm": "^4.0.1",
-    "use-prms": "^0.4"
+    "use-prms": "^0.5.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250719.0",

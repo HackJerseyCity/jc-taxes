@@ -66,7 +66,7 @@ const DEFAULT_VIEW = getDefaultView(window.innerWidth)
 
 const viewParam = viewStateParam({
   default: DEFAULT_VIEW,
-  signedDelim: true,
+  signDelim: true,
   zoomDecimals: 1,
 })
 
