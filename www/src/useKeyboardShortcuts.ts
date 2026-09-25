@@ -189,6 +189,7 @@ export function useKeyboardShortcuts({
     label: 'Block view',
     group: 'Navigation',
     defaultBindings: ['b'],
+    keywords: ['blocks', 'tax blocks', 'block view'],
     handler: () => setAggregateMode('block'),
     actionTriplet: { tripletId: 'view:agg', index: 0 },
   })
@@ -196,6 +197,7 @@ export function useKeyboardShortcuts({
     label: 'Lot view',
     group: 'Navigation',
     defaultBindings: ['l'],
+    keywords: ['lots', 'tax lots', 'parcels', 'lot view'],
     handler: () => setAggregateMode('lot'),
     actionTriplet: { tripletId: 'view:agg', index: 1 },
   })
@@ -203,6 +205,7 @@ export function useKeyboardShortcuts({
     label: 'Unit view',
     group: 'Navigation',
     defaultBindings: ['u'],
+    keywords: ['units', 'condos', 'unit view'],
     handler: () => setAggregateMode('unit'),
     actionTriplet: { tripletId: 'view:agg', index: 2 },
   })
@@ -243,6 +246,7 @@ export function useKeyboardShortcuts({
     label: 'Census block view',
     group: 'Navigation',
     defaultBindings: ['c'],
+    keywords: ['census blocks', 'census', 'census block view'],
     handler: () => setAggregateMode('census-block'),
   })
 
@@ -250,6 +254,7 @@ export function useKeyboardShortcuts({
     label: 'Ward view',
     group: 'Navigation',
     defaultBindings: ['w'],
+    keywords: ['wards', 'ward view'],
     handler: () => setAggregateMode('ward'),
   })
 
