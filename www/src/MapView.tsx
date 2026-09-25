@@ -720,11 +720,13 @@ export default function MapView() {
     // would only introduce a one-frame flicker before the new data settles.
     if (yearFloor !== yearCeil && data && !aggChanged) {
       ensureLoaded().catch(() => {})
+      setLoading(false)
       return
     }
     const allCached = needed.every(y => yearCacheRef.current.has(cacheKey(aggregateMode, y)))
     if (allCached) {
       setData(yearCacheRef.current.get(cacheKey(aggregateMode, yearFloor)) ?? null)
+      setLoading(false)
       yearOnlyChangeRef.current = false
       return
     }
