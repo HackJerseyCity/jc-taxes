@@ -10,6 +10,7 @@ import AppSpeedDial from './AppSpeedDial'
 import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
+import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
 import { useTouchPitch } from './useTouchPitch'
 import { useParcelSearch } from './useParcelSearch'
 import { useTheme } from './theme'
@@ -342,6 +343,9 @@ function ssLoad(key: string, field: string): string | null {
 }
 
 const LOADING_COLOR: [number, number, number, number] = [128, 128, 128, 60]
+// Parcels outside the active portfolio are dimmed to near-background so the
+// portfolio set pops (members keep their normal metric color).
+const PORTFOLIO_DIM: [number, number, number] = [90, 95, 105]
 const HOVER_COLOR: [number, number, number, number] = [255, 255, 100, 220]
 const SELECTED_COLOR: [number, number, number, number] = [100, 200, 255, 230]
 const SELECTED_HOVER_COLOR: [number, number, number, number] = [160, 230, 255, 240]
@@ -383,6 +387,10 @@ export default function MapView() {
   const [year, setYear] = useUrlState('y', yearParam)
   const [maxHeightRaw, setMaxHeightRaw] = useUrlState('mh', optNumParam)
   const [aggregateMode, setAggregateModeRaw] = useUrlState('agg', stringParam('block'))
+  const [portfolio, setPortfolio] = useUrlState('pf', stringParam(''))
+  const portfolios = usePortfolios()
+  const [pfDimRaw, setPfDim] = useUrlState('pfd', optNumParam)
+  const pfDim = pfDimRaw ?? 0.2
   const [colorScaleRaw, setColorScaleRaw] = useUrlState('scale', optScaleParam)
   const [metricMode, setMetricModeRaw] = useUrlState('mt', stringParam('per_sqft'))
   const [wardGeom, setWardGeom] = useUrlState('wg', stringParam('merged'))
@@ -650,6 +658,7 @@ export default function MapView() {
     colorByYrBuilt, switchColorBy,
     settingsPos, setSettingsPos,
     extruded, setExtruded,
+    portfolios, setPortfolio,
   })
 
   // Two-finger pitch gesture for mobile (deck.gl's built-in multipan is broken)
@@ -1064,18 +1073,41 @@ export default function MapView() {
   // In total-$ 3D the columns carry the metric, so the footprints behind them
   // are dimmed to stay readable as context rather than competing for attention.
   const polyAlpha = isTotal && extruded ? Math.round(fillAlpha * 0.3) : fillAlpha
+  // Active developer/owner portfolio (`pf` param): a membership test at the
+  // current view granularity, used to dim non-members and to aggregate stats.
+  const activePortfolio = useMemo(() => findPortfolio(portfolios, portfolio), [portfolios, portfolio])
+  const portfolioTest = useMemo(() => {
+    const blockGranular = aggregateMode === 'block' || aggregateMode === 'ward' || aggregateMode === 'census-block'
+    return portfolioPredicate(activePortfolio, blockGranular)
+  }, [activePortfolio, aggregateMode])
+  const portfolioStats = useMemo(() => {
+    if (!portfolioTest || !data) return null
+    let count = 0, paid = 0
+    for (const f of data) {
+      const p = f.properties
+      if (portfolioTest(String(p?.block ?? ''), String(p?.lot ?? ''))) { count++; paid += p?.paid ?? 0 }
+    }
+    return { count, paid }
+  }, [portfolioTest, data])
+
   const colorOf = useCallback((f: ParcelFeatureLike, alpha: number): [number, number, number, number] => {
     if (staleData) return LOADING_COLOR
     const id = getFeatureId(f)
     if (id === selectedId) return id === hoveredId ? SELECTED_HOVER_COLOR : SELECTED_COLOR
     if (id === hoveredId) return HOVER_COLOR
+    if (portfolioTest) {
+      const p = f.properties
+      if (!portfolioTest(String(p?.block ?? ''), String(p?.lot ?? ''))) {
+        return [...PORTFOLIO_DIM, Math.round(alpha * pfDim)]
+      }
+    }
 
     if (colorByYrBuilt) {
       const yr = f.properties?.yr_built ?? 0
       return interpolateColor(yr, colorStops, colorMax, colorScale, alpha, colorMin)
     }
     return interpolateColor(getMetricValue(f), colorStops, maxVal, colorScale, alpha)
-  }, [staleData, colorStops, colorScale, maxVal, hoveredId, selectedId, getFeatureId, getMetricValue, colorByYrBuilt, colorMax, colorMin])
+  }, [staleData, colorStops, colorScale, maxVal, hoveredId, selectedId, getFeatureId, getMetricValue, colorByYrBuilt, colorMax, colorMin, portfolioTest, pfDim])
   const getFillColor = useCallback((f: ParcelFeatureLike) => colorOf(f, polyAlpha), [colorOf, polyAlpha])
   const getColumnColor = useCallback((f: ParcelFeatureLike) => colorOf(f, fillAlpha), [colorOf, fillAlpha])
 
@@ -1136,7 +1168,7 @@ export default function MapView() {
       onHover: onFeatureHover,
       onClick: onFeatureClick,
       updateTriggers: {
-        getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, polyAlpha],
+        getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, polyAlpha, portfolio, pfDim],
         getElevation: [year, stableHeightScaleRef.current, aggregateMode, metricMode, percentile, maxHeight],
         getLineColor: [actualTheme],
       },
@@ -1163,7 +1195,7 @@ export default function MapView() {
         onClick: onFeatureClick,
         updateTriggers: {
           getPosition: [aggregateMode, wardGeom],
-          getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax],
+          getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, portfolio, pfDim],
           getElevation: [year, stableHeightScaleRef.current, aggregateMode, metricMode, percentile, maxHeight],
         },
       }),
@@ -1412,6 +1444,20 @@ export default function MapView() {
               style={{ width: 80 }}
             />
           </label>
+          {activePortfolio && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }} title="Opacity of parcels outside the active portfolio">
+              Faded: {Math.round(pfDim * 100)}%
+              <input
+                type="range"
+                min={0}
+                max={0.6}
+                step={0.02}
+                value={pfDim}
+                onChange={(e) => setPfDim(Number(e.target.value))}
+                style={{ width: 80 }}
+              />
+            </label>
+          )}
         </div>
       )}
     </div>
@@ -1453,6 +1499,27 @@ export default function MapView() {
       {loading && (
         <div className="loading-overlay">
           <div className="loading-spinner" />
+        </div>
+      )}
+
+      {/* Active-portfolio badge (bottom-center). Click to clear. */}
+      {activePortfolio && portfolioStats && (
+        <div
+          onClick={() => setPortfolio('')}
+          title="Clear portfolio highlight"
+          style={{
+            position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
+            background: 'rgba(0,0,0,0.72)', color: 'white', padding: '6px 12px',
+            borderRadius: 999, fontSize: 13, fontFamily: 'Inter, sans-serif',
+            border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer', zIndex: 2,
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>{activePortfolio.label}</span>
+          <span style={{ opacity: 0.85 }}>
+            {portfolioStats.count.toLocaleString()} parcel{portfolioStats.count === 1 ? '' : 's'} · {abbr(portfolioStats.paid)} paid · {Math.floor(year)}
+          </span>
+          <span style={{ opacity: 0.7, marginLeft: 2 }}>✕</span>
         </div>
       )}
 

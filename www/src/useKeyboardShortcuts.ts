@@ -1,6 +1,7 @@
-import { useAction } from 'use-kbd'
+import { useAction, useActions, type ActionConfig } from 'use-kbd'
 import { LinearInterpolator } from '@deck.gl/core'
-import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
+import type { Portfolio } from './portfolios'
 
 const AVAILABLE_YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
 
@@ -78,6 +79,8 @@ type Props = {
   setSettingsPos: (v: string) => void
   extruded: boolean
   setExtruded: (v: boolean) => void
+  portfolios: Portfolio[]
+  setPortfolio: (v: string) => void
 }
 
 export function useKeyboardShortcuts({
@@ -103,6 +106,8 @@ export function useKeyboardShortcuts({
   setSettingsPos,
   extruded,
   setExtruded,
+  portfolios,
+  setPortfolio,
 }: Props) {
   const isWardMode = aggregateMode === 'ward'
   const isLotOrUnit = aggregateMode === 'lot' || aggregateMode === 'unit'
@@ -263,6 +268,33 @@ export function useKeyboardShortcuts({
     keywords: ['wards', 'ward view'],
     handler: () => setAggregateMode('ward'),
   })
+
+  // Developer/owner portfolios: highlight a curated parcel set + report its
+  // aggregate taxes. No default bindings — surfaced only via the command
+  // palette (searchable by label/keywords) and the `pf` URL param, so they
+  // stay hidden-but-linkable. Definitions are runtime-loaded data; registered
+  // in one `useActions` call to avoid a hooks-in-loop.
+  const portfolioActions = useMemo(() => {
+    const acts: Record<string, ActionConfig> = {}
+    for (const p of portfolios) {
+      acts[`portfolio:${p.key}`] = {
+        label: `Portfolio: ${p.label}`,
+        group: 'Portfolios',
+        keywords: [p.key, 'portfolio', 'developer', 'owner', ...(p.keywords ?? [])],
+        handler: () => setPortfolio(p.key),
+      }
+    }
+    if (portfolios.length) {
+      acts['portfolio:clear'] = {
+        label: 'Clear portfolio highlight',
+        group: 'Portfolios',
+        keywords: ['clear portfolio', 'reset portfolio', 'show all parcels'],
+        handler: () => setPortfolio(''),
+      }
+    }
+    return acts
+  }, [portfolios, setPortfolio])
+  useActions(portfolioActions)
 
   // Cycle metrics: $/sqft → total $ → ($/capita, where population data exists)
   const metricCycle = hasPopulation ? ['per_sqft', 'total', 'per_capita'] : ['per_sqft', 'total']
