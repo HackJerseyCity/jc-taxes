@@ -402,9 +402,12 @@ const LOADING_COLOR: [number, number, number, number] = [128, 128, 128, 60]
 // Parcels outside the active portfolio are dimmed to near-background so the
 // portfolio set pops (members keep their normal metric color).
 const PORTFOLIO_DIM: [number, number, number] = [90, 95, 105]
-const HOVER_COLOR: [number, number, number, number] = [255, 255, 100, 220]
+// Hover / selection use a blue family that sits outside the red→yellow→green
+// $ gradient, so a highlighted parcel never reads as a data value. Hover is the
+// palest, selected the most saturated, selected+hover in between.
+const HOVER_COLOR: [number, number, number, number] = [190, 235, 255, 230]
 const SELECTED_COLOR: [number, number, number, number] = [100, 200, 255, 230]
-const SELECTED_HOVER_COLOR: [number, number, number, number] = [160, 230, 255, 240]
+const SELECTED_HOVER_COLOR: [number, number, number, number] = [145, 218, 255, 235]
 
 const optScaleParam: Param<ScaleType | undefined> = {
   decode: (s: string | undefined) => (s as ScaleType) ?? undefined,
