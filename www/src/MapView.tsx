@@ -1377,58 +1377,83 @@ export default function MapView() {
     return true
   }, [getFeatureId, setSelectedId])
 
+  // With a portfolio active, non-members are drawn translucent. If they also
+  // wrote depth, whether a faded tower in front hid a highlighted member behind
+  // it would depend on draw order (often fully occluding it). So split into two
+  // layers: faded non-members first with depth writes off (luma.gl v9
+  // `depthWriteEnabled`), then members with normal depth — members are never
+  // hidden by faded geometry. Both stay pickable with the same id scheme, so
+  // hover / select work across them. Without a portfolio: one layer, as before.
+  const [memberData, fadedData] = useMemo((): [ParcelFeature[], ParcelFeature[]] => {
+    const all = effectiveData ?? []
+    if (!portfolioTest) return [all, []]
+    const members: ParcelFeature[] = [], faded: ParcelFeature[] = []
+    for (const f of all) {
+      const p = f.properties
+      ;(portfolioTest(String(p?.block ?? ''), String(p?.lot ?? '')) ? members : faded).push(f)
+    }
+    return [members, faded]
+  }, [effectiveData, portfolioTest])
+  const FADED_PARAMS = { depthWriteEnabled: false }
+  const fillColorTriggers = [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, portfolio, pfDim]
+  const elevationTriggers = [year, stableHeightScaleRef.current, aggregateMode, metricMode, percentile, maxHeight]
+  const parcelLayer = (id: string, layerData: ParcelFeature[], faded: boolean) => new GeoJsonLayer<ParcelProperties>({
+    id,
+    data: layerData,
+    filled: true,
+    extruded: polysExtruded,
+    wireframe: polysExtruded,
+    getFillColor,
+    getElevation: polysExtruded ? getBarElevation : 0,
+    // No deck.gl tweens — both browser-time year flips and scrns fractional
+    // sweeps rely on per-feature interpolation in getMetricValue (instant).
+    // Toggling transitions shape per render triggered a luma.gl WebGL init
+    // race that blanked the canvas on subsequent frames.
+    transitions: undefined,
+    getLineColor: lineColor,
+    lineWidthMinPixels: 1,
+    pickable: true,
+    onHover: onFeatureHover,
+    onClick: onFeatureClick,
+    ...(faded && { parameters: FADED_PARAMS }),
+    updateTriggers: {
+      getFillColor: [...fillColorTriggers, polyAlpha],
+      getElevation: elevationTriggers,
+      getLineColor: [actualTheme],
+    },
+  })
+  // Total-$ 3D: one uniform footprint per parcel, height ∝ dollars paid.
+  // Extruding the polygons themselves would make bar *volume* ∝ dollars ×
+  // area, so a big cheap lot could out-loom a small expensive one.
+  const columnLayer = (id: string, layerData: ParcelFeature[], faded: boolean) => new ColumnLayer<ParcelFeature>({
+    id,
+    data: layerData,
+    diskResolution: 12,
+    radius: columnRadius,
+    radiusUnits: 'meters',
+    extruded: true,
+    filled: true,
+    stroked: false,
+    pickable: true,
+    getPosition: getColumnPosition,
+    getFillColor: getColumnColor,
+    getElevation: getBarElevation,
+    transitions: undefined,
+    onHover: onFeatureHover,
+    onClick: onFeatureClick,
+    ...(faded && { parameters: FADED_PARAMS }),
+    updateTriggers: {
+      getPosition: [aggregateMode, wardGeom],
+      getFillColor: fillColorTriggers,
+      getElevation: elevationTriggers,
+    },
+  })
+  const showColumns = isTotal && extruded
   const layers = [
-    new GeoJsonLayer<ParcelProperties>({
-      id: 'parcels',
-      data: effectiveData ?? [],
-      filled: true,
-      extruded: polysExtruded,
-      wireframe: polysExtruded,
-      getFillColor,
-      getElevation: polysExtruded ? getBarElevation : 0,
-      // No deck.gl tweens — both browser-time year flips and scrns fractional
-      // sweeps rely on per-feature interpolation in getMetricValue (instant).
-      // Toggling transitions shape per render triggered a luma.gl WebGL init
-      // race that blanked the canvas on subsequent frames.
-      transitions: undefined,
-      getLineColor: lineColor,
-      lineWidthMinPixels: 1,
-      pickable: true,
-      onHover: onFeatureHover,
-      onClick: onFeatureClick,
-      updateTriggers: {
-        getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, polyAlpha, portfolio, pfDim],
-        getElevation: [year, stableHeightScaleRef.current, aggregateMode, metricMode, percentile, maxHeight],
-        getLineColor: [actualTheme],
-      },
-    }),
-    // Total-$ 3D: one uniform footprint per parcel, height ∝ dollars paid.
-    // Extruding the polygons themselves would make bar *volume* ∝ dollars ×
-    // area, so a big cheap lot could out-loom a small expensive one.
-    ...(isTotal && extruded ? [
-      new ColumnLayer<ParcelFeature>({
-        id: 'total-columns',
-        data: effectiveData ?? [],
-        diskResolution: 12,
-        radius: columnRadius,
-        radiusUnits: 'meters',
-        extruded: true,
-        filled: true,
-        stroked: false,
-        pickable: true,
-        getPosition: getColumnPosition,
-        getFillColor: getColumnColor,
-        getElevation: getBarElevation,
-        transitions: undefined,
-        onHover: onFeatureHover,
-        onClick: onFeatureClick,
-        updateTriggers: {
-          getPosition: [aggregateMode, wardGeom],
-          getFillColor: [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, portfolio, pfDim],
-          getElevation: [year, stableHeightScaleRef.current, aggregateMode, metricMode, percentile, maxHeight],
-        },
-      }),
-    ] : []),
+    ...(fadedData.length ? [parcelLayer('parcels-faded', fadedData, true)] : []),
+    ...(showColumns && fadedData.length ? [columnLayer('total-columns-faded', fadedData, true)] : []),
+    parcelLayer('parcels', memberData, false),
+    ...(showColumns ? [columnLayer('total-columns', memberData, false)] : []),
   ]
 
   const inputStyle = {
