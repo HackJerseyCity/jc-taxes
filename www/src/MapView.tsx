@@ -126,6 +126,62 @@ function RollingYear({ year, fontSize = 56 }: { year: number, fontSize?: number 
   )
 }
 
+// Interactive year control for the title subtitle: prev/next steppers flank a
+// native <select> styled to read as inline title text; it's the app's primary
+// year control. Steps within `years`; the select snaps to the nearest integer so it
+// tracks fractional-year animation/playback without falling back.
+function YearControl({ year, setYear, years }: { year: number, setYear: (y: number) => void, years: number[] }) {
+  const cur = Math.round(year)
+  const idx = years.indexOf(cur)
+  const go = (d: number) => { const i = idx + d; if (i >= 0 && i < years.length) setYear(years[i]) }
+  const stepBtn = (dir: -1 | 1, disabled: boolean, glyph: string) => (
+    <button
+      onClick={() => go(dir)}
+      disabled={disabled}
+      aria-label={dir < 0 ? 'Previous year' : 'Next year'}
+      style={{
+        pointerEvents: 'auto',
+        background: 'rgba(0,0,0,0.35)',
+        color: 'white',
+        border: '1px solid rgba(255,255,255,0.35)',
+        borderRadius: 4,
+        width: 20, height: 20, lineHeight: '18px', padding: 0,
+        fontSize: 14, fontWeight: 700, cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.3 : 0.9,
+        fontFamily: 'inherit',
+      }}
+    >{glyph}</button>
+  )
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, verticalAlign: 'middle' }}>
+      {stepBtn(-1, idx <= 0, '‹')}
+      <span
+        style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', pointerEvents: 'auto' }}
+        title="Change tax year"
+      >
+        <select
+          value={cur}
+          onChange={(e) => setYear(Number(e.target.value))}
+          style={{
+            appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+            background: 'transparent', color: 'white', border: 'none',
+            fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 700,
+            padding: '0 14px 0 2px', margin: 0, cursor: 'pointer',
+            borderBottom: '1px dotted rgba(255,255,255,0.7)',
+            textShadow: 'inherit',
+          }}
+        >
+          {years.map((y) => (
+            <option key={y} value={y} style={{ color: '#111' }}>{y}</option>
+          ))}
+        </select>
+        <span style={{ position: 'absolute', right: 2, fontSize: 9, pointerEvents: 'none', opacity: 0.85 }}>{'▼'}</span>
+      </span>
+      {stepBtn(1, idx >= years.length - 1, '›')}
+    </span>
+  )
+}
+
 // Status-bar summary tooltip. `usd` is the exact dollar amount (commas, no
 // cents) for cross-checking against official figures; `abbr` is a compact form.
 const usd = (n: number) => `$${Math.round(n).toLocaleString()}`
@@ -1289,21 +1345,7 @@ export default function MapView() {
       </div>
       {settingsOpen && (
         <div style={{ padding: '0 15px 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <label>
-            Tax Year:{' '}
-            <select
-              // Snap to nearest integer for the option-list match so the dropdown
-              // tracks fractional-year animations instead of falling back to 2018.
-              value={Math.round(year)}
-              onChange={(e) => setYear(Number(e.target.value))}
-              style={inputStyle}
-            >
-              {AVAILABLE_YEARS.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </label>
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 4 }}>
+          <div>
             <div style={{ marginBottom: 6, fontSize: 12, color: 'var(--text-secondary)' }}>Color Gradient</div>
             <GradientEditor
               stops={colorStops}
@@ -1555,31 +1597,11 @@ export default function MapView() {
         </div>
       )}
 
-      {/* Active-portfolio badge (bottom-center). Click to clear. */}
-      {activePortfolio && portfolioStats && (
-        <div
-          onClick={() => setPortfolio('')}
-          title="Clear portfolio highlight"
-          style={{
-            position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
-            background: 'rgba(0,0,0,0.72)', color: 'white', padding: '6px 12px',
-            borderRadius: 999, fontSize: 13, fontFamily: 'Inter, sans-serif',
-            border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer', zIndex: 2,
-          }}
-        >
-          <span style={{ fontWeight: 600 }}>{activePortfolio.label}</span>
-          <span style={{ opacity: 0.85 }}>
-            {portfolioStats.count.toLocaleString()} parcel{portfolioStats.count === 1 ? '' : 's'} · {abbr(portfolioStats.paid)} paid · {Math.floor(year)}
-          </span>
-          <span style={{ opacity: 0.7, marginLeft: 2 }}>✕</span>
-        </div>
-      )}
-
-      {/* Plot title — top-center. In animation context (?animYr) the year
-          becomes a big odometer-style readout above the subtitle: digits that
-          differ between floor(year) and ceil(year) scroll up by `year-floor`,
-          so the fractional bit is visualized as a rolling digit. */}
+      {/* Plot title — top-center. The tax year is a live control in the
+          subtitle (‹ year ›), the primary way to change years. When a portfolio (`pf`) is active its label +
+          aggregate total fold in as a chip right under the subtitle, with a ✕
+          to clear. In animation context (?animYr) the year becomes a big
+          odometer readout instead of the interactive control. */}
       {showTitle && (() => {
         const aggLabel = ({ 'census-block': 'census block' } as Record<string, string>)[aggregateMode] ?? aggregateMode
         const headline = colorByYrBuilt ? 'Jersey City Parcels' : 'Jersey City Property Taxes'
@@ -1602,21 +1624,55 @@ export default function MapView() {
           zIndex: 1,
           maxWidth: 'calc(100% - 20px)',
         }
+        const portfolioChip = activePortfolio && portfolioStats ? (
+          <div style={{ marginTop: 6, textAlign: 'center' }}>
+            <span
+              style={{
+                pointerEvents: 'auto',
+                display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
+                maxWidth: '90vw',
+                background: 'rgba(0,0,0,0.72)', color: 'white', padding: '5px 6px 5px 12px',
+                borderRadius: 999, fontSize: 13, fontFamily: 'Inter, sans-serif',
+                border: '1px solid rgba(255,255,255,0.25)',
+              }}
+            >
+              <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{activePortfolio.label}</span>
+              <span style={{ opacity: 0.85 }}>
+                · {abbr(portfolioStats.paid)} · {portfolioStats.count.toLocaleString()} parcel{portfolioStats.count === 1 ? '' : 's'}
+              </span>
+              <button
+                onClick={() => setPortfolio('')}
+                title="Clear portfolio highlight"
+                aria-label="Clear portfolio highlight"
+                style={{
+                  pointerEvents: 'auto', cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.15)', color: 'white',
+                  border: 'none', borderRadius: 999, width: 20, height: 20,
+                  lineHeight: '18px', padding: 0, fontSize: 12, fontWeight: 700,
+                  fontFamily: 'inherit',
+                }}
+              >✕</button>
+            </span>
+          </div>
+        ) : null
         if (isAnim) {
           return (
             <div style={titleStyle}>
               <div style={{ fontSize: 14, fontWeight: 500, opacity: 0.85, marginBottom: 2 }}>{headline}</div>
               <RollingYear year={year} />
               <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>{subPrefix}</div>
+              {portfolioChip}
             </div>
           )
         }
         return (
           <div style={titleStyle}>
             <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2 }}>{headline}</div>
-            <div style={{ fontSize: 13, opacity: 0.95, marginTop: 2 }}>
-              {colorByYrBuilt ? `Colored by year built · ${year}` : `${subPrefix} · ${year}`}
+            <div style={{ fontSize: 13, opacity: 0.95, marginTop: 4 }}>
+              {colorByYrBuilt ? 'Colored by year built' : subPrefix} {'·'}{' '}
+              <YearControl year={year} setYear={setYear} years={AVAILABLE_YEARS} />
             </div>
+            {portfolioChip}
           </div>
         )
       })()}
