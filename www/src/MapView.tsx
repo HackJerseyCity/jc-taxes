@@ -623,25 +623,6 @@ export default function MapView() {
     if (percentile == null || sortedVals.length === 0) return null
     return sortedVals[Math.floor(sortedVals.length * percentile / 100)]
   }, [percentile, sortedVals])
-  // Summary stats for the current view (status-bar tooltip). Sums the displayed
-  // features; for integer years `data` is that year's set so `paid`/`billed` are
-  // exact. Totals differ by view — block view has the fullest coverage; lot/unit
-  // views drop parcels lacking geometry — so we label the view + coverage.
-  // Keyed on the rounded year so fractional playback frames don't re-scan every
-  // feature (the sums only depend on `data`).
-  const yearRounded = Math.round(year)
-  const summary = useMemo(() => {
-    if (!data || data.length === 0) return null
-    let paid = 0, billed = 0, area = 0, withPaid = 0
-    for (const f of data) {
-      const p = f.properties
-      if (p?.paid) { paid += p.paid; withPaid++ }
-      if (p?.billed) billed += p.billed
-      if (p?.area_sqft) area += p.area_sqft
-    }
-    const yr = data[0]?.properties?.year ?? yearRounded
-    return { count: data.length, paid, billed, area, withPaid, yr }
-  }, [data, yearRounded])
   const summaryAggLabel = ({
     'block': 'blocks', 'lot': 'lots', 'unit': 'units',
     'census-block': 'census blocks', 'ward': 'wards',
@@ -1309,15 +1290,38 @@ export default function MapView() {
     const blockGranular = aggregateMode === 'block' || aggregateMode === 'ward' || aggregateMode === 'census-block'
     return portfolioPredicate(activePortfolio, blockGranular)
   }, [activePortfolio, aggregateMode])
+  // Features for the displayed (rounded) year. During playback `data` stays the
+  // start year's set (the interpolation reads other years from the cache), so
+  // totals must come from the per-year cache or they'd freeze at the start year.
+  const yearRounded = Math.round(year)
+  const displayData = useMemo(
+    () => yearCacheRef.current.get(cacheKey(aggregateMode, yearRounded)) ?? data,
+    [data, aggregateMode, yearRounded, cacheKey],
+  )
+  // Summary stats for the current view + displayed year (status-bar tooltip).
+  // Keyed on the rounded year so fractional playback frames don't re-scan every
+  // feature.
+  const summary = useMemo(() => {
+    if (!displayData || displayData.length === 0) return null
+    let paid = 0, billed = 0, area = 0, withPaid = 0
+    for (const f of displayData) {
+      const p = f.properties
+      if (p?.paid) { paid += p.paid; withPaid++ }
+      if (p?.billed) billed += p.billed
+      if (p?.area_sqft) area += p.area_sqft
+    }
+    const yr = displayData[0]?.properties?.year ?? yearRounded
+    return { count: displayData.length, paid, billed, area, withPaid, yr }
+  }, [displayData, yearRounded])
   const portfolioStats = useMemo(() => {
-    if (!portfolioTest || !data) return null
+    if (!portfolioTest || !displayData) return null
     let count = 0, paid = 0
-    for (const f of data) {
+    for (const f of displayData) {
       const p = f.properties
       if (portfolioTest(String(p?.block ?? ''), String(p?.lot ?? ''))) { count++; paid += p?.paid ?? 0 }
     }
     return { count, paid }
-  }, [portfolioTest, data])
+  }, [portfolioTest, displayData])
 
   const colorOf = useCallback((f: ParcelFeatureLike, alpha: number): [number, number, number, number] => {
     if (staleData) return LOADING_COLOR
