@@ -60,6 +60,63 @@ html, body, #root {
   color: var(--kbd-text);
 }
 
+/* ---- Projector-legible transient overlays ("toasts") ----
+   use-kbd's transient text feedback — the multi-key SequenceModal popup and
+   the ModeIndicator — is sized for a laptop at arm's length. This app is
+   frequently shown on a big projected screen, so scale the text up, add
+   padding, and push contrast (opaque background, brighter accent border,
+   stronger shadow) so it reads from across a room. These stylesheet rules load
+   after use-kbd's own (same single-class specificity), so the cascade wins. */
+.kbd-sequence {
+  min-width: 340px;
+  border-width: 2px;
+  border-color: var(--kbd-accent-hover, #4ecdc4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+}
+.kbd-sequence-current {
+  padding: 22px 26px;
+}
+.kbd-sequence-keys {
+  font-size: 2rem;
+  padding: 10px 18px;
+  border-width: 2px;
+}
+.kbd-sequence-ellipsis {
+  font-size: 2.2rem;
+}
+/* Key chips render as nested `.kbd-kbd` with a fixed 0.75rem, so sizing the
+   container alone doesn't enlarge the glyphs. Scoped to the popup only. */
+.kbd-sequence-keys .kbd-kbd {
+  font-size: 1.6rem;
+  padding: 6px 12px;
+  min-height: 44px;
+}
+.kbd-sequence-completion .kbd-kbd {
+  font-size: 1rem;
+  padding: 4px 8px;
+  min-height: 30px;
+}
+.kbd-sequence-completions {
+  padding: 14px 18px;
+}
+.kbd-sequence-actions {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.kbd-sequence-arrow {
+  font-size: 1.1rem;
+}
+
+.kbd-mode-indicator {
+  padding: 14px 22px;
+  border-width: 2px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+}
+.kbd-mode-indicator-label {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
 /* Loading spinner overlay */
 .loading-overlay {
   position: absolute;
