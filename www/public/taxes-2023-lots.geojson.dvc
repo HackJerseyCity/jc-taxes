@@ -1,6 +1,6 @@
 outs:
-- md5: a4b14b4b266431a93a0daf6fa3350a2e
-  size: 22839112
+- md5: 7d1b148449a0e49171be4738ac759fc7
+  size: 23778101
   hash: md5
   path: taxes-2023-lots.geojson
 meta:

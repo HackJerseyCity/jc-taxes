@@ -1,6 +1,6 @@
 outs:
-- md5: 1928d736e5d5131c44bef8e9374a08ed
-  size: 1156687
+- md5: 67153460f9beee4f0474ab2506fc7dec
+  size: 1259109
   hash: md5
   path: taxes-2023-census-blocks.geojson
 meta:

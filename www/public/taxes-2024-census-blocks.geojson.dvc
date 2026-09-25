@@ -1,6 +1,6 @@
 outs:
-- md5: 2842257d3fa09babd9ab2ea6faba35d4
-  size: 1149301
+- md5: c8fceb025c7b832494bbc4c50d3f23d4
+  size: 1254414
   hash: md5
   path: taxes-2024-census-blocks.geojson
 meta:

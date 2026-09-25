@@ -1,6 +1,6 @@
 outs:
-- md5: b87860b2d4a892992bc5a38358a20a1a
-  size: 1084933
+- md5: c691a8d3ab9bed540fc0fec4af504ee8
+  size: 1142799
   hash: md5
   path: taxes-2022-wards.geojson
 meta:
