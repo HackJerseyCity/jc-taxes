@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Map as MaplibreMap } from 'react-map-gl/maplibre'
-import DeckGL from '@deck.gl/react'
+import { Map as MaplibreMap, type MapRef } from 'react-map-gl/maplibre'
+import DeckGL, { type DeckGLRef } from '@deck.gl/react'
 import { WebMercatorViewport, FlyToInterpolator, LinearInterpolator } from '@deck.gl/core'
 import { ColumnLayer, GeoJsonLayer } from '@deck.gl/layers'
 import { useUrlState, stringParam, viewStateParam } from 'use-prms'
@@ -642,6 +642,57 @@ export default function MapView() {
     }, 300)
     return () => clearTimeout(timer)
   }, [viewState])
+
+  // Browser-zoom / DPR robustness. On ⌘+ / ⌘- (and monitor moves) the device
+  // pixel ratio and CSS viewport change. luma.gl only resizes deck's drawing
+  // buffer inside its ResizeObserver handler, which can throw on the
+  // `device.limits` race (swallowed in main.tsx) — leaving a stale buffer (and
+  // a squashed / partly blank map) until a manual refresh; `deck.redraw()`
+  // alone doesn't resize it. So on any DPR change (resolution media query) or
+  // window resize we: resize maplibre, compare deck's canvas backing store to
+  // its CSS size × DPR and force `setDrawingBufferSize` if it's stale, then
+  // redraw. Re-checked next frame and after 150ms so a late throw can't strand
+  // it. When luma already did its job this is a no-op beyond a redraw.
+  const deckRef = useRef<DeckGLRef>(null)
+  const mapRef = useRef<MapRef>(null)
+  useEffect(() => {
+    let mql: MediaQueryList | null = null
+    const nudge = () => {
+      try { mapRef.current?.getMap().resize() } catch { /* map not ready */ }
+      const deck = deckRef.current?.deck
+      const cc = deck?.device?.canvasContext
+      const canvas = cc?.canvas
+      if (cc && canvas instanceof HTMLCanvasElement && canvas.clientWidth > 0) {
+        const dpr = window.devicePixelRatio || 1
+        const w = Math.round(canvas.clientWidth * dpr)
+        const h = Math.round(canvas.clientHeight * dpr)
+        // ±2px slack: luma sizes from `device-pixel-content-box`, which can
+        // round differently from clientWidth × DPR.
+        if (Math.abs(canvas.width - w) > 2 || Math.abs(canvas.height - h) > 2) {
+          cc.setDrawingBufferSize(w, h)
+        }
+      }
+      try { deck?.redraw('dpr-resize') } catch { /* deck not ready */ }
+    }
+    const scheduleNudge = () => {
+      nudge()
+      requestAnimationFrame(nudge)
+      window.setTimeout(nudge, 150)
+    }
+    const onDprChange = () => { scheduleNudge(); subscribe() }
+    const subscribe = () => {
+      mql?.removeEventListener('change', onDprChange)
+      // Matches only at the current DPR; unmatches (fires `change`) when DPR moves.
+      mql = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+      mql.addEventListener('change', onDprChange)
+    }
+    subscribe()
+    window.addEventListener('resize', scheduleNudge)
+    return () => {
+      window.removeEventListener('resize', scheduleNudge)
+      mql?.removeEventListener('change', onDprChange)
+    }
+  }, [])
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -1466,6 +1517,7 @@ export default function MapView() {
   return (
     <div style={{ width: '100vw', height: '100vh', WebkitTouchCallout: 'none' }} onContextMenu={e => e.preventDefault()} {...(!loading && { 'data-loaded': aggregateMode })}>
       <DeckGL
+        ref={deckRef}
         viewState={viewState}
         onViewStateChange={({ viewState: vs }) => {
           if (isPitchingRef.current) return
@@ -1491,6 +1543,7 @@ export default function MapView() {
         deviceProps={{ type: 'webgl' }}
       >
         <MaplibreMap
+          ref={mapRef}
           mapStyle={mapStyle}
           maxPitch={85}
           attributionControl={false}
