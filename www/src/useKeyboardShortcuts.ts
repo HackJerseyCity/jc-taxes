@@ -138,6 +138,12 @@ export function useKeyboardShortcuts({
         if (activeMovements.current.has('pitch-down')) pitch = Math.max(0, pitch - PITCH_SPEED * dt)
         if (activeMovements.current.has('rotate-cw')) bearing += ROTATE_SPEED * dt
         if (activeMovements.current.has('rotate-ccw')) bearing -= ROTATE_SPEED * dt
+        // Keep bearing in [-180, 180) so it never diverges from the range
+        // deck.gl's controller normalizes to. Otherwise, once accumulated
+        // bearing crosses ±180 the controller snaps/animates the long way
+        // around (a backward "warp"), especially when the key is released.
+        // Wrapping is seamless mid-rotation (181° and -179° are the same view).
+        bearing = ((bearing + 180) % 360 + 360) % 360 - 180
         return { latitude, longitude, zoom, pitch, bearing }
       })
     }
