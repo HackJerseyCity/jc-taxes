@@ -4,6 +4,7 @@ import gzip
 import json
 import re
 from collections import defaultdict
+from functools import lru_cache
 from pathlib import Path
 
 import geopandas as gpd
@@ -31,6 +32,7 @@ def _iter_cache_jsons(cache_dir: Path):
 
 from .building_desc import parse_building_desc
 from .census import load_jc_census_blocks, load_jc_wards
+from .coastline import clip_to_land
 from .paths import CACHE, DATA, PARCELS, PARCELS_COMBINED
 
 # Transformers for different CRS scenarios
@@ -38,6 +40,7 @@ wgs84_to_njsp = Transformer.from_crs("EPSG:4326", "EPSG:3424", always_xy=True)
 njsp_to_wgs84 = Transformer.from_crs("EPSG:3424", "EPSG:4326", always_xy=True)
 
 
+@lru_cache(maxsize=None)
 def load_owners(cache_dir: Path = CACHE) -> tuple[dict[str, str], dict[str, str]]:
     """Load property owners from cached account JSON files.
 
@@ -74,6 +77,7 @@ def load_owners(cache_dir: Path = CACHE) -> tuple[dict[str, str], dict[str, str]
     return lot_owners, unit_owners
 
 
+@lru_cache(maxsize=None)
 def load_addresses(cache_dir: Path = CACHE) -> dict[str, str]:
     """Load property addresses from cached account JSON files.
 
@@ -93,6 +97,7 @@ def load_addresses(cache_dir: Path = CACHE) -> dict[str, str]:
     return addresses
 
 
+@lru_cache(maxsize=None)
 def load_building_info(data_dir: Path = DATA) -> dict[str, dict]:
     """Load building info from taxrecords_enriched.parquet.
 
@@ -153,6 +158,7 @@ def load_building_info(data_dir: Path = DATA) -> dict[str, dict]:
     return info
 
 
+@lru_cache(maxsize=None)
 def load_unit_sqft(data_dir: Path = DATA) -> dict[str, int]:
     """Load per-unit square footage from taxrecords_enriched.parquet.
 
@@ -230,6 +236,73 @@ def summarize_block_streets(addresses: dict[str, str]) -> dict[str, str]:
 OMNIBUS_LOT_GROUPS = [
     {"source": "18702-29", "lots": ["18702-27", "18702-28", "18702-29"]},
 ]
+
+def _parent_lot(lot: str) -> str:
+    """Strip a trailing sub-lot suffix: '3.17' -> '3', '55.01' -> '55', '6' -> '6'."""
+    return lot.rsplit(".", 1)[0] if "." in lot else lot
+
+
+def fold_orphan_payments(pay_dict: dict, present: list[tuple]) -> dict:
+    """Fold payments whose join_key has no parcel geometry onto a same-block sink.
+
+    Orphan block-lots (e.g. Newport tower sub-lots that exist in `payments.parquet`
+    but not the parcel snapshot) would otherwise be silently DROPPED from lot/unit
+    views. Each orphan's Paid/Billed is added onto the best available present key in
+    the same block, preferring, in order:
+      0. a present key with the exact same (block, lot) — a sibling unit/qualifier,
+      1. the exact parent lot (trailing `.NN` stripped),
+      2. a sibling lot sharing the integer lot prefix,
+      3. the largest-area present lot anywhere in the block.
+
+    Args:
+        pay_dict: join_key -> {"Paid":, "Billed":}. Mutated in place: orphan amounts
+            are ADDED onto sink keys. Orphan entries themselves are left as-is (they
+            are never read without geometry, so leaving them causes no double count).
+        present: list of (join_key, block, lot, area_sqft) for keys that HAVE geometry.
+
+    Returns:
+        {"folded": n, "folded_amt": $, "dropped": n, "dropped_amt": $}
+    """
+    present_keys = {p[0] for p in present}
+    by_block: dict[str, list[tuple]] = defaultdict(list)       # block -> [(key, area)]
+    by_block_lot: dict[tuple, list[tuple]] = defaultdict(list)  # (block,lot) -> [(key, area)]
+    for key, block, lot, area in present:
+        by_block[block].append((key, area))
+        by_block_lot[(block, lot)].append((key, area))
+
+    def _pick(candidates: list[tuple]) -> str | None:
+        return max(candidates, key=lambda ka: ka[1])[0] if candidates else None
+
+    folded = dropped = 0
+    folded_amt = dropped_amt = 0.0
+    for key in list(pay_dict.keys()):
+        if key in present_keys:
+            continue
+        parts = key.split("-")
+        block, lot = parts[0], parts[1] if len(parts) > 1 else ""
+        paid = float(pay_dict[key].get("Paid", 0) or 0)
+        billed = float(pay_dict[key].get("Billed", 0) or 0)
+        if paid == 0 and billed == 0:
+            continue
+        parent = _parent_lot(lot)
+        prefix = lot.split(".")[0]
+        sink = (
+            _pick(by_block_lot.get((block, lot), []))
+            or (_pick(by_block_lot.get((block, parent), [])) if parent != lot else None)
+            or _pick([(k, a) for k, a in by_block.get(block, []) if k.split("-")[1].split(".")[0] == prefix])
+            or _pick(by_block.get(block, []))
+        )
+        if sink is None:
+            dropped += 1
+            dropped_amt += paid
+            continue
+        bucket = pay_dict.setdefault(sink, {"Paid": 0.0, "Billed": 0.0})
+        bucket["Paid"] = float(bucket.get("Paid", 0) or 0) + paid
+        bucket["Billed"] = float(bucket.get("Billed", 0) or 0) + billed
+        folded += 1
+        folded_amt += paid
+    return {"folded": folded, "folded_amt": folded_amt, "dropped": dropped, "dropped_amt": dropped_amt}
+
 
 AGGREGATE_CHOICES = ["block", "census-block", "lot", "unit", "ward"]
 SUFFIX_MAP = {
@@ -385,28 +458,40 @@ def generate_yearly_geojson(
         return geom
 
     def process_geometry(geom):
-        """Convert geometry to WGS84 for GeoJSON and calculate area in sqft."""
+        """Convert geometry to WGS84, clip to land, and calculate area in sqft.
+
+        Coastline clip (Mode B): the geometry is cropped to the land mask before
+        `area_sqft` is computed, so both the rendered polygon and $/sqft exclude
+        underwater area.
+        """
         if geom is None:
             return None, None, 0.0
 
+        # Normalize to WGS84 first.
         if is_njsp(geom):
-            # Already in NJ State Plane (feet) - area is direct, need to convert to WGS84 for GeoJSON
-            area_sqft = geom.area
             geom_wgs84 = shapely.ops.transform(njsp_to_wgs84.transform, geom)
-            geojson = json.loads(shapely.to_geojson(geom_wgs84))
         else:
-            # In WGS84 - need to project to NJ State Plane for area
-            projected = shapely.ops.transform(wgs84_to_njsp.transform, geom)
-            area_sqft = projected.area
-            geojson = json.loads(shapely.to_geojson(geom))
+            geom_wgs84 = geom
 
-        return geojson, geom, area_sqft
+        # Clip to land (subtract water); recompute area from the CLIPPED geometry.
+        geom_wgs84 = clip_to_land(geom_wgs84)
+        if geom_wgs84 is None or geom_wgs84.is_empty:
+            return None, None, 0.0
+
+        projected = shapely.ops.transform(wgs84_to_njsp.transform, geom_wgs84)
+        area_sqft = projected.area
+        geojson = json.loads(shapely.to_geojson(geom_wgs84))
+
+        return geojson, geom_wgs84, area_sqft
 
     features = []
 
     if aggregate == "unit":
-        # Unit-level: one feature per parcel row with individual payments
+        # Unit-level: one feature per parcel row with individual payments.
         err("Generating unit-level features...")
+        # Pass 1: clip + measure geometry for every parcel row.
+        processed = []       # (row, geometry, area_sqft)
+        present: list[tuple] = []  # (join_key, block, lot, area) for orphan folding
         for _, row in parcels.iterrows():
             geom = get_geometry(row)
             if geom is None:
@@ -417,7 +502,20 @@ def generate_yearly_geojson(
                     continue
             except Exception:
                 continue
+            key = row["join_key"]
+            block = str(row.get("block", "")).strip()
+            lot = str(row.get("lot", "")).strip()
+            processed.append((row, geometry, area_sqft))
+            present.append((key, block, lot, area_sqft))
 
+        # Fold orphan payments (block-lot-qual in payments but not in geometry).
+        stats = fold_orphan_payments(pay_dict, present)
+        err(f"  Orphan payments folded: {stats['folded']} keys "
+            f"(${stats['folded_amt']:,.0f} paid); dropped: {stats['dropped']} keys "
+            f"(${stats['dropped_amt']:,.0f} paid)")
+
+        # Pass 2: emit features.
+        for row, geometry, area_sqft in processed:
             key = row["join_key"]
             addr_key = row["addr_key"]
             pay_data = pay_dict.get(key, {})
@@ -425,6 +523,7 @@ def generate_yearly_geojson(
             billed = float(pay_data.get("Billed", 0) or 0)
 
             paid_per_sqft = paid / area_sqft if area_sqft > 0 else 0.0
+            billed_per_sqft = billed / area_sqft if area_sqft > 0 else 0.0
 
             qual_str = str(row.get("qual", "")).strip() if pd.notna(row.get("qual")) else ""
             owner = unit_owners.get(key) if qual_str else lot_owners.get(addr_key)
@@ -437,6 +536,7 @@ def generate_yearly_geojson(
                 "billed": round(billed, 2),
                 "area_sqft": round(area_sqft, 1),
                 "paid_per_sqft": round(paid_per_sqft, 2),
+                "billed_per_sqft": round(billed_per_sqft, 2),
             }
             true_sqft = unit_sqft.get(key)
             if true_sqft:
@@ -474,6 +574,9 @@ def generate_yearly_geojson(
             agg_geoms[key].append(geom)
 
         err(f"Dissolving {len(agg_geoms)} {level}s...")
+        # Pass 1: dissolve + clip + measure.
+        processed: dict[str, tuple] = {}  # key -> (geometry, area_sqft)
+        present = []                       # (join_key, block, lot, area)
         for key, geoms in agg_geoms.items():
             try:
                 if len(geoms) == 1:
@@ -485,11 +588,25 @@ def generate_yearly_geojson(
                     continue
             except Exception:
                 continue
+            processed[key] = (geometry, area_sqft)
+            props = agg_props[key]
+            present.append((key, props["block"], props["lot"] or "", area_sqft))
 
+        # Fold orphan payments into parent/sibling/block lots. Lot view only: block
+        # view's join_key IS the block, so it already sums every payment in a block.
+        if aggregate == "lot":
+            stats = fold_orphan_payments(pay_dict, present)
+            err(f"  Orphan payments folded: {stats['folded']} keys "
+                f"(${stats['folded_amt']:,.0f} paid); dropped: {stats['dropped']} keys "
+                f"(${stats['dropped_amt']:,.0f} paid)")
+
+        # Pass 2: emit features.
+        for key, (geometry, area_sqft) in processed.items():
             pay_data = pay_dict.get(key, {})
             paid = float(pay_data.get("Paid", 0) or 0)
             billed = float(pay_data.get("Billed", 0) or 0)
             paid_per_sqft = paid / area_sqft if area_sqft > 0 else 0.0
+            billed_per_sqft = billed / area_sqft if area_sqft > 0 else 0.0
 
             props = agg_props[key]
             addr_key = props["addr_key"]
@@ -502,6 +619,7 @@ def generate_yearly_geojson(
                 "billed": round(billed, 2),
                 "area_sqft": round(area_sqft, 1),
                 "paid_per_sqft": round(paid_per_sqft, 2),
+                "billed_per_sqft": round(billed_per_sqft, 2),
             }
             addr = addresses.get(addr_key)
             if addr:
@@ -586,22 +704,39 @@ def _build_lot_gdf(parcels: pd.DataFrame, payments: pd.DataFrame) -> gpd.GeoData
         if geom is not None:
             lot_geoms[row["join_key"]].append(geom)
 
-    rows = []
+    # Dissolve each lot, convert to WGS84, and clip to land (coastline crop).
+    geoms_wgs84: dict[str, shapely.Geometry] = {}
+    present: list[tuple] = []  # (join_key, block, lot, area) for orphan folding
     for key, geoms in lot_geoms.items():
         try:
             dissolved = geoms[0] if len(geoms) == 1 else shapely.ops.unary_union(geoms)
-            # Convert NJSP → WGS84 if needed
             if dissolved.bounds[0] > 1000:
                 dissolved = shapely.ops.transform(njsp_to_wgs84.transform, dissolved)
-            pay = pay_dict.get(key, {})
-            rows.append({
-                "join_key": key,
-                "paid": float(pay.get("Paid", 0) or 0),
-                "billed": float(pay.get("Billed", 0) or 0),
-                "geometry": dissolved,
-            })
+            dissolved = clip_to_land(dissolved)
+            if dissolved is None or dissolved.is_empty:
+                continue
         except Exception:
             continue
+        geoms_wgs84[key] = dissolved
+        block, _, lot = key.partition("-")
+        present.append((key, block, lot, dissolved.area))  # degree-area OK for local sink ranking
+
+    # Fold orphan payments (sub-lots in payments but not geometry) onto parent/
+    # sibling/block lots so census/ward allocations don't drop them either.
+    stats = fold_orphan_payments(pay_dict, present)
+    err(f"  Orphan payments folded: {stats['folded']} keys "
+        f"(${stats['folded_amt']:,.0f} paid); dropped: {stats['dropped']} keys "
+        f"(${stats['dropped_amt']:,.0f} paid)")
+
+    rows = []
+    for key, dissolved in geoms_wgs84.items():
+        pay = pay_dict.get(key, {})
+        rows.append({
+            "join_key": key,
+            "paid": float(pay.get("Paid", 0) or 0),
+            "billed": float(pay.get("Billed", 0) or 0),
+            "geometry": dissolved,
+        })
 
     gdf = gpd.GeoDataFrame(rows, crs="EPSG:4326")
     err(f"Built {len(gdf)} lot geometries in WGS84")
@@ -670,8 +805,14 @@ def _generate_census_geojson(
     cb_result["paid_per_sqft"] = cb_result.apply(
         lambda r: r["paid"] / r["area_sqft"] if r["area_sqft"] > 0 else 0, axis=1
     )
+    cb_result["billed_per_sqft"] = cb_result.apply(
+        lambda r: r["billed"] / r["area_sqft"] if r["area_sqft"] > 0 else 0, axis=1
+    )
     cb_result["paid_per_capita"] = cb_result.apply(
         lambda r: r["paid"] / r["POP100"] if r["POP100"] > 0 else None, axis=1
+    )
+    cb_result["billed_per_capita"] = cb_result.apply(
+        lambda r: r["billed"] / r["POP100"] if r["POP100"] > 0 else None, axis=1
     )
 
     # Build trimmed geometries from tax-paying lot fragments
@@ -742,8 +883,10 @@ def _generate_census_geojson(
             "billed": round(row["billed"], 2),
             "area_sqft": round(row["area_sqft"], 1),
             "paid_per_sqft": round(row["paid_per_sqft"], 2),
+            "billed_per_sqft": round(row["billed_per_sqft"], 2),
             "population": int(row["POP100"]),
             "paid_per_capita": round(row["paid_per_capita"], 2) if pd.notna(row["paid_per_capita"]) else None,
+            "billed_per_capita": round(row["billed_per_capita"], 2) if pd.notna(row["billed_per_capita"]) else None,
         }
         features.append({"type": "Feature", "geometry": geojson_geom, "properties": props})
 
@@ -778,8 +921,14 @@ def _aggregate_to_wards(
     ward_result["paid_per_sqft"] = ward_result.apply(
         lambda r: r["paid"] / r["area_sqft"] if r["area_sqft"] > 0 else 0, axis=1
     )
+    ward_result["billed_per_sqft"] = ward_result.apply(
+        lambda r: r["billed"] / r["area_sqft"] if r["area_sqft"] > 0 else 0, axis=1
+    )
     ward_result["paid_per_capita"] = ward_result.apply(
         lambda r: r["paid"] / r["population"] if r["population"] > 0 else None, axis=1
+    )
+    ward_result["billed_per_capita"] = ward_result.apply(
+        lambda r: r["billed"] / r["population"] if r["population"] > 0 else None, axis=1
     )
 
     features = []
@@ -796,8 +945,10 @@ def _aggregate_to_wards(
             "billed": round(row["billed"], 2),
             "area_sqft": round(row["area_sqft"], 1),
             "paid_per_sqft": round(row["paid_per_sqft"], 2),
+            "billed_per_sqft": round(row["billed_per_sqft"], 2),
             "population": int(row["population"]),
             "paid_per_capita": round(row["paid_per_capita"], 2) if pd.notna(row["paid_per_capita"]) else None,
+            "billed_per_capita": round(row["billed_per_capita"], 2) if pd.notna(row["billed_per_capita"]) else None,
         }
         # Alternate geometry options for frontend toggle
         lots = ward_lots.get(ward)
