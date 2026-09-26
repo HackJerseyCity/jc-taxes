@@ -4,7 +4,6 @@ import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
 import dvc from 'vite-plugin-dvc'
 
-const allowedHosts = ['host.docker.internal', ...(process.env.VITE_ALLOWED_HOSTS?.split(',') ?? [])]
 
 // Public base URL the DVC cache is served from. Unset → the plugin derives it
 // from the DVC remote (currently AWS S3). Set to the R2 custom-domain cache
@@ -42,7 +41,7 @@ export default defineConfig({
   server: {
     port: 3201,  // JC area code
     host: true,
-    allowedHosts,
+    allowedHosts: true,  // trusted-tailnet dev server, reached by bare MagicDNS name (e.g. `m3:3201`)
   },
 
   preview: {
