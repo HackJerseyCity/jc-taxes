@@ -513,12 +513,16 @@ export default function MapView() {
   // the scrubber is being dragged. It overrides `urlYear` for rendering without
   // writing to the URL at 60fps (which history.replaceState throttles). When it
   // clears, the URL year is authoritative again.
-  const [playYear, setPlayYear] = useState<number | null>(null)
+  const [playing, setPlaying] = useUrlState('play', playParam)
+  // Autoplay link (`play=1`) parked at the last year: start on the first year
+  // from the very first frame, instead of showing the end year then jumping.
+  const [playYear, setPlayYear] = useState<number | null>(
+    () => playing && urlYear >= YEAR_MAX ? AVAILABLE_YEARS[0] : null,
+  )
   const year = playYear ?? urlYear
   const playYearRef = useRef(playYear)
   playYearRef.current = playYear
   // Animation player: URL-linkable play flag (auto-resumes on load) + speed.
-  const [playing, setPlaying] = useUrlState('play', playParam)
   const [playSpeedRaw, setPlaySpeed] = useUrlState('pspeed', optNumParam)
   const playSpeed = playSpeedRaw ?? PLAY_SPEED_DEFAULT
   // The transport bar is summoned by playing (title ▶ button, space, `?play=1`)
@@ -571,7 +575,8 @@ export default function MapView() {
   const [maxHeightRaw, setMaxHeightRaw] = useUrlState('mh', optNumParam)
   const [aggregateMode, setAggregateModeRaw] = useUrlState('agg', stringParam('block'))
   const [portfolio, setPortfolio] = useUrlState('pf', stringParam(''))
-  const portfolios = usePortfolios()
+  const portfoliosOrNull = usePortfolios()
+  const portfolios = useMemo(() => portfoliosOrNull ?? [], [portfoliosOrNull])
   const [region, setRegion] = useUrlState('rg', stringParam(''))
   const [pfDimRaw, setPfDim] = useUrlState('pfd', optNumParam)
   const pfDim = Number(pfDimRaw ?? 0)
@@ -1550,25 +1555,34 @@ export default function MapView() {
   // hover / select work across them. Without a portfolio: one layer, as before.
   // Fly to the focus set when the user picks a new portfolio / region (skipped
   // for the focus present at load, so a shared link's camera is kept).
+  // A focus in the URL without a camera (`v`) gets a focus-fit initial view,
+  // applied (without animation) before anything renders.
+  const urlHadViewRef = useRef(new URLSearchParams(window.location.search).has('v'))
+  const [initialFitDone, setInitialFitDone] = useState(() => urlHadViewRef.current || !(portfolio || region))
   const fitFocusRef = useRef<string | null>(null)
   const focusKey = `${portfolio}|${region}`
   useEffect(() => {
     if (!displayData?.length) return
-    if (fitFocusRef.current === null) { fitFocusRef.current = focusKey; return }
-    if (fitFocusRef.current === focusKey) return
+    if (portfolio && portfoliosOrNull === null) return
+    const initial = fitFocusRef.current === null
+    if (!initial && fitFocusRef.current === focusKey) return
     fitFocusRef.current = focusKey
-    if (!focusTest) return
-    const bounds = boundsOf(displayData.filter(f => focusTest(f.properties)))
-    if (!bounds) return
-    setViewState(v => {
-      const vp = new WebMercatorViewport({ ...v, width: window.innerWidth, height: window.innerHeight })
-      const { longitude, latitude, zoom } = vp.fitBounds(bounds, { padding: Math.min(80, window.innerWidth / 8) })
-      return {
-        ...v, longitude, latitude, zoom: Math.min(zoom, 16.5),
-        transitionDuration: 800, transitionInterpolator: new FlyToInterpolator(),
-      }
-    })
-  }, [focusKey, focusTest, displayData, setViewState])
+    if (initial && urlHadViewRef.current) { setInitialFitDone(true); return }
+    const bounds = focusTest && boundsOf(displayData.filter(f => focusTest(f.properties)))
+    if (bounds) {
+      setViewState(v => {
+        const vp = new WebMercatorViewport({ ...v, width: window.innerWidth, height: window.innerHeight })
+        const { longitude, latitude, zoom } = vp.fitBounds(bounds, { padding: Math.min(80, window.innerWidth / 8) })
+        return {
+          ...v, longitude, latitude, zoom: Math.min(zoom, 16.5),
+          ...(initial
+            ? { transitionDuration: 0 }
+            : { transitionDuration: 800, transitionInterpolator: new FlyToInterpolator() }),
+        }
+      })
+    }
+    setInitialFitDone(true)
+  }, [focusKey, focusTest, displayData, setViewState, portfolio, portfoliosOrNull])
 
   const [memberData, fadedData] = useMemo((): [ParcelFeature[], ParcelFeature[]] => {
     const all = effectiveData ?? []
@@ -1636,7 +1650,13 @@ export default function MapView() {
     },
   })
   const showColumns = isTotal && extruded
-  const layers = [
+  // Hold rendering (spinner) until the first frame would be the intended one:
+  // portfolio list loaded (for `pf`), focus camera fitted, and — for an
+  // autoplay link — every year buffered, so playback starts cleanly.
+  const autoplayAtLoadRef = useRef(!!playing)
+  if (yearsReady) autoplayAtLoadRef.current = false
+  const holdRender = (!!portfolio && portfoliosOrNull === null) || !initialFitDone || (autoplayAtLoadRef.current && !!playing)
+  const layers = holdRender ? [] : [
     ...(fadedData.length ? [parcelLayer('parcels-faded', fadedData, true)] : []),
     ...(showColumns && fadedData.length ? [columnLayer('total-columns-faded', fadedData, true)] : []),
     parcelLayer('parcels', memberData, false),
@@ -1925,7 +1945,7 @@ export default function MapView() {
           attributionControl={false}
         />
       </DeckGL>
-      {loading && (
+      {(loading || holdRender) && (
         <div className="loading-overlay">
           <div className="loading-spinner" />
         </div>

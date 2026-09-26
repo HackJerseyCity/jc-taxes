@@ -21,8 +21,9 @@ export interface Portfolio {
   note?: string
 }
 
-export function usePortfolios(): Portfolio[] {
-  const [portfolios, setPortfolios] = useState<Portfolio[]>([])
+// `null` while loading (callers gate `pf` rendering on it); `[]` if the fetch fails.
+export function usePortfolios(): Portfolio[] | null {
+  const [portfolios, setPortfolios] = useState<Portfolio[] | null>(null)
   useEffect(() => {
     let cancelled = false
     fetch(dvcResolve('portfolios.json'))
@@ -31,7 +32,10 @@ export function usePortfolios(): Portfolio[] {
         return r.json() as Promise<Portfolio[]>
       })
       .then(ps => { if (!cancelled) setPortfolios(ps) })
-      .catch(e => console.error('Failed to load portfolios:', e))
+      .catch(e => {
+        console.error('Failed to load portfolios:', e)
+        if (!cancelled) setPortfolios([])
+      })
     return () => { cancelled = true }
   }, [])
   return portfolios
