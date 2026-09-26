@@ -347,12 +347,12 @@ def geojson(output: str, limit: int):
 @main.command("geojson-yearly")
 @click.option("-a", "--aggregate", "aggregates", multiple=True, help="Aggregate level(s); repeatable (default: all)")
 @click.option("-o", "--output-dir", default=None, help="Output dir (default: www/public/)")
-@click.option("-y", "--year", "years", multiple=True, type=int, help="Year(s); repeatable (default: 2015-2025)")
+@click.option("-y", "--year", "years", multiple=True, type=int, help="Year(s); repeatable (default: 2015-2026)")
 def geojson_yearly(aggregates: tuple, output_dir: str, years: tuple):
     """Generate year × aggregate GeoJSONs (block/lot/unit/census-block/ward)."""
     from .geojson_yearly import AGGREGATE_CHOICES, generate_yearly_geojson
     out = Path(output_dir) if output_dir else None
-    yrs = list(years) if years else list(range(2015, 2026))
+    yrs = list(years) if years else list(range(2015, 2027))
     aggs = list(aggregates) if aggregates else AGGREGATE_CHOICES
     for year in yrs:
         for aggregate in aggs:

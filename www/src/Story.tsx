@@ -11,12 +11,12 @@ const MAP = 'https://jct.rbw.sh/'
 
 // 2025 "paid" totals by ward ($M), from taxes-2025-wards.geojson.
 const WARDS: { ward: string, paid: number }[] = [
-  { ward: 'E', paid: 414.9 },
-  { ward: 'D', paid: 199.0 },
-  { ward: 'F', paid: 195.6 },
-  { ward: 'C', paid: 176.4 },
-  { ward: 'A', paid: 128.1 },
-  { ward: 'B', paid: 112.5 },
+  { ward: 'E', paid: 417.5 },
+  { ward: 'D', paid: 199.1 },
+  { ward: 'F', paid: 196.7 },
+  { ward: 'C', paid: 176.8 },
+  { ward: 'A', paid: 128.4 },
+  { ward: 'B', paid: 112.7 },
 ]
 const WARD_MAX = Math.max(...WARDS.map(w => w.paid))
 
@@ -60,8 +60,8 @@ export default function Story() {
         <p className="story-tag">
           Per-account billing and payment history for ~70k accounts (2015–2025),
           scraped from the city's HLS tax portal and joined to NJGIN parcel
-          geometry. Figures are taxes paid; citywide 2025 total: <strong>$1.227B</strong>,
-          up from $589.7M in 2015 (×2.08).
+          geometry. Figures are taxes paid; citywide 2025 total: <strong>$1.231B</strong>,
+          up from $589.7M in 2015 (×2.09).
         </p>
         <div className="story-hero-ctas">
           <a className="story-cta" href={MAP} target="_blank" rel="noopener noreferrer">
@@ -88,8 +88,8 @@ export default function Story() {
       </View>
 
       <View
-        title="Newport: 9.4% of citywide taxes"
-        stat="$114.7M"
+        title="Newport: 9.3% of citywide taxes"
+        stat="$115.1M"
         statLabel="2025 · 6 waterfront tax blocks · mall, offices, ~4,900 condos"
         img="/story/newport.png"
         imgAlt="Newport's six tax blocks highlighted; rest of the city dimmed"
@@ -97,7 +97,7 @@ export default function Story() {
         flip
       >
         <p>
-          $57.0M (2015) → $66.5M (2018) → $114.7M (2025). Share of the city total
+          $57.0M (2015) → $66.5M (2018) → $115.1M (2025). Share of the city total
           held at 9–10% throughout. The 2021–23 step (+$35M) coincides with PILOT
           expirations and reassessment; parcel count is flat (~1,385). Totals
           include PILOT service charges billed through HLS.
@@ -105,15 +105,15 @@ export default function Story() {
       </View>
 
       <View
-        title="Harborside (block 11603): 6.6%"
-        stat="$80.8M"
+        title="Harborside (block 11603): 6.7%"
+        stat="$82.5M"
         statLabel="2025 · Second St / Marin Blvd / Hudson St · 3.4M sqft"
         img="/story/harborside.png"
         imgAlt="Block 11603 (Harborside) selected in the block view"
         href={`${MAP}?v=40.7165-74.0370+13.9+45-25&agg=block&sel=11603`}
       >
         <p>
-          $40.9M (2015) → $55.9M (2018) → $80.8M (2025). $23.04/sqft over the
+          $40.9M (2015) → $55.9M (2018) → $82.5M (2025). $23.53/sqft over the
           whole superblock.
         </p>
       </View>
@@ -130,8 +130,8 @@ export default function Story() {
         <div className="story-view-body">
           <h2 className="story-view-h">Ward E &gt; any two other wards combined</h2>
           <div className="story-view-stat">
-            <span className="story-view-stat-value">$414.9M</span>
-            <span className="story-view-stat-label">2025 · 33.8% of citywide</span>
+            <span className="story-view-stat-value">$417.5M</span>
+            <span className="story-view-stat-label">2025 · 33.9% of citywide</span>
           </div>
           <div className="story-view-wards">
             {WARDS.map(w => (
@@ -144,7 +144,7 @@ export default function Story() {
           </div>
           <div className="story-view-p">
             <p>
-              2025: E $414.9M vs. D + F $394.7M. Also true in 2015, narrowly:
+              2025: E $417.5M vs. D + F $395.8M. Also true in 2015, narrowly:
               E $179.8M vs. A + F $178.7M.
             </p>
           </div>

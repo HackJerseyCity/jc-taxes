@@ -13,6 +13,8 @@ export type ParcelProperties = {
   area_sqft?: number
   unit_sqft?: number
   paid_per_sqft?: number
+  billed_per_sqft?: number
+  billed_per_capita?: number
   geoid?: string
   ward?: string
   hood?: string       // neighborhood (JC Open Data `jersey-city-neighborhoods`)

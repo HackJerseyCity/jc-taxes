@@ -75,8 +75,10 @@ const viewParam = viewStateParam({
   zoomDecimals: 1,
 })
 
-const AVAILABLE_YEARS = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+const AVAILABLE_YEARS = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
 const YEAR_MAX = AVAILABLE_YEARS[AVAILABLE_YEARS.length - 1]
+// Default (URL `y` absent): the latest COMPLETE year; `BILLED_YEARS` after it are opt-in.
+const DEFAULT_YEAR = 2025
 
 // Float-aware ?y param: accepts integer years for normal use and fractional
 // values (e.g. ?y=2020.5) for deterministic mid-animation states. Adjacent
@@ -377,6 +379,20 @@ const METRIC_FIELDS = {
 function metricField(metric: string): 'paid_per_sqft' | 'paid_per_capita' | 'paid' {
   return METRIC_FIELDS[metric as MetricMode] ?? 'paid_per_sqft'
 }
+// Years whose payments are still coming in (final-quarter bills not yet due):
+// shown by amount BILLED, with a caveat, rather than a misleadingly low paid.
+const BILLED_YEARS = new Set([2026])
+const isBilledYear = (y: number | undefined) => y != null && BILLED_YEARS.has(Math.round(y))
+const BILLED_FIELDS = { paid_per_sqft: 'billed_per_sqft', paid_per_capita: 'billed_per_capita', paid: 'billed' } as const
+/** The displayed metric for a feature: paid, or billed for `BILLED_YEARS`. */
+function metricValue(p: ParcelProperties | null | undefined, metric: string): number {
+  if (!p) return 0
+  const f = metricField(metric)
+  return (isBilledYear(p.year) ? p[BILLED_FIELDS[f]] : p[f]) ?? 0
+}
+/** Dollar amount for totals: paid, or billed for `BILLED_YEARS`. */
+const amountOf = (p: ParcelProperties | null | undefined): number =>
+  (isBilledYear(p?.year) ? p?.billed : p?.paid) ?? 0
 // `per_capita` needs population data (census-block / ward only); `per_sqft` and
 // `total` are available at every aggregation.
 function effectiveMetricFor(agg: string, metric: string): string {
@@ -524,7 +540,7 @@ export default function MapView() {
   const [settingsOpen, setSettingsOpen] = useState(() => settingsOpenUrl && window.innerWidth > 768)
 
   // URL-persisted state (mh is optional; absent = use mode default)
-  const [urlYear, setUrlYear] = useUrlState('y', yearParam(YEAR_MAX))
+  const [urlYear, setUrlYear] = useUrlState('y', yearParam(DEFAULT_YEAR))
   // Transient (uncommitted) year used while the animation player is running or
   // the scrubber is being dragged. It overrides `urlYear` for rendering without
   // writing to the URL at 60fps (which history.replaceState throttles). When it
@@ -533,7 +549,7 @@ export default function MapView() {
   // Autoplay link (`play=1`) parked at the last year: start on the first year
   // from the very first frame, instead of showing the end year then jumping.
   const [playYear, setPlayYear] = useState<number | null>(
-    () => playing && urlYear >= YEAR_MAX ? AVAILABLE_YEARS[0] : null,
+    () => playing && urlYear >= DEFAULT_YEAR ? AVAILABLE_YEARS[0] : null,
   )
   const year = playYear ?? urlYear
   const playYearRef = useRef(playYear)
@@ -738,11 +754,10 @@ export default function MapView() {
   }, [metricMode, focusTest])
   const sortedVals = useMemo(() => {
     if (!data || data.length === 0) return []
-    const field = metricField(metricMode)
     const vals: number[] = []
     for (const f of data) {
       if (!scalesHeight(f.properties)) continue
-      const v = f.properties?.[field] ?? 0
+      const v = metricValue(f.properties, metricMode)
       if (v > 0) vals.push(v)
     }
     vals.sort((a, b) => a - b)
@@ -1109,7 +1124,7 @@ export default function MapView() {
           if (!features) continue
           for (const f of features) {
             if (!scalesHeight(f.properties)) continue
-            const v = f.properties?.[metricField(metricMode)] ?? 0
+            const v = metricValue(f.properties, metricMode)
             if (v > m) m = v
           }
         }
@@ -1142,9 +1157,10 @@ export default function MapView() {
     const first = AVAILABLE_YEARS[0]
     const last = YEAR_MAX
     // Start from the current year, but restart from the first year if we're
-    // already parked at the end (so pressing play always plays something).
+    // parked at (or past) the default latest-complete year, so pressing play on
+    // the landing view plays the whole history.
     let pos = yearRef.current
-    if (pos >= last) pos = first
+    if (pos >= DEFAULT_YEAR) pos = first
     let raf = 0
     let prev: number | null = null
     let started = false
@@ -1215,7 +1231,7 @@ export default function MapView() {
     return data.map(f => {
       const p = f.properties
       if (!p?.ward) return null
-      const metricVal = p[metricField(metricMode)] ?? 0
+      const metricVal = metricValue(p, metricMode)
       const rings = f.geometry.type === 'Polygon' ? [f.geometry.coordinates[0]] : f.geometry.coordinates.map(p => p[0])
       const lines = [`Ward ${p.ward}`]
       if (p.population) lines.push(`Pop: ${p.population.toLocaleString()}`)
@@ -1442,7 +1458,7 @@ export default function MapView() {
     : [60, 60, 60, 160]
 
   const metricOf = useCallback((f: ParcelFeatureLike): number => {
-    return f.properties?.[metricField(metricMode)] ?? 0
+    return metricValue(f.properties, metricMode)
   }, [metricMode])
 
   // Per-feature metric at the (possibly fractional) `year`. For integer years
@@ -1513,7 +1529,7 @@ export default function MapView() {
     let count = 0, paid = 0
     for (const f of displayData) {
       const p = f.properties
-      if (focusTest(p)) { count++; paid += p?.paid ?? 0 }
+      if (focusTest(p)) { count++; paid += amountOf(p) }
     }
     return { count, paid }
   }, [focusTest, displayData])
@@ -1528,7 +1544,7 @@ export default function MapView() {
       if (!features) return null
       let paid = 0
       for (const f of features) {
-        if (!focusTest || focusTest(f.properties)) paid += f.properties?.paid ?? 0
+        if (!focusTest || focusTest(f.properties)) paid += amountOf(f.properties)
       }
       out.push([y, paid])
     }
@@ -2009,7 +2025,7 @@ export default function MapView() {
           ? 'Colored by year built'
           : isTotal
             ? `Total paid · by ${aggLabel}`
-            : `Paid per ${metricMode === 'per_capita' ? 'capita' : 'sq ft'} · by ${aggLabel}`
+            : `${isBilledYear(year) ? 'Billed' : 'Paid'} per ${metricMode === 'per_capita' ? 'capita' : 'sq ft'} · by ${aggLabel}`
         const isAnim = !!animYr
         const titleStyle = {
           position: 'absolute' as const,
@@ -2026,7 +2042,8 @@ export default function MapView() {
         }
         // Focus picker + totals chip: [Citywide / portfolio / ward / hood ▾] · $ · count.
         // Totals track the displayed (rounded) year, so they move with playback.
-        const chipStats = focusTest ? portfolioStats : summary && { count: summary.count, paid: summary.paid }
+        const billedYr = isBilledYear(year)
+        const chipStats = focusTest ? portfolioStats : summary && { count: summary.count, paid: billedYr ? summary.billed : summary.paid }
         const noun = chipStats?.count === 1 ? AGG_NOUN[String(aggregateMode)]?.[0] : AGG_NOUN[String(aggregateMode)]?.[1]
         const focusValue = portfolio ? `pf:${portfolio}` : region ? `rg:${region}` : ''
         const onFocus = (v: string) => {
@@ -2095,7 +2112,7 @@ export default function MapView() {
               {colorByYrBuilt ? <span>Colored by year built</span> : (
                 <InlineSelect
                   value={String(metricMode)}
-                  label={isTotal ? 'Total paid' : `Paid per ${metricMode === 'per_capita' ? 'capita' : 'sq ft'}`}
+                  label={`${billedYr ? (isTotal ? 'Total billed' : 'Billed') : (isTotal ? 'Total paid' : 'Paid')}${isTotal ? '' : ` per ${metricMode === 'per_capita' ? 'capita' : 'sq ft'}`}`}
                   onChange={(v) => setMetricMode(v as MetricMode)}
                   title="Metric"
                   options={<>
@@ -2131,6 +2148,11 @@ export default function MapView() {
                 {statsChip}
               </div>
             ) : statsChip}
+            {billedYr && summary && (
+              <div style={{ marginTop: 6, fontSize: 12, opacity: 0.9, textShadow: 'inherit' }}>
+                {Math.round(year)}: amounts billed (final quarter due Nov 1) · citywide paid so far {abbr(summary.paid)} ({Math.round(summary.paid / Math.max(summary.billed, 1) * 100)}% of billed)
+              </div>
+            )}
           </div>
         )
       })()}
