@@ -275,6 +275,8 @@ def fold_orphan_payments(pay_dict: dict, present: list[tuple]) -> dict:
     but not the parcel snapshot) would otherwise be silently DROPPED from lot/unit
     views. Each orphan's Paid/Billed is added onto the best available present key in
     the same block, preferring, in order:
+     -1. a commercial-condo qualifier alias: tax account `C8nnn` ↔ geometry `C0nnn`
+         (same lot), when that geometry key has no payments of its own,
       0. a present key with the exact same (block, lot) — a sibling unit/qualifier,
       1. the exact parent lot (trailing `.NN` stripped),
       2. a sibling lot sharing the integer lot prefix,
@@ -299,6 +301,22 @@ def fold_orphan_payments(pay_dict: dict, present: list[tuple]) -> dict:
     def _pick(candidates: list[tuple]) -> str | None:
         return max(candidates, key=lambda ka: ka[1])[0] if candidates else None
 
+    # Keys with their own payments, before any folding mutates `pay_dict`.
+    paid_keys = {
+        k for k, v in pay_dict.items()
+        if float(v.get("Paid", 0) or 0) or float(v.get("Billed", 0) or 0)
+    }
+
+    def _qual_alias(key: str) -> str | None:
+        parts = key.split("-")
+        if len(parts) != 3:
+            return None
+        m = re.fullmatch(r"C8(\d{3})", parts[2])
+        if not m:
+            return None
+        alias = f"{parts[0]}-{parts[1]}-C0{m.group(1)}"
+        return alias if alias in present_keys and alias not in paid_keys else None
+
     folded = dropped = 0
     folded_amt = dropped_amt = 0.0
     for key in list(pay_dict.keys()):
@@ -313,7 +331,8 @@ def fold_orphan_payments(pay_dict: dict, present: list[tuple]) -> dict:
         parent = _parent_lot(lot)
         prefix = lot.split(".")[0]
         sink = (
-            _pick(by_block_lot.get((block, lot), []))
+            _qual_alias(key)
+            or _pick(by_block_lot.get((block, lot), []))
             or (_pick(by_block_lot.get((block, parent), [])) if parent != lot else None)
             or _pick([(k, a) for k, a in by_block.get(block, []) if k.split("-")[1].split(".")[0] == prefix])
             or _pick(by_block.get(block, []))
