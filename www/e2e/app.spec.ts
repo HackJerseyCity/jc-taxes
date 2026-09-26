@@ -170,16 +170,32 @@ test.describe('Keyboard shortcuts', () => {
     await expect(page).toHaveURL(/[?&]y=22(&|$)/)
   })
 
-  test('j increments year, k decrements year', async ({ page }) => {
+  test('k increments year, j decrements year', async ({ page }) => {
     await mockGeoJSON(page)
     await page.goto('/?y=22')
     await waitForLoad(page)
 
-    await page.keyboard.press('j')
+    await page.keyboard.press('k')
     await expect(page).toHaveURL(/[?&]y=23(&|$)/)
 
-    await page.keyboard.press('k')
+    await page.keyboard.press('j')
     await expect(page).toHaveURL(/[?&]y=22(&|$)/)
+  })
+
+  test('year keys step from the last year; J / K jump to first / last', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?y=26')
+    await waitForLoad(page)
+
+    await page.keyboard.press('k')
+    await expect(page).toHaveURL(/[?&]y=26(&|$)/)
+    await page.keyboard.press('j')
+    // 2025 is the default year, so `y` is omitted
+    await expect(page).not.toHaveURL(/[?&]y=/)
+    await page.keyboard.press('Shift+J')
+    await expect(page).toHaveURL(/[?&]y=15(&|$)/)
+    await page.keyboard.press('Shift+K')
+    await expect(page).toHaveURL(/[?&]y=26(&|$)/)
   })
 })
 
@@ -198,6 +214,18 @@ test.describe('Omnibar', () => {
 
     await page.keyboard.press('Escape')
     await expect(input).not.toBeVisible()
+  })
+
+  test('searching a year selects it', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?y=22')
+    await waitForLoad(page)
+
+    await page.keyboard.press('Meta+k')
+    await page.keyboard.type('2019')
+    await expect(page.locator('.kbd-omnibar-result-label').first()).toHaveText('Year 2019')
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/[?&]y=19(&|$)/)
   })
 })
 

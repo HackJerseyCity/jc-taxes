@@ -10,6 +10,7 @@ import AppSpeedDial from './AppSpeedDial'
 import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
+import { AVAILABLE_YEARS, DEFAULT_YEAR, YEAR_MAX } from './years'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
 import { fit3d } from './fit3d'
 import FocusPicker, { type FocusOption } from './FocusPicker'
@@ -75,10 +76,6 @@ const viewParam = viewStateParam({
   zoomDecimals: 1,
 })
 
-const AVAILABLE_YEARS = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
-const YEAR_MAX = AVAILABLE_YEARS[AVAILABLE_YEARS.length - 1]
-// Default (URL `y` absent): the latest COMPLETE year; `BILLED_YEARS` after it are opt-in.
-const DEFAULT_YEAR = 2025
 
 // Float-aware ?y param: accepts integer years for normal use and fractional
 // values (e.g. ?y=2020.5) for deterministic mid-animation states. Adjacent

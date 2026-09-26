@@ -3,8 +3,7 @@ import { LinearInterpolator } from '@deck.gl/core'
 import { useCallback, useEffect, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
 import type { Portfolio } from './portfolios'
 import { WARDS } from './regions'
-
-const AVAILABLE_YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+import { AVAILABLE_YEARS } from './years'
 
 export type ViewState = {
   latitude: number
@@ -187,21 +186,47 @@ export function useKeyboardShortcuts({
     }
   }, [])
 
-  // Year navigation: k/j (and [/]) to avoid arrow-key conflict with viewport panning
+  // Year navigation: j/k (and [/]) to avoid arrow-key conflict with viewport panning
+  const stepYear = (d: number) => {
+    const i = yearIdx + d
+    if (i >= 0 && i < AVAILABLE_YEARS.length) setYear(AVAILABLE_YEARS[i])
+  }
   useAction('year-a', {
     label: 'Previous year',
-    group: 'Navigation',
-    defaultBindings: ['k', '['],
-    handler: () => { if (yearIdx > 0) setYear(AVAILABLE_YEARS[yearIdx - 1]) },
+    group: 'Years',
+    defaultBindings: ['j', '['],
+    handler: () => stepYear(-1),
     actionPair: { pairId: 'year', index: 0 },
   })
   useAction('year-b', {
     label: 'Next year',
-    group: 'Navigation',
-    defaultBindings: ['j', ']'],
-    handler: () => { if (yearIdx < AVAILABLE_YEARS.length - 1) setYear(AVAILABLE_YEARS[yearIdx + 1]) },
+    group: 'Years',
+    defaultBindings: ['k', ']'],
+    handler: () => stepYear(1),
     actionPair: { pairId: 'year', index: 1 },
   })
+  useAction('year-first', {
+    label: 'First year',
+    group: 'Years',
+    defaultBindings: ['shift+j'],
+    handler: () => setYear(AVAILABLE_YEARS[0]),
+  })
+  useAction('year-last', {
+    label: 'Last year',
+    group: 'Years',
+    defaultBindings: ['shift+k'],
+    handler: () => setYear(AVAILABLE_YEARS[AVAILABLE_YEARS.length - 1]),
+  })
+  // One omnibar action per year ("2026", "Year 2026", "26").
+  useActions(useMemo(() => Object.fromEntries(AVAILABLE_YEARS.map((y): [string, ActionConfig] => [
+    `year:${y}`,
+    {
+      label: `Year ${y}`,
+      group: 'Years',
+      keywords: [String(y), String(y % 100)],
+      handler: () => setYear(y),
+    },
+  ])), [setYear]))
 
   useAction('view:agg-a', {
     label: 'Block view',
