@@ -655,6 +655,11 @@ export default function MapView() {
   // value across every loaded year (per-feature). Falls back to `modeConf.max`
   // before the preload settles.
   const [crossYearMax, setCrossYearMax] = useState<number | null>(null)
+  // All years fetched (and `crossYearMax` computed); playback holds on its
+  // first frame until then, instead of animating through not-yet-loaded years.
+  const [yearsReady, setYearsReady] = useState(false)
+  const yearsReadyRef = useRef(yearsReady)
+  yearsReadyRef.current = yearsReady
   const dataMax = useMemo(() => {
     // In animation context (?animYr set, or `year` is fractional) auto-fit per
     // year would jump `heightScale` at every integer boundary — including
@@ -662,13 +667,13 @@ export default function MapView() {
     // Use the cross-year max once it's computed (covers the ward case where
     // mode-default `max=10` is a color clamp but actual Ward E reaches $21+),
     // falling back to the mode default while preload is still in-flight.
-    if (animYr || playing || !Number.isInteger(year)) return crossYearMax ?? modeConf.max
+    if (animYr || playing || transportOpen || !Number.isInteger(year)) return crossYearMax ?? modeConf.max
     if (sortedVals.length === 0) return modeConf.max
     if (percentile != null) {
       return sortedVals[Math.floor(sortedVals.length * percentile / 100)] || modeConf.max
     }
     return sortedVals[sortedVals.length - 1] || modeConf.max
-  }, [sortedVals, modeConf.max, percentile, year, animYr, playing, crossYearMax])
+  }, [sortedVals, modeConf.max, percentile, year, animYr, playing, transportOpen, crossYearMax])
   const percentilePrice = useMemo(() => {
     if (percentile == null || sortedVals.length === 0) return null
     return sortedVals[Math.floor(sortedVals.length * percentile / 100)]
@@ -968,9 +973,11 @@ export default function MapView() {
   // color clamp but Ward E reaches ~$21/sqft in recent years) overshoots
   // `maxHeight` by ~2x and runs off the top of the viewport.
   // (`crossYearMax` state is declared earlier in the file so `dataMax` can read it.)
+  const preloadAll = !!animYr || !!playing || transportOpen
   useEffect(() => {
     setCrossYearMax(null)
-    if (!animYr && !playing) return
+    setYearsReady(false)
+    if (!preloadAll) return
     let cancelled = false
     Promise.all(AVAILABLE_YEARS.map(y => fetchYear(aggregateMode, y).catch(() => null)))
       .then(() => {
@@ -986,9 +993,10 @@ export default function MapView() {
           }
         }
         setCrossYearMax(m || null)
+        setYearsReady(true)
       })
     return () => { cancelled = true }
-  }, [animYr, playing, aggregateMode, metricMode, fetchYear, cacheKey, scalesHeight])
+  }, [preloadAll, aggregateMode, metricMode, fetchYear, cacheKey, scalesHeight])
 
   // In-app animation player. When `playing`, a rAF loop advances a fractional
   // year (`playYear`) in real time, which drives the existing per-feature
@@ -1010,6 +1018,11 @@ export default function MapView() {
     let raf = 0
     let prev: number | null = null
     const tick = (t: number) => {
+      if (!yearsReadyRef.current) {
+        prev = null
+        raf = requestAnimationFrame(tick)
+        return
+      }
       if (prev != null) {
         const dt = Math.min((t - prev) / 1000, 0.1)
         pos += dt * playSpeed
@@ -1913,7 +1926,7 @@ export default function MapView() {
             style={{ width: 170, cursor: 'pointer' }}
           />
           <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, minWidth: 40, textAlign: 'center' }}>
-            {Math.round(year)}
+            {playing && !yearsReady ? '…' : Math.round(year)}
           </span>
           <button
             onClick={cycleSpeed}
