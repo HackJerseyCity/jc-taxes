@@ -5,7 +5,7 @@ import { WebMercatorViewport, FlyToInterpolator, LinearInterpolator } from '@dec
 import { ColumnLayer, GeoJsonLayer } from '@deck.gl/layers'
 import { useUrlAlias, useUrlState, stringParam, viewStateParam } from 'use-prms'
 import { useHotkeysContext } from 'use-kbd'
-import { MdFolderOpen } from 'react-icons/md'
+import { MdFolderOpen, MdSettings } from 'react-icons/md'
 import AppSpeedDial from './AppSpeedDial'
 import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -1714,11 +1714,11 @@ export default function MapView() {
   })
   const showColumns = isTotal && extruded
   // Hold rendering (spinner) until the first frame would be the intended one:
-  // portfolio list loaded (for `pf`), focus camera fitted, and — for an
-  // autoplay link — every year buffered, so playback starts cleanly.
-  const autoplayAtLoadRef = useRef(!!playing)
-  if (yearsReady) autoplayAtLoadRef.current = false
-  const holdRender = (!!portfolio && portfoliosOrNull === null) || !initialFitDone || (autoplayAtLoadRef.current && !!playing)
+  // portfolio list loaded (for `pf`) and focus camera fitted. An autoplay link
+  // still renders its start year right away; only the play clock waits for the
+  // remaining years (spinner + n/11 in the transport), since buffering every
+  // year can take a while on a slow connection.
+  const holdRender = (!!portfolio && portfoliosOrNull === null) || !initialFitDone
   const layers = holdRender ? [] : [
     ...(fadedData.length ? [parcelLayer('parcels-faded', fadedData, true)] : []),
     ...(showColumns && fadedData.length ? [columnLayer('total-columns-faded', fadedData, true)] : []),
@@ -1746,19 +1746,28 @@ export default function MapView() {
         maxWidth: '90vw',
       }}
     >
+      {/* Collapsed: a gear icon only (keeps clear of the centered title);
+          expanded: "Settings" header with a collapse caret. */}
       <div
         onClick={() => setSettingsOpen(v => !v)}
+        role="button"
+        aria-label={settingsOpen ? 'Collapse settings' : 'Settings'}
+        title={settingsOpen ? 'Collapse settings (s)' : 'Settings (s)'}
         style={{
-          padding: '8px 15px',
+          padding: settingsOpen ? '8px 15px' : 8,
           cursor: 'pointer',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: 8,
           userSelect: 'none',
         }}
       >
-        <span style={{ fontWeight: 'bold' }}>Settings</span>
-        <span style={{ fontSize: 10 }}>{settingsOpen ? '\u25B2' : '\u25BC'}</span>
+        <MdSettings size={settingsOpen ? 16 : 22} style={{ opacity: 0.9 }} />
+        {!!settingsOpen && <>
+          <span style={{ fontWeight: 'bold', flex: 1 }}>Settings</span>
+          <span style={{ fontSize: 10 }}>{'\u25B2'}</span>
+        </>}
       </div>
       {settingsOpen && (
         <div style={{ padding: '0 15px 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
