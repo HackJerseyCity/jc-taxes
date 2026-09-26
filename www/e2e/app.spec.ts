@@ -169,6 +169,18 @@ test.describe('Keyboard shortcuts', () => {
     await page.keyboard.press('[')
     await expect(page).toHaveURL(/[?&]y=22(&|$)/)
   })
+
+  test('j increments year, k decrements year', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?y=22')
+    await waitForLoad(page)
+
+    await page.keyboard.press('j')
+    await expect(page).toHaveURL(/[?&]y=23(&|$)/)
+
+    await page.keyboard.press('k')
+    await expect(page).toHaveURL(/[?&]y=22(&|$)/)
+  })
 })
 
 test.describe('Omnibar', () => {

@@ -187,20 +187,18 @@ export function useKeyboardShortcuts({
     }
   }, [])
 
-  // Year navigation: [ and ] to avoid arrow-key conflict with viewport panning
+  // Year navigation: k/j (and [/]) to avoid arrow-key conflict with viewport panning
   useAction('year-a', {
     label: 'Previous year',
     group: 'Navigation',
-    defaultBindings: ['['],
-    enabled: yearIdx > 0,
+    defaultBindings: ['k', '['],
     handler: () => { if (yearIdx > 0) setYear(AVAILABLE_YEARS[yearIdx - 1]) },
     actionPair: { pairId: 'year', index: 0 },
   })
   useAction('year-b', {
     label: 'Next year',
     group: 'Navigation',
-    defaultBindings: [']'],
-    enabled: yearIdx < AVAILABLE_YEARS.length - 1,
+    defaultBindings: ['j', ']'],
     handler: () => { if (yearIdx < AVAILABLE_YEARS.length - 1) setYear(AVAILABLE_YEARS[yearIdx + 1]) },
     actionPair: { pairId: 'year', index: 1 },
   })
