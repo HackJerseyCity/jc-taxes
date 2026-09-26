@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react'
 import { Map as MaplibreMap, type MapRef } from 'react-map-gl/maplibre'
 import DeckGL, { type DeckGLRef } from '@deck.gl/react'
 import { WebMercatorViewport, FlyToInterpolator, LinearInterpolator } from '@deck.gl/core'
@@ -11,7 +11,7 @@ import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
-import { boundsOf, hoodsOf, parseRegion, regionLabel, regionTest } from './regions'
+import { WARDS, boundsOf, hoodsOf, parseRegion, regionLabel, regionTest } from './regions'
 import { useTouchPitch } from './useTouchPitch'
 import { useParcelSearch } from './useParcelSearch'
 import { useTheme } from './theme'
@@ -127,11 +127,12 @@ function RollingYear({ year, fontSize = 56 }: { year: number, fontSize?: number 
   )
 }
 
-// Interactive year control for the title subtitle: prev/next steppers flank a
-// native <select> styled to read as inline title text; it's the app's primary
-// year control. Steps within `years`; the select snaps to the nearest integer so it
-// tracks fractional-year animation/playback without falling back.
 const SCRUB_W = 190
+// [singular, plural] feature noun per aggregation level.
+const AGG_NOUN: Record<string, [string, string]> = {
+  'block': ['block', 'blocks'], 'lot': ['lot', 'lots'], 'unit': ['unit', 'units'],
+  'census-block': ['census block', 'census blocks'], 'ward': ['ward', 'wards'],
+}
 // Native range thumbs sit inset by ~their radius at each end; the sparkline's
 // x-axis uses the same inset so each year's point lines up with its thumb spot.
 const THUMB_INSET = 8
@@ -160,23 +161,69 @@ function YearSparkline({ totals, year, width, height }: { totals: [number, numbe
   )
 }
 
+// Inline title picker: the visible label (current option text + ▼, dotted
+// underline) sizes the control; a transparent native <select> overlays it, so
+// the width tracks the current value rather than the longest option, while
+// tapping still opens the native (mobile-friendly) picker.
+function InlineSelect({ value, label, onChange, options, title, fontSize, fontWeight = 600, ariaLabel }: {
+  value: string | number
+  label: ReactNode
+  onChange: (v: string) => void
+  options: ReactNode
+  title: string
+  fontSize?: number
+  fontWeight?: number
+  ariaLabel?: string
+}) {
+  return (
+    <span
+      style={{
+        position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '0.25em',
+        pointerEvents: 'auto', fontSize, fontWeight, cursor: 'pointer',
+        borderBottom: '1px dotted rgba(255,255,255,0.7)', whiteSpace: 'nowrap',
+        maxWidth: '62vw',
+      }}
+      title={title}
+    >
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      <span style={{ fontSize: '0.55em', opacity: 0.85 }}>{'▼'}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={ariaLabel ?? title}
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          opacity: 0, cursor: 'pointer', fontSize: 16, margin: 0, padding: 0,
+        }}
+      >
+        {options}
+      </select>
+    </span>
+  )
+}
+
+// Interactive year control for the title subtitle: prev/next steppers flank a
+// native <select> styled to read as inline title text; it's the app's primary
+// year control. Steps within `years`; the select snaps to the nearest integer so it
+// tracks fractional-year animation/playback without falling back.
 function YearControl({ year, setYear, years, onPlay }: { year: number, setYear: (y: number) => void, years: number[], onPlay?: () => void }) {
   const cur = Math.round(year)
   const idx = years.indexOf(cur)
   const go = (d: number) => { const i = idx + d; if (i >= 0 && i < years.length) setYear(years[i]) }
-  const stepBtn = (dir: -1 | 1, disabled: boolean, glyph: string) => (
+  const btn = (onClick: () => void, disabled: boolean, glyph: string, label: string, fontSize = 15) => (
     <button
-      onClick={() => go(dir)}
+      onClick={onClick}
       disabled={disabled}
-      aria-label={dir < 0 ? 'Previous year' : 'Next year'}
+      aria-label={label}
+      title={label}
       style={{
         pointerEvents: 'auto',
         background: 'rgba(0,0,0,0.35)',
         color: 'white',
         border: '1px solid rgba(255,255,255,0.35)',
-        borderRadius: 4,
-        width: 20, height: 20, lineHeight: '18px', padding: 0,
-        fontSize: 14, fontWeight: 700, cursor: disabled ? 'default' : 'pointer',
+        borderRadius: 5,
+        width: 24, height: 24, lineHeight: '22px', padding: 0,
+        fontSize, fontWeight: 700, cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.3 : 0.9,
         fontFamily: 'inherit',
       }}
@@ -184,47 +231,18 @@ function YearControl({ year, setYear, years, onPlay }: { year: number, setYear: 
   )
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, verticalAlign: 'middle' }}>
-      {stepBtn(-1, idx <= 0, '‹')}
-      <span
-        style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', pointerEvents: 'auto' }}
+      {btn(() => go(-1), idx <= 0, '‹', 'Previous year')}
+      <InlineSelect
+        value={cur}
+        label={cur}
+        onChange={(v) => setYear(Number(v))}
         title="Change tax year"
-      >
-        <select
-          value={cur}
-          onChange={(e) => setYear(Number(e.target.value))}
-          style={{
-            appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
-            background: 'transparent', color: 'white', border: 'none',
-            fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 700,
-            padding: '0 14px 0 2px', margin: 0, cursor: 'pointer',
-            borderBottom: '1px dotted rgba(255,255,255,0.7)',
-            textShadow: 'inherit',
-          }}
-        >
-          {years.map((y) => (
-            <option key={y} value={y} style={{ color: '#111' }}>{y}</option>
-          ))}
-        </select>
-        <span style={{ position: 'absolute', right: 2, fontSize: 9, pointerEvents: 'none', opacity: 0.85 }}>{'▼'}</span>
-      </span>
-      {stepBtn(1, idx >= years.length - 1, '›')}
-      {onPlay && (
-        <button
-          onClick={onPlay}
-          aria-label="Play through years"
-          title="Play through years (space)"
-          style={{
-            pointerEvents: 'auto',
-            background: 'rgba(0,0,0,0.35)',
-            color: 'white',
-            border: '1px solid rgba(255,255,255,0.35)',
-            borderRadius: 4,
-            width: 20, height: 20, lineHeight: '18px', padding: 0,
-            fontSize: 10, cursor: 'pointer', opacity: 0.9,
-            fontFamily: 'inherit',
-          }}
-        >{'▶'}</button>
-      )}
+        fontSize={20}
+        fontWeight={700}
+        options={years.map((y) => <option key={y} value={y} style={{ color: '#111' }}>{y}</option>)}
+      />
+      {btn(() => go(1), idx >= years.length - 1, '›', 'Next year')}
+      {onPlay && btn(onPlay, false, '▶', 'Play through years', 11)}
     </span>
   )
 }
@@ -449,6 +467,8 @@ const LOADING_COLOR: [number, number, number, number] = [128, 128, 128, 60]
 // Parcels outside the active portfolio are dimmed to near-background so the
 // portfolio set pops (members keep their normal metric color).
 const PORTFOLIO_DIM: [number, number, number] = [90, 95, 105]
+// Minimum camera pitch when fitting to a focus (portfolio / region).
+const FOCUS_PITCH = 54
 // Min footprint for a feature to set the per-area height auto-fit (see `scalesHeight`).
 const MIN_SCALE_AREA_SQFT = 500
 // Hover / selection use a blue family that sits outside the red→yellow→green
@@ -1571,10 +1591,18 @@ export default function MapView() {
     const bounds = focusTest && boundsOf(displayData.filter(f => focusTest(f.properties)))
     if (bounds) {
       setViewState(v => {
-        const vp = new WebMercatorViewport({ ...v, width: window.innerWidth, height: window.innerHeight })
-        const { longitude, latitude, zoom } = vp.fitBounds(bounds, { padding: Math.min(80, window.innerWidth / 8) })
+        const width = window.innerWidth, height = window.innerHeight
+        // `fitBounds` ignores pitch: fit top-down, then tilt and push the center
+        // forward so the footprint sits in the lower ~60% of the screen,
+        // leaving headroom for the (tall) extruded bars.
+        const flat = new WebMercatorViewport({ ...v, pitch: 0, width, height })
+        const fit = flat.fitBounds(bounds, { padding: Math.min(80, width / 8) })
+        const zoom = Math.min(fit.zoom - 0.6, 16)
+        const pitch = Math.max(v.pitch, FOCUS_PITCH)
+        const tilted = new WebMercatorViewport({ ...v, longitude: fit.longitude, latitude: fit.latitude, zoom, pitch, width, height })
+        const [longitude, latitude] = tilted.unproject([width / 2, height * 0.4])
         return {
-          ...v, longitude, latitude, zoom: Math.min(zoom, 16.5),
+          ...v, longitude, latitude, zoom, pitch,
           ...(initial
             ? { transitionDuration: 0 }
             : { transitionDuration: 800, transitionInterpolator: new FlyToInterpolator() }),
@@ -1728,20 +1756,6 @@ export default function MapView() {
               />
             </details>
           </div>
-          <label>
-            View:{' '}
-            <select
-              value={aggregateMode}
-              onChange={(e) => setAggregateMode(e.target.value as AggregateMode)}
-              style={inputStyle}
-            >
-              <option value="ward">Wards</option>
-              <option value="census-block">Census Blocks</option>
-              <option value="block">Blocks</option>
-              <option value="lot">Lots (dissolved)</option>
-              <option value="unit">Units (individual)</option>
-            </select>
-          </label>
           {(aggregateMode === 'lot' || aggregateMode === 'unit') && (
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input
@@ -1752,18 +1766,6 @@ export default function MapView() {
               Color by year built
             </label>
           )}
-          <label>
-            Metric:{' '}
-            <select
-              value={metricMode}
-              onChange={(e) => setMetricMode(e.target.value as MetricMode)}
-              style={inputStyle}
-            >
-              <option value="per_sqft">$/sqft</option>
-              <option value="total">$ total</option>
-              {hasPopulation && <option value="per_capita">$/capita</option>}
-            </select>
-          </label>
           {aggregateMode === 'ward' && (<>
             <label>
               Geometry:{' '}
@@ -1957,7 +1959,7 @@ export default function MapView() {
           to clear. In animation context (?animYr) the year becomes a big
           odometer readout instead of the interactive control. */}
       {showTitle && (() => {
-        const aggLabel = ({ 'census-block': 'census block' } as Record<string, string>)[aggregateMode] ?? aggregateMode
+        const aggLabel = AGG_NOUN[String(aggregateMode)]?.[0] ?? String(aggregateMode)
         const headline = colorByYrBuilt ? 'Jersey City Parcels' : 'Jersey City Property Taxes'
         const subPrefix = colorByYrBuilt
           ? 'Colored by year built'
@@ -1978,55 +1980,116 @@ export default function MapView() {
           zIndex: 1,
           maxWidth: 'calc(100% - 20px)',
         }
-        const portfolioChip = focusLabel && portfolioStats ? (
-          <div style={{ marginTop: 6, textAlign: 'center' }}>
+        // Focus picker + totals chip: [Citywide / portfolio / ward / hood ▾] · $ · count.
+        // Totals track the displayed (rounded) year, so they move with playback.
+        const chipStats = focusTest ? portfolioStats : summary && { count: summary.count, paid: summary.paid }
+        const noun = chipStats?.count === 1 ? AGG_NOUN[String(aggregateMode)]?.[0] : AGG_NOUN[String(aggregateMode)]?.[1]
+        const focusValue = portfolio ? `pf:${portfolio}` : region ? `rg:${region}` : ''
+        const onFocus = (v: string) => {
+          if (v.startsWith('pf:')) { setRegion(''); setPortfolio(v.slice(3)) }
+          else if (v.startsWith('rg:')) { setPortfolio(''); setRegion(v.slice(3)) }
+          else { setPortfolio(''); setRegion('') }
+        }
+        const opt = (value: string, label: string) => <option key={value} value={value} style={{ color: '#111' }}>{label}</option>
+        const statsChip = (
+          <div style={{ marginTop: 8, textAlign: 'center' }}>
             <span
               style={{
                 pointerEvents: 'auto',
                 display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
-                maxWidth: '90vw',
-                background: 'rgba(0,0,0,0.72)', color: 'white', padding: '5px 6px 5px 12px',
-                borderRadius: 999, fontSize: 13, fontFamily: 'Inter, sans-serif',
-                border: '1px solid rgba(255,255,255,0.25)',
+                maxWidth: '92vw',
+                background: 'rgba(0,0,0,0.72)', color: 'white', padding: '5px 8px 5px 12px',
+                borderRadius: 999, fontSize: 14, fontFamily: 'Inter, sans-serif',
+                border: '1px solid rgba(255,255,255,0.25)', textShadow: 'none',
               }}
             >
-              <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{focusLabel}</span>
-              <span style={{ opacity: 0.85 }}>
-                · {abbr(portfolioStats.paid)} · {portfolioStats.count.toLocaleString()} parcel{portfolioStats.count === 1 ? '' : 's'}
-              </span>
-              <button
-                onClick={() => { setPortfolio(''); setRegion('') }}
-                title="Clear highlight"
-                aria-label="Clear highlight"
-                style={{
-                  pointerEvents: 'auto', cursor: 'pointer',
-                  background: 'rgba(255,255,255,0.15)', color: 'white',
-                  border: 'none', borderRadius: 999, width: 20, height: 20,
-                  lineHeight: '18px', padding: 0, fontSize: 12, fontWeight: 700,
-                  fontFamily: 'inherit',
-                }}
-              >✕</button>
+              <InlineSelect
+                value={focusValue}
+                label={focusLabel || 'Citywide'}
+                onChange={onFocus}
+                title="Highlight a developer portfolio, ward, or neighborhood"
+                ariaLabel="Focus"
+                options={<>
+                  {opt('', 'Citywide')}
+                  {portfolios.length > 0 && <optgroup label="Developers">{portfolios.map(p => opt(`pf:${p.key}`, p.label))}</optgroup>}
+                  <optgroup label="Wards">{WARDS.map(w => opt(`rg:ward:${w}`, `Ward ${w}`))}</optgroup>
+                  {hoods.length > 0 && <optgroup label="Neighborhoods">{hoods.map(h => opt(`rg:hood:${h}`, h))}</optgroup>}
+                  {activeRegion && portfolio && opt(focusValue, focusLabel)}
+                </>}
+              />
+              {chipStats && (
+                <Tooltip content={summary ? <SummaryStats s={summary} aggLabel={summaryAggLabel} /> : null}>
+                  <span style={{ opacity: 0.9, fontVariantNumeric: 'tabular-nums', cursor: 'help' }}>
+                    {abbr(chipStats.paid)} · {chipStats.count.toLocaleString()} {noun}
+                  </span>
+                </Tooltip>
+              )}
+              {focusTest && (
+                <button
+                  onClick={() => { setPortfolio(''); setRegion('') }}
+                  title="Clear highlight"
+                  aria-label="Clear highlight"
+                  style={{
+                    pointerEvents: 'auto', cursor: 'pointer',
+                    background: 'rgba(255,255,255,0.15)', color: 'white',
+                    border: 'none', borderRadius: 999, width: 20, height: 20,
+                    lineHeight: '18px', padding: 0, fontSize: 12, fontWeight: 700,
+                    fontFamily: 'inherit',
+                  }}
+                >✕</button>
+              )}
             </span>
           </div>
-        ) : null
+        )
         if (isAnim) {
           return (
             <div style={titleStyle}>
               <div style={{ fontSize: 14, fontWeight: 500, opacity: 0.85, marginBottom: 2 }}>{headline}</div>
               <RollingYear year={year} />
               <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>{subPrefix}</div>
-              {portfolioChip}
+              {focusLabel && statsChip}
             </div>
           )
         }
         return (
           <div style={titleStyle}>
-            <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2 }}>{headline}</div>
-            <div style={{ fontSize: 13, opacity: 0.95, marginTop: 4 }}>
-              {colorByYrBuilt ? 'Colored by year built' : subPrefix} {'·'}{' '}
+            <div style={{ fontSize: 'clamp(16px, 4.2vw, 20px)', fontWeight: 600, lineHeight: 1.2 }}>{headline}</div>
+            <div style={{ fontSize: 16, marginTop: 6, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '4px 8px' }}>
+              {colorByYrBuilt ? <span>Colored by year built</span> : (
+                <InlineSelect
+                  value={String(metricMode)}
+                  label={isTotal ? 'Total paid' : `Paid per ${metricMode === 'per_capita' ? 'capita' : 'sq ft'}`}
+                  onChange={(v) => setMetricMode(v as MetricMode)}
+                  title="Metric"
+                  options={<>
+                    {opt('per_sqft', 'Paid per sq ft')}
+                    {opt('total', 'Total paid')}
+                    {hasPopulation && opt('per_capita', 'Paid per capita')}
+                  </>}
+                />
+              )}
+              <span>
+                by{' '}
+                <InlineSelect
+                  value={String(aggregateMode)}
+                  label={aggLabel}
+                  onChange={(v) => setAggregateMode(v as AggregateMode)}
+                  title="View (aggregation level)"
+                  options={<>
+                    {opt('ward', 'ward')}
+                    {opt('census-block', 'census block')}
+                    {opt('block', 'block')}
+                    {opt('lot', 'lot')}
+                    {opt('unit', 'unit')}
+                  </>}
+                />
+              </span>
               <YearControl year={year} setYear={setYear} years={AVAILABLE_YEARS} onPlay={transportOpen ? undefined : togglePlay} />
             </div>
-            {portfolioChip}
+            {transportOpen && (
+              <div style={{ marginTop: 4 }}><RollingYear year={year} fontSize={44} /></div>
+            )}
+            {statsChip}
           </div>
         )
       })()}
@@ -2363,32 +2426,6 @@ export default function MapView() {
           <polygon points="20,36 23.5,21 20,24 16.5,21" fill="var(--text-secondary)" opacity="0.4" />
           <text x="20" y="3.5" textAnchor="middle" fontSize="6" fontWeight="bold" fill="#e53935">N</text>
         </svg>
-      </div>
-
-      {/* Status bar */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 10,
-          left: posRight ? 10 : undefined,
-          right: posRight ? undefined : 10,
-          background: 'var(--panel-bg)',
-          color: 'var(--text-primary)',
-          padding: '8px 12px',
-          borderRadius: 4,
-          fontSize: 12,
-          cursor: summary ? 'help' : undefined,
-        }}
-      >
-        {loading || !summary ? (
-          'Loading...'
-        ) : (
-          <Tooltip content={<SummaryStats s={summary} aggLabel={summaryAggLabel} />}>
-            <span style={{ borderBottom: '1px dotted var(--input-border)' }}>
-              {summary.count.toLocaleString()} parcels
-            </span>
-          </Tooltip>
-        )}
       </div>
     </div>
   )
