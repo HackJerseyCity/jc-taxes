@@ -11,6 +11,7 @@ import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
+import { fit3d } from './fit3d'
 import { aggAlias, hoodParam, metricAlias, portfolioAlias, wardParam, yearParam } from './urlParams'
 import { WARDS, boundsOf, hoodsOf, parseRegion, regionLabel, regionTest } from './regions'
 import { useTouchPitch } from './useTouchPitch'
@@ -1596,6 +1597,7 @@ export default function MapView() {
   const urlHadViewRef = useRef(new URLSearchParams(window.location.search).has('v'))
   const [initialFitDone, setInitialFitDone] = useState(() => urlHadViewRef.current || !(portfolio || region))
   const fitFocusRef = useRef<string | null>(null)
+  const titleRef = useRef<HTMLDivElement>(null)
   const focusKey = `${portfolio}|${region}`
   useEffect(() => {
     if (!displayData?.length) return
@@ -1604,21 +1606,27 @@ export default function MapView() {
     if (!initial && fitFocusRef.current === focusKey) return
     fitFocusRef.current = focusKey
     if (initial && urlHadViewRef.current) { setInitialFitDone(true); return }
-    const bounds = focusTest && boundsOf(displayData.filter(f => focusTest(f.properties)))
+    const members = focusTest ? displayData.filter(f => focusTest(f.properties)) : []
+    const bounds = boundsOf(members)
     if (bounds) {
+      const extrudedNow = polysExtruded || (isTotal && extruded)
+      const tops: [number, number, number][] = extrudedNow
+        ? members.map(f => {
+          const b = boundsOf([f])!
+          return [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2, getBarElevation(f)]
+        })
+        : []
       setViewState(v => {
         const width = window.innerWidth, height = window.innerHeight
-        // `fitBounds` ignores pitch: fit top-down, then tilt and push the center
-        // forward so the footprint sits in the lower ~60% of the screen,
-        // leaving headroom for the (tall) extruded bars.
-        const flat = new WebMercatorViewport({ ...v, pitch: 0, width, height })
-        const fit = flat.fitBounds(bounds, { padding: Math.min(80, width / 8) })
-        const zoom = Math.min(fit.zoom - 0.6, 16)
-        const pitch = Math.max(v.pitch, FOCUS_PITCH)
-        const tilted = new WebMercatorViewport({ ...v, longitude: fit.longitude, latitude: fit.latitude, zoom, pitch, width, height })
-        const [longitude, latitude] = tilted.unproject([width / 2, height * 0.4])
+        // Fit the extruded box (footprint × tallest bar) into the screen area
+        // left free by the title / chip overlay and the bottom controls.
+        const pad = Math.min(40, width / 12)
+        const top = (titleRef.current?.getBoundingClientRect().bottom ?? 120) + 12
+        const frame = { left: pad, right: width - pad, top, bottom: height - 70 }
+        const pitch = Math.max(Number(v.pitch), FOCUS_PITCH)
+        const cam = fit3d(bounds, tops, { pitch, bearing: Number(v.bearing) }, { width, height }, frame)
         return {
-          ...v, longitude, latitude, zoom, pitch,
+          ...v, ...cam,
           ...(initial
             ? { transitionDuration: 0 }
             : { transitionDuration: 800, transitionInterpolator: new FlyToInterpolator() }),
@@ -1626,7 +1634,7 @@ export default function MapView() {
       })
     }
     setInitialFitDone(true)
-  }, [focusKey, focusTest, displayData, setViewState, portfolio, portfoliosOrNull])
+  }, [focusKey, focusTest, displayData, setViewState, portfolio, portfoliosOrNull, getBarElevation, polysExtruded, isTotal, extruded])
 
   const [memberData, fadedData] = useMemo((): [ParcelFeature[], ParcelFeature[]] => {
     const all = effectiveData ?? []
@@ -2059,7 +2067,7 @@ export default function MapView() {
         )
         if (isAnim) {
           return (
-            <div style={titleStyle}>
+            <div ref={titleRef} style={titleStyle}>
               <div style={{ fontSize: 14, fontWeight: 500, opacity: 0.85, marginBottom: 2 }}>{headline}</div>
               <RollingYear year={year} />
               <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>{subPrefix}</div>
@@ -2068,7 +2076,7 @@ export default function MapView() {
           )
         }
         return (
-          <div style={titleStyle}>
+          <div ref={titleRef} style={titleStyle}>
             <div style={{ fontSize: 'clamp(16px, 4.2vw, 20px)', fontWeight: 600, lineHeight: 1.2 }}>{headline}</div>
             <div style={{ fontSize: 16, marginTop: 6, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '4px 8px' }}>
               {colorByYrBuilt ? <span>Colored by year built</span> : (
