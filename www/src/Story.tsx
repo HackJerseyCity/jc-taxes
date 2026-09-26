@@ -12,7 +12,7 @@ const MAP = 'https://jct.rbw.sh/'
 // 2025 "paid" totals by ward ($M), from taxes-2025-wards.geojson.
 const WARDS: { ward: string, paid: number }[] = [
   { ward: 'E', paid: 414.9 },
-  { ward: 'D', paid: 199.1 },
+  { ward: 'D', paid: 199.0 },
   { ward: 'F', paid: 195.6 },
   { ward: 'C', paid: 176.4 },
   { ward: 'A', paid: 128.1 },
@@ -113,7 +113,7 @@ export default function Story() {
         href={`${MAP}?v=40.7165-74.0370+13.9+45-25&agg=block&sel=11603`}
       >
         <p>
-          $40.9M (2015) → $55.9M (2018) → $80.8M (2025). $23.57/sqft over the
+          $40.9M (2015) → $55.9M (2018) → $80.8M (2025). $23.04/sqft over the
           whole superblock.
         </p>
       </View>
