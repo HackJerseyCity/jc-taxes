@@ -12,7 +12,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
 import { fit3d } from './fit3d'
-import { aggAlias, hoodParam, metricAlias, portfolioAlias, wardParam, yearParam } from './urlParams'
+import FocusPicker, { type FocusOption } from './FocusPicker'
+import { HOOD_SLUGS, aggAlias, hoodParam, metricAlias, portfolioAlias, wardParam, yearParam } from './urlParams'
 import { WARDS, boundsOf, hoodsOf, parseRegion, regionLabel, regionTest } from './regions'
 import { useTouchPitch } from './useTouchPitch'
 import { useParcelSearch } from './useParcelSearch'
@@ -199,11 +200,12 @@ function InlineSelect({ value, label, onChange, options, title, fontSize, fontWe
 // native <select> styled to read as inline title text; it's the app's primary
 // year control. Steps within `years`; the select snaps to the nearest integer so it
 // tracks fractional-year animation/playback without falling back.
-function YearControl({ year, setYear, years, onPlay }: { year: number, setYear: (y: number) => void, years: number[], onPlay?: () => void }) {
+function YearControl({ year, setYear, years, onPlay, big }: { year: number, setYear: (y: number) => void, years: number[], onPlay?: () => void, big?: boolean }) {
   const cur = Math.round(year)
   const idx = years.indexOf(cur)
   const go = (d: number) => { const i = idx + d; if (i >= 0 && i < years.length) setYear(years[i]) }
-  const btn = (onClick: () => void, disabled: boolean, glyph: string, label: string, fontSize = 15) => (
+  const bs = big ? 34 : 24
+  const btn = (onClick: () => void, disabled: boolean, glyph: string, label: string, fontSize = big ? 22 : 15) => (
     <button
       onClick={onClick}
       disabled={disabled}
@@ -215,7 +217,7 @@ function YearControl({ year, setYear, years, onPlay }: { year: number, setYear: 
         color: 'white',
         border: '1px solid rgba(255,255,255,0.35)',
         borderRadius: 5,
-        width: 24, height: 24, lineHeight: '22px', padding: 0,
+        width: bs, height: bs, lineHeight: `${bs - 2}px`, padding: 0,
         fontSize, fontWeight: 700, cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.3 : 0.9,
         fontFamily: 'inherit',
@@ -227,10 +229,10 @@ function YearControl({ year, setYear, years, onPlay }: { year: number, setYear: 
       {btn(() => go(-1), idx <= 0, '‹', 'Previous year')}
       <InlineSelect
         value={cur}
-        label={cur}
+        label={big ? <RollingYear year={year} fontSize={46} /> : cur}
         onChange={(v) => setYear(Number(v))}
         title="Change tax year"
-        fontSize={20}
+        fontSize={big ? 46 : 20}
         fontWeight={700}
         options={years.map((y) => <option key={y} value={y} style={{ color: '#111' }}>{y}</option>)}
       />
@@ -957,6 +959,15 @@ export default function MapView() {
 
   // Neighborhoods present in the loaded features (for omnibar region actions).
   const hoods = useMemo(() => hoodsOf(data), [data])
+  const focusOptions = useMemo((): FocusOption[] => [
+    { value: '', label: 'Citywide', keywords: ['all', 'city', 'clear'] },
+    ...portfolios.map(p => ({ value: `pf:${p.key}`, label: p.label, group: 'Developers', keywords: [p.key, ...(p.keywords ?? [])] })),
+    ...WARDS.map(w => ({ value: `rg:ward:${w}`, label: `Ward ${w}`, group: 'Wards' })),
+    ...hoods.map(h => {
+      const slug = HOOD_SLUGS[h]
+      return { value: `rg:hood:${h}`, label: h, group: 'Neighborhoods', keywords: slug ? [slug, `${slug}na`] : [] }
+    }),
+  ], [portfolios, hoods])
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -2015,31 +2026,24 @@ export default function MapView() {
           else { setPortfolio(''); setRegion('') }
         }
         const opt = (value: string, label: string) => <option key={value} value={value} style={{ color: '#111' }}>{label}</option>
+        const big = transportOpen
         const statsChip = (
-          <div style={{ marginTop: 8, textAlign: 'center' }}>
+          <div style={{ marginTop: big ? 0 : 8, textAlign: 'center' }}>
             <span
               style={{
                 pointerEvents: 'auto',
                 display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
                 maxWidth: '92vw',
                 background: 'rgba(0,0,0,0.72)', color: 'white', padding: '5px 8px 5px 12px',
-                borderRadius: 999, fontSize: 14, fontFamily: 'Inter, sans-serif',
+                borderRadius: 999, fontSize: big ? 19 : 15, fontFamily: 'Inter, sans-serif',
                 border: '1px solid rgba(255,255,255,0.25)', textShadow: 'none',
               }}
             >
-              <InlineSelect
+              <FocusPicker
                 value={focusValue}
                 label={focusLabel || 'Citywide'}
+                options={focusOptions}
                 onChange={onFocus}
-                title="Highlight a developer portfolio, ward, or neighborhood"
-                ariaLabel="Focus"
-                options={<>
-                  {opt('', 'Citywide')}
-                  {portfolios.length > 0 && <optgroup label="Developers">{portfolios.map(p => opt(`pf:${p.key}`, p.label))}</optgroup>}
-                  <optgroup label="Wards">{WARDS.map(w => opt(`rg:ward:${w}`, `Ward ${w}`))}</optgroup>
-                  {hoods.length > 0 && <optgroup label="Neighborhoods">{hoods.map(h => opt(`rg:hood:${h}`, h))}</optgroup>}
-                  {activeRegion && portfolio && opt(focusValue, focusLabel)}
-                </>}
               />
               {chipStats && (
                 <Tooltip content={summary ? <SummaryStats s={summary} aggLabel={summaryAggLabel} /> : null}>
@@ -2108,12 +2112,16 @@ export default function MapView() {
                   </>}
                 />
               </span>
-              <YearControl year={year} setYear={setYear} years={AVAILABLE_YEARS} onPlay={transportOpen ? undefined : togglePlay} />
+              {!big && <YearControl year={year} setYear={setYear} years={AVAILABLE_YEARS} onPlay={togglePlay} />}
             </div>
-            {transportOpen && (
-              <div style={{ marginTop: 4 }}><RollingYear year={year} fontSize={44} /></div>
-            )}
-            {statsChip}
+            {big ? (
+              // Player open: the year becomes a big rolling readout (still the
+              // picker), with the totals chip enlarged beside it.
+              <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '6px 14px' }}>
+                <YearControl year={year} setYear={setYear} years={AVAILABLE_YEARS} big />
+                {statsChip}
+              </div>
+            ) : statsChip}
           </div>
         )
       })()}
