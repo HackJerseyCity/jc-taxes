@@ -130,7 +130,7 @@ function RollingYear({ year, fontSize = 56 }: { year: number, fontSize?: number 
 // native <select> styled to read as inline title text; it's the app's primary
 // year control. Steps within `years`; the select snaps to the nearest integer so it
 // tracks fractional-year animation/playback without falling back.
-function YearControl({ year, setYear, years }: { year: number, setYear: (y: number) => void, years: number[] }) {
+function YearControl({ year, setYear, years, onPlay }: { year: number, setYear: (y: number) => void, years: number[], onPlay?: () => void }) {
   const cur = Math.round(year)
   const idx = years.indexOf(cur)
   const go = (d: number) => { const i = idx + d; if (i >= 0 && i < years.length) setYear(years[i]) }
@@ -178,6 +178,23 @@ function YearControl({ year, setYear, years }: { year: number, setYear: (y: numb
         <span style={{ position: 'absolute', right: 2, fontSize: 9, pointerEvents: 'none', opacity: 0.85 }}>{'▼'}</span>
       </span>
       {stepBtn(1, idx >= years.length - 1, '›')}
+      {onPlay && (
+        <button
+          onClick={onPlay}
+          aria-label="Play through years"
+          title="Play through years (space)"
+          style={{
+            pointerEvents: 'auto',
+            background: 'rgba(0,0,0,0.35)',
+            color: 'white',
+            border: '1px solid rgba(255,255,255,0.35)',
+            borderRadius: 4,
+            width: 20, height: 20, lineHeight: '18px', padding: 0,
+            fontSize: 10, cursor: 'pointer', opacity: 0.9,
+            fontFamily: 'inherit',
+          }}
+        >{'▶'}</button>
+      )}
     </span>
   )
 }
@@ -402,6 +419,8 @@ const LOADING_COLOR: [number, number, number, number] = [128, 128, 128, 60]
 // Parcels outside the active portfolio are dimmed to near-background so the
 // portfolio set pops (members keep their normal metric color).
 const PORTFOLIO_DIM: [number, number, number] = [90, 95, 105]
+// Min footprint for a feature to set the per-area height auto-fit (see `scalesHeight`).
+const MIN_SCALE_AREA_SQFT = 500
 // Hover / selection use a blue family that sits outside the red→yellow→green
 // $ gradient, so a highlighted parcel never reads as a data value. Hover is the
 // palest, selected the most saturated, selected+hover in between.
@@ -472,6 +491,10 @@ export default function MapView() {
   const [playing, setPlaying] = useUrlState('play', playParam)
   const [playSpeedRaw, setPlaySpeed] = useUrlState('pspeed', optNumParam)
   const playSpeed = playSpeedRaw ?? PLAY_SPEED_DEFAULT
+  // The transport bar is summoned by playing (title ▶ button, space, `?play=1`)
+  // and stays up while paused / scrubbing until dismissed with its ×.
+  const [transportOpen, setTransportOpen] = useState(!!playing)
+  useEffect(() => { if (playing) setTransportOpen(true) }, [playing])
   // Picking a year explicitly (dropdown / stepper / keyboard / search) commits
   // to the URL and cancels any in-flight playback or scrub.
   const setYear = useCallback((y: number) => {
@@ -501,6 +524,15 @@ export default function MapView() {
     setUrlYear(playYearRef.current)
     setPlayYear(null)
   }, [setUrlYear])
+  // Closing the player snaps to the nearest whole year (a paused-but-open
+  // player keeps the fractional frame, for sharing mid-transition views).
+  const closeTransport = useCallback(() => {
+    const y = playYearRef.current ?? urlYear
+    setPlaying(false)
+    setPlayYear(null)
+    setUrlYear(Math.round(y))
+    setTransportOpen(false)
+  }, [urlYear, setPlaying, setUrlYear])
   const cycleSpeed = useCallback(() => {
     const i = PLAY_SPEEDS.indexOf(playSpeed as typeof PLAY_SPEEDS[number])
     const next = PLAY_SPEEDS[(i + 1) % PLAY_SPEEDS.length]
@@ -511,7 +543,7 @@ export default function MapView() {
   const [portfolio, setPortfolio] = useUrlState('pf', stringParam(''))
   const portfolios = usePortfolios()
   const [pfDimRaw, setPfDim] = useUrlState('pfd', optNumParam)
-  const pfDim = pfDimRaw ?? 0.2
+  const pfDim = Number(pfDimRaw ?? 0)
   const [colorScaleRaw, setColorScaleRaw] = useUrlState('scale', optScaleParam)
   const [metricMode, setMetricModeRaw] = useUrlState('mt', stringParam('per_sqft'))
   const [wardGeom, setWardGeom] = useUrlState('wg', stringParam('merged'))
@@ -590,17 +622,35 @@ export default function MapView() {
     (v: number) => isTotal ? abbr(v) : `$${v.toFixed(2)}`,
     [isTotal],
   )
+  // Active developer/owner portfolio (`pf` param): a membership test at the
+  // current view granularity, used to dim non-members and to aggregate stats.
+  const activePortfolio = useMemo(() => findPortfolio(portfolios, portfolio), [portfolios, portfolio])
+  const portfolioTest = useMemo(() => {
+    const blockGranular = aggregateMode === 'block' || aggregateMode === 'ward' || aggregateMode === 'census-block'
+    return portfolioPredicate(activePortfolio, blockGranular)
+  }, [activePortfolio, aggregateMode])
+  // Features that set the auto-fit height scale: portfolio members only (when
+  // one is active, so its buildings fill the vertical range), and — for
+  // per-area metrics — not slivers, whose tiny (often coastline-clipped) area
+  // yields absurd $/sqft (e.g. a 1 sqft remnant at $20k/sqft) that would
+  // flatten every other bar. Excluded outliers are clamped to `maxHeight`.
+  const scalesHeight = useCallback((p: ParcelProperties | null | undefined): boolean => {
+    if (!p) return false
+    if (metricMode === 'per_sqft' && Number(p.area_sqft ?? 0) < MIN_SCALE_AREA_SQFT) return false
+    return !portfolioTest || portfolioTest(String(p.block ?? ''), String(p.lot ?? ''))
+  }, [metricMode, portfolioTest])
   const sortedVals = useMemo(() => {
     if (!data || data.length === 0) return []
     const field = metricField(metricMode)
     const vals: number[] = []
     for (const f of data) {
+      if (!scalesHeight(f.properties)) continue
       const v = f.properties?.[field] ?? 0
       if (v > 0) vals.push(v)
     }
     vals.sort((a, b) => a - b)
     return vals
-  }, [data, metricMode])
+  }, [data, metricMode, scalesHeight])
   // Set by the preload effect once all `animYr` years are fetched; max metric
   // value across every loaded year (per-feature). Falls back to `modeConf.max`
   // before the preload settles.
@@ -930,6 +980,7 @@ export default function MapView() {
           const features = yearCacheRef.current.get(cacheKey(aggregateMode, y))
           if (!features) continue
           for (const f of features) {
+            if (!scalesHeight(f.properties)) continue
             const v = f.properties?.[metricField(metricMode)] ?? 0
             if (v > m) m = v
           }
@@ -937,7 +988,7 @@ export default function MapView() {
         setCrossYearMax(m || null)
       })
     return () => { cancelled = true }
-  }, [animYr, playing, aggregateMode, metricMode, fetchYear, cacheKey])
+  }, [animYr, playing, aggregateMode, metricMode, fetchYear, cacheKey, scalesHeight])
 
   // In-app animation player. When `playing`, a rAF loop advances a fractional
   // year (`playYear`) in real time, which drives the existing per-feature
@@ -1283,13 +1334,6 @@ export default function MapView() {
   // In total-$ 3D the columns carry the metric, so the footprints behind them
   // are dimmed to stay readable as context rather than competing for attention.
   const polyAlpha = isTotal && extruded ? Math.round(fillAlpha * 0.3) : fillAlpha
-  // Active developer/owner portfolio (`pf` param): a membership test at the
-  // current view granularity, used to dim non-members and to aggregate stats.
-  const activePortfolio = useMemo(() => findPortfolio(portfolios, portfolio), [portfolios, portfolio])
-  const portfolioTest = useMemo(() => {
-    const blockGranular = aggregateMode === 'block' || aggregateMode === 'ward' || aggregateMode === 'census-block'
-    return portfolioPredicate(activePortfolio, blockGranular)
-  }, [activePortfolio, aggregateMode])
   // Features for the displayed (rounded) year. During playback `data` stays the
   // start year's set (the interpolation reads other years from the cache), so
   // totals must come from the per-year cache or they'd freeze at the start year.
@@ -1345,9 +1389,8 @@ export default function MapView() {
   const getColumnColor = useCallback((f: ParcelFeatureLike) => colorOf(f, fillAlpha), [colorOf, fillAlpha])
 
   const getBarElevation = useCallback((f: ParcelFeatureLike): number => {
-    const h = getMetricValue(f) * stableHeightScaleRef.current
-    return percentile != null ? Math.min(h, maxHeight) : h
-  }, [getMetricValue, percentile, maxHeight])
+    return Math.min(getMetricValue(f) * stableHeightScaleRef.current, maxHeight)
+  }, [getMetricValue, maxHeight])
 
   // Column anchors: cached per feature object (features are shared from the
   // per-(agg, year) cache, so this is computed once per parcel per geometry).
@@ -1396,11 +1439,12 @@ export default function MapView() {
       const p = f.properties
       ;(portfolioTest(String(p?.block ?? ''), String(p?.lot ?? '')) ? members : faded).push(f)
     }
-    return [members, faded]
-  }, [effectiveData, portfolioTest])
+    // Faded at 0%: non-members are hidden outright (not drawn, not pickable).
+    return [members, pfDim > 0 ? faded : []]
+  }, [effectiveData, portfolioTest, pfDim])
   const FADED_PARAMS = { depthWriteEnabled: false }
   const fillColorTriggers = [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, portfolio, pfDim]
-  const elevationTriggers = [year, stableHeightScaleRef.current, aggregateMode, metricMode, percentile, maxHeight]
+  const elevationTriggers = [year, stableHeightScaleRef.current, aggregateMode, metricMode, maxHeight]
   const parcelLayer = (id: string, layerData: ParcelFeature[], faded: boolean) => new GeoJsonLayer<ParcelProperties>({
     id,
     data: layerData,
@@ -1821,7 +1865,7 @@ export default function MapView() {
             <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2 }}>{headline}</div>
             <div style={{ fontSize: 13, opacity: 0.95, marginTop: 4 }}>
               {colorByYrBuilt ? 'Colored by year built' : subPrefix} {'·'}{' '}
-              <YearControl year={year} setYear={setYear} years={AVAILABLE_YEARS} />
+              <YearControl year={year} setYear={setYear} years={AVAILABLE_YEARS} onPlay={transportOpen ? undefined : togglePlay} />
             </div>
             {portfolioChip}
           </div>
@@ -1832,7 +1876,7 @@ export default function MapView() {
           speed. Advances `year` fractionally via requestAnimationFrame and
           drives the existing per-feature interpolation. Hidden in the scrns
           `?animYr` capture context, which owns the year itself. */}
-      {!animYr && (
+      {!animYr && transportOpen && (
         <div
           style={{
             position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)',
@@ -1882,6 +1926,18 @@ export default function MapView() {
             }}
           >
             {playSpeedLabel(playSpeed)}
+          </button>
+          <button
+            onClick={closeTransport}
+            title="Close player"
+            aria-label="Close player"
+            style={{
+              width: 24, height: 24, borderRadius: '50%', cursor: 'pointer', padding: 0,
+              background: 'transparent', color: 'var(--text-secondary)',
+              border: 'none', fontSize: 16, lineHeight: 1,
+            }}
+          >
+            {'×'}
           </button>
         </div>
       )}
