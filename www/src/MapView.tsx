@@ -666,7 +666,7 @@ export default function MapView() {
     if (!portfolioTest && !activeRegion) return null
     return (p: ParcelProperties | null | undefined): boolean => {
       if (!p) return false
-      if (portfolioTest && !portfolioTest(String(p.block ?? ''), String(p.lot ?? ''))) return false
+      if (portfolioTest && !portfolioTest(String(p.block ?? ''), String(p.lot ?? ''), p.qual)) return false
       return !activeRegion || regionTest(activeRegion, p)
     }
   }, [portfolioTest, activeRegion])

@@ -46,16 +46,21 @@ export function findPortfolio(portfolios: Portfolio[], key: string | undefined |
 // granularity. Block-granular views (block/ward/census-block) match on block;
 // lot/unit views match a whole-block portfolio's blocks, else the specific
 // `block-lot`.
+// `parcels` entries are `block-lot` (whole lot) or `block-lot-qual` (one unit of
+// a lot shared with other owners, e.g. a developer-held rental in a lot of sold
+// condos). Unit entries match only in unit view (lot features carry no `qual`),
+// so lot view undercounts rather than crediting other owners' units.
 export function portfolioPredicate(
   p: Portfolio | null,
   blockGranular: boolean,
-): ((block: string, lot: string) => boolean) | null {
+): ((block: string, lot: string, qual?: string) => boolean) | null {
   if (!p) return null
   const blocks = new Set(p.blocks ?? [])
   const parcels = new Set(p.parcels ?? [])
-  const parcelBlocks = new Set([...parcels].map(id => id.slice(0, id.lastIndexOf('-'))))
+  const parcelBlocks = new Set([...parcels].map(id => id.split('-')[0]))
   if (blockGranular) {
     return (block: string) => blocks.has(block) || parcelBlocks.has(block)
   }
-  return (block: string, lot: string) => blocks.has(block) || parcels.has(`${block}-${lot}`)
+  return (block: string, lot: string, qual?: string) =>
+    blocks.has(block) || parcels.has(`${block}-${lot}`) || (!!qual && parcels.has(`${block}-${lot}-${qual}`))
 }

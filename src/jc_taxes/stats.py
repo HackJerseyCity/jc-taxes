@@ -123,10 +123,14 @@ def _load_portfolios(path: Path) -> list[dict]:
 
 def _portfolio_matcher(p: dict):
     """Parcel-granular membership predicate for a portfolio (mirrors
-    `portfolioPredicate(p, blockGranular=false)` in `portfolios.ts`)."""
+    `portfolioPredicate(p, blockGranular=false)` in `portfolios.ts`). `parcels`
+    entries are `block-lot` (whole lot) or `block-lot-qual` (one unit of a lot
+    shared with other owners)."""
     blocks = set(p.get("blocks") or [])
     parcels = set(p.get("parcels") or [])
-    return lambda block, lot: block in blocks or f"{block}-{lot}" in parcels
+    return lambda block, lot, qual: (
+        block in blocks or f"{block}-{lot}" in parcels or (bool(qual) and f"{block}-{lot}-{qual}" in parcels)
+    )
 
 
 @click.command()
@@ -167,18 +171,23 @@ def stats(cache_dir: Path | None, force: bool, out: Path, portfolios_path: Path,
                 "paid": round(paid, 2),
                 "billed": round(billed, 2),
             }
-            # Portfolios are parcel sets → compute against lot-level features.
-            if agg == "lot":
+            # Portfolios are parcel (or unit) sets → compute against unit-level
+            # features; `count` is distinct block-lots matched.
+            if agg == "unit":
                 ys = str(year)
+                seen: dict[str, set] = {key: set() for key in matchers}
                 for f in feats:
                     pr = f["properties"]
                     block = str(pr.get("block") or "")
                     lot = str(pr.get("lot") or "")
+                    qual = str(pr.get("qual") or "")
                     for key, match in matchers.items():
-                        if match(block, lot):
+                        if match(block, lot, qual):
                             tgt = pf_totals[key]["years"][ys]
-                            tgt["count"] += 1
+                            seen[key].add(f"{block}-{lot}")
                             tgt["paid"] += pr.get("paid") or 0
+                for key, lots in seen.items():
+                    pf_totals[key]["years"][ys]["count"] = len(lots)
 
     for pf in pf_totals.values():
         for yv in pf["years"].values():
