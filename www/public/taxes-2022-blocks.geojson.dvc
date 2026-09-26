@@ -1,6 +1,6 @@
 outs:
-- md5: 6b79868064a98f9506c32084446ca54d
-  size: 2759999
+- md5: 8d859194cb545500fc88ccdef489bf81
+  size: 2802344
   hash: md5
   path: taxes-2022-blocks.geojson
 meta:
