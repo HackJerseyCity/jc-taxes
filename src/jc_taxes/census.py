@@ -10,6 +10,8 @@ from .paths import ROOT
 CENSUS_DIR = ROOT / "census"
 BLOCKS_GEO = CENSUS_DIR / "hudson-blocks-geo.geojson"
 WARDS_GEO = CENSUS_DIR / "jc-wards.geojson"
+# JC Open Data `jersey-city-neighborhoods` (53 neighborhoods in 6 areas), props trimmed to `hood` / `area`.
+HOODS_GEO = CENSUS_DIR / "jc-neighborhoods.geojson"
 
 
 def load_jc_wards() -> gpd.GeoDataFrame:
@@ -22,6 +24,12 @@ def load_jc_wards() -> gpd.GeoDataFrame:
     gdf = gdf[["ward", "council_person", "geometry"]].copy()
     gdf = gdf.set_crs("EPSG:4326", allow_override=True)
     return gdf
+
+
+def load_jc_neighborhoods() -> gpd.GeoDataFrame:
+    """Load JC neighborhood boundaries. Returns GeoDataFrame with columns: hood, area, geometry."""
+    gdf = gpd.read_file(HOODS_GEO)
+    return gdf.set_crs("EPSG:4326", allow_override=True)[["hood", "area", "geometry"]]
 
 
 def load_jc_census_blocks() -> gpd.GeoDataFrame:

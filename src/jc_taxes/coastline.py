@@ -100,3 +100,28 @@ def clip_to_land(geom_wgs84: shapely.Geometry | None) -> shapely.Geometry | None
     if geom_wgs84.intersects(wu):
         geom_wgs84 = geom_wgs84.difference(wu)
     return _polygonal(geom_wgs84)
+
+
+# Remnants smaller than this fraction of the original parcel are treated as fully
+# underwater (e.g. a 1 sqft sliver of a 19-acre riparian lot).
+MIN_LAND_FRAC = 0.01
+
+
+def clip_parcel(geom_wgs84: shapely.Geometry | None, improved: bool) -> shapely.Geometry | None:
+    """Coastline crop for one parcel (WGS84 in/out).
+
+    Improved parcels (building assessment > 0: piers, docks, marine terminals) are
+    kept whole: TIGER's water mask runs to the bulkhead line, so clipping would
+    delete built piers (e.g. Pier 203) or leave a sliver whose $/sqft explodes.
+    Unimproved parcels are clipped to land, and a remnant under `MIN_LAND_FRAC`
+    of the original returns None (treated as underwater; its payments fold onto
+    neighboring lots like any other geometry-less lot).
+    """
+    if geom_wgs84 is None or geom_wgs84.is_empty or improved:
+        return geom_wgs84
+    clipped = clip_to_land(geom_wgs84)
+    if clipped is None or clipped.is_empty:
+        return None
+    if clipped.area < geom_wgs84.area * MIN_LAND_FRAC:
+        return None
+    return clipped

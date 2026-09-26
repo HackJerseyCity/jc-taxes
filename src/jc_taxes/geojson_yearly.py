@@ -31,8 +31,8 @@ def _iter_cache_jsons(cache_dir: Path):
             continue
 
 from .building_desc import parse_building_desc
-from .census import load_jc_census_blocks, load_jc_wards
-from .coastline import clip_to_land
+from .census import load_jc_census_blocks, load_jc_neighborhoods, load_jc_wards
+from .coastline import clip_parcel
 from .paths import CACHE, DATA, PARCELS, PARCELS_COMBINED
 
 # Transformers for different CRS scenarios
@@ -159,6 +159,32 @@ def load_building_info(data_dir: Path = DATA) -> dict[str, dict]:
 
 
 @lru_cache(maxsize=None)
+def load_improved_lots(data_dir: Path = DATA) -> set[str]:
+    """"block-lot" keys with any building assessment (exempt from the coastline clip)."""
+    df = pd.read_parquet(data_dir / "taxrecords_enriched.parquet", columns=["join_key", "bldg_assmnt"])
+    return set(df.loc[df["bldg_assmnt"].fillna(0) > 0, "join_key"].astype(str))
+
+
+def tag_regions(features: list[dict]) -> None:
+    """Set `ward` and `hood` (neighborhood) on each feature, by its representative point.
+
+    Features whose point falls outside every polygon (e.g. slivers past a boundary's
+    shoreline) are left untagged.
+    """
+    pts = [shapely.geometry.shape(f["geometry"]).representative_point() for f in features]
+    for gdf, col in ((load_jc_wards(), "ward"), (load_jc_neighborhoods(), "hood")):
+        tree = shapely.STRtree(gdf.geometry.values)
+        names = gdf[col].tolist()
+        pt_idx, poly_idx = tree.query(pts, predicate="within")
+        tagged: set[int] = set()
+        for i, j in zip(pt_idx, poly_idx):
+            if i in tagged:
+                continue
+            tagged.add(i)
+            features[i]["properties"][col] = names[j]
+        err(f"  Tagged {len(tagged):,}/{len(features):,} features with `{col}`")
+
+
 def load_unit_sqft(data_dir: Path = DATA) -> dict[str, int]:
     """Load per-unit square footage from taxrecords_enriched.parquet.
 
@@ -359,6 +385,7 @@ def generate_yearly_geojson(
     # Load building info from enriched tax records
     err("Loading building info from enriched tax records...")
     building_info = load_building_info()
+    improved_lots = load_improved_lots()
     unit_sqft = load_unit_sqft()
     err(f"  {len(building_info):,} lots with building info, {len(unit_sqft):,} units with sqft")
 
@@ -457,24 +484,26 @@ def generate_yearly_geojson(
                     geom = shapely.geometry.shape(json.loads(geo_shape))
         return geom
 
-    def process_geometry(geom):
+    def to_wgs84(geom):
+        return shapely.ops.transform(njsp_to_wgs84.transform, geom) if is_njsp(geom) else geom
+
+    def lot_improved(row) -> bool:
+        return f"{str(row.get('block', '')).strip()}-{str(row.get('lot', '')).strip()}" in improved_lots
+
+    def process_geometry(geom, improved: bool | None):
         """Convert geometry to WGS84, clip to land, and calculate area in sqft.
 
-        Coastline clip (Mode B): the geometry is cropped to the land mask before
-        `area_sqft` is computed, so both the rendered polygon and $/sqft exclude
-        underwater area.
+        Coastline clip (Mode B, see `clip_parcel`): the geometry is cropped to the
+        land mask before `area_sqft` is computed, so both the rendered polygon and
+        $/sqft exclude underwater area. `improved=None` means the caller already
+        clipped (per lot, before dissolving).
         """
         if geom is None:
             return None, None, 0.0
 
-        # Normalize to WGS84 first.
-        if is_njsp(geom):
-            geom_wgs84 = shapely.ops.transform(njsp_to_wgs84.transform, geom)
-        else:
-            geom_wgs84 = geom
-
-        # Clip to land (subtract water); recompute area from the CLIPPED geometry.
-        geom_wgs84 = clip_to_land(geom_wgs84)
+        geom_wgs84 = to_wgs84(geom)
+        if improved is not None:
+            geom_wgs84 = clip_parcel(geom_wgs84, improved)
         if geom_wgs84 is None or geom_wgs84.is_empty:
             return None, None, 0.0
 
@@ -497,7 +526,7 @@ def generate_yearly_geojson(
             if geom is None:
                 continue
             try:
-                geometry, _, area_sqft = process_geometry(geom)
+                geometry, _, area_sqft = process_geometry(geom, lot_improved(row))
                 if geometry is None:
                     continue
             except Exception:
@@ -571,19 +600,28 @@ def generate_yearly_geojson(
                     "lot": str(row.get("lot", "")).strip() if aggregate != "block" else None,
                     "addr_key": addr_key,
                 }
-            agg_geoms[key].append(geom)
+            # Clip per lot before dissolving, so a block keeps its piers (improved
+            # lots) while shedding underwater riparian lots.
+            try:
+                clipped = clip_parcel(to_wgs84(geom), lot_improved(row))
+            except Exception:
+                continue
+            if clipped is not None and not clipped.is_empty:
+                agg_geoms[key].append(clipped)
 
         err(f"Dissolving {len(agg_geoms)} {level}s...")
-        # Pass 1: dissolve + clip + measure.
+        # Pass 1: dissolve (members already clipped) + measure.
         processed: dict[str, tuple] = {}  # key -> (geometry, area_sqft)
         present = []                       # (join_key, block, lot, area)
         for key, geoms in agg_geoms.items():
+            if not geoms:
+                continue
             try:
                 if len(geoms) == 1:
                     dissolved = geoms[0]
                 else:
                     dissolved = shapely.ops.unary_union(geoms)
-                geometry, _, area_sqft = process_geometry(dissolved)
+                geometry, _, area_sqft = process_geometry(dissolved, None)
                 if geometry is None:
                     continue
             except Exception:
@@ -638,6 +676,7 @@ def generate_yearly_geojson(
             features.append({"type": "Feature", "geometry": geometry, "properties": properties})
 
     err(f"Generated {len(features)} features")
+    tag_regions(features)
 
     geojson = {
         "type": "FeatureCollection",
@@ -653,7 +692,11 @@ def generate_yearly_geojson(
     return geojson
 
 
-def _build_lot_gdf(parcels: pd.DataFrame, payments: pd.DataFrame) -> gpd.GeoDataFrame:
+def _build_lot_gdf(
+    parcels: pd.DataFrame,
+    payments: pd.DataFrame,
+    improved_lots: set[str],
+) -> gpd.GeoDataFrame:
     """Build lot-level GeoDataFrame in WGS84 with aggregated payments.
 
     Dissolves condo units into lots, converts all geometries to WGS84.
@@ -712,7 +755,7 @@ def _build_lot_gdf(parcels: pd.DataFrame, payments: pd.DataFrame) -> gpd.GeoData
             dissolved = geoms[0] if len(geoms) == 1 else shapely.ops.unary_union(geoms)
             if dissolved.bounds[0] > 1000:
                 dissolved = shapely.ops.transform(njsp_to_wgs84.transform, dissolved)
-            dissolved = clip_to_land(dissolved)
+            dissolved = clip_parcel(dissolved, key in improved_lots)
             if dissolved is None or dissolved.is_empty:
                 continue
         except Exception:
@@ -766,7 +809,7 @@ def _generate_census_geojson(
     output_dir: Path,
 ) -> dict:
     """Generate census-block or ward level GeoJSON via area-weighted allocation."""
-    lot_gdf = _build_lot_gdf(parcels, payments)
+    lot_gdf = _build_lot_gdf(parcels, payments, load_improved_lots())
     cb_gdf = load_jc_census_blocks()
 
     # Project to NJSP for accurate area computation
