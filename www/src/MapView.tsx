@@ -11,6 +11,7 @@ import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
+import { boundsOf, hoodsOf, parseRegion, regionLabel, regionTest } from './regions'
 import { useTouchPitch } from './useTouchPitch'
 import { useParcelSearch } from './useParcelSearch'
 import { useTheme } from './theme'
@@ -542,6 +543,7 @@ export default function MapView() {
   const [aggregateMode, setAggregateModeRaw] = useUrlState('agg', stringParam('block'))
   const [portfolio, setPortfolio] = useUrlState('pf', stringParam(''))
   const portfolios = usePortfolios()
+  const [region, setRegion] = useUrlState('rg', stringParam(''))
   const [pfDimRaw, setPfDim] = useUrlState('pfd', optNumParam)
   const pfDim = Number(pfDimRaw ?? 0)
   const [colorScaleRaw, setColorScaleRaw] = useUrlState('scale', optScaleParam)
@@ -609,7 +611,6 @@ export default function MapView() {
   // Derived: maxVal is always the mode default (no longer user-facing)
   const maxVal = modeConf.max
   // Effective max height: URL value if explicitly set, else mode default
-  const maxHeight = maxHeightRaw ?? modeConf.maxHeight
   const percentile = percentileRaw
   const modeColumnRadius = modeConf.columnRadius ?? 30
   // Guard `?cr=0` / negatives from the URL: a zero radius renders nothing, which
@@ -629,6 +630,32 @@ export default function MapView() {
     const blockGranular = aggregateMode === 'block' || aggregateMode === 'ward' || aggregateMode === 'census-block'
     return portfolioPredicate(activePortfolio, blockGranular)
   }, [activePortfolio, aggregateMode])
+  // Focus = portfolio ∧ region (`rg`: ward / neighborhood). Non-members are
+  // faded (or hidden at `pfd=0`); stats + height auto-fit cover members only.
+  const activeRegion = useMemo(() => parseRegion(region), [region])
+  const focusTest = useMemo(() => {
+    if (!portfolioTest && !activeRegion) return null
+    return (p: ParcelProperties | null | undefined): boolean => {
+      if (!p) return false
+      if (portfolioTest && !portfolioTest(String(p.block ?? ''), String(p.lot ?? ''))) return false
+      return !activeRegion || regionTest(activeRegion, p)
+    }
+  }, [portfolioTest, activeRegion])
+  // With a focus, heights auto-fit to its members; cap the tallest bar at the
+  // focus set's ground extent (bbox diagonal) so a neighborhood of rowhouses
+  // doesn't become 4.5 km spikes. An explicit `mh` always wins.
+  const focusExtentM = useMemo(() => {
+    if (!focusTest || !data) return null
+    const b = boundsOf(data.filter(f => focusTest(f.properties)))
+    if (!b) return null
+    const [[x0, y0], [x1, y1]] = b
+    const mPerDeg = 111_320
+    return Math.hypot((x1 - x0) * mPerDeg * Math.cos((y0 + y1) / 2 * Math.PI / 180), (y1 - y0) * mPerDeg)
+  }, [focusTest, data])
+  const maxHeight = maxHeightRaw ?? (
+    focusExtentM != null ? Math.min(modeConf.maxHeight, Math.max(300, focusExtentM)) : modeConf.maxHeight
+  )
+  const focusLabel = [activePortfolio?.label, activeRegion && regionLabel(activeRegion)].filter(Boolean).join(' · ')
   // Features that set the auto-fit height scale: portfolio members only (when
   // one is active, so its buildings fill the vertical range), and — for
   // per-area metrics — not slivers, whose tiny (often coastline-clipped) area
@@ -637,8 +664,8 @@ export default function MapView() {
   const scalesHeight = useCallback((p: ParcelProperties | null | undefined): boolean => {
     if (!p) return false
     if (metricMode === 'per_sqft' && Number(p.area_sqft ?? 0) < MIN_SCALE_AREA_SQFT) return false
-    return !portfolioTest || portfolioTest(String(p.block ?? ''), String(p.lot ?? ''))
-  }, [metricMode, portfolioTest])
+    return !focusTest || focusTest(p)
+  }, [metricMode, focusTest])
   const sortedVals = useMemo(() => {
     if (!data || data.length === 0) return []
     const field = metricField(metricMode)
@@ -860,6 +887,9 @@ export default function MapView() {
     }
   }, [])
 
+  // Neighborhoods present in the loaded features (for omnibar region actions).
+  const hoods = useMemo(() => hoodsOf(data), [data])
+
   // Keyboard shortcuts
   useKeyboardShortcuts({
     year, setYear,
@@ -876,6 +906,7 @@ export default function MapView() {
     settingsPos, setSettingsPos,
     extruded, setExtruded,
     portfolios, setPortfolio,
+    hoods, setRegion,
     playing, togglePlay,
   })
 
@@ -1399,23 +1430,22 @@ export default function MapView() {
     return { count: displayData.length, paid, billed, area, withPaid, yr }
   }, [displayData, yearRounded])
   const portfolioStats = useMemo(() => {
-    if (!portfolioTest || !displayData) return null
+    if (!focusTest || !displayData) return null
     let count = 0, paid = 0
     for (const f of displayData) {
       const p = f.properties
-      if (portfolioTest(String(p?.block ?? ''), String(p?.lot ?? ''))) { count++; paid += p?.paid ?? 0 }
+      if (focusTest(p)) { count++; paid += p?.paid ?? 0 }
     }
     return { count, paid }
-  }, [portfolioTest, displayData])
+  }, [focusTest, displayData])
 
   const colorOf = useCallback((f: ParcelFeatureLike, alpha: number): [number, number, number, number] => {
     if (staleData) return LOADING_COLOR
     const id = getFeatureId(f)
     if (id === selectedId) return id === hoveredId ? SELECTED_HOVER_COLOR : SELECTED_COLOR
     if (id === hoveredId) return HOVER_COLOR
-    if (portfolioTest) {
-      const p = f.properties
-      if (!portfolioTest(String(p?.block ?? ''), String(p?.lot ?? ''))) {
+    if (focusTest) {
+      if (!focusTest(f.properties)) {
         return [...PORTFOLIO_DIM, Math.round(alpha * pfDim)]
       }
     }
@@ -1425,7 +1455,7 @@ export default function MapView() {
       return interpolateColor(yr, colorStops, colorMax, colorScale, alpha, colorMin)
     }
     return interpolateColor(getMetricValue(f), colorStops, maxVal, colorScale, alpha)
-  }, [staleData, colorStops, colorScale, maxVal, hoveredId, selectedId, getFeatureId, getMetricValue, colorByYrBuilt, colorMax, colorMin, portfolioTest, pfDim])
+  }, [staleData, colorStops, colorScale, maxVal, hoveredId, selectedId, getFeatureId, getMetricValue, colorByYrBuilt, colorMax, colorMin, focusTest, pfDim])
   const getFillColor = useCallback((f: ParcelFeatureLike) => colorOf(f, polyAlpha), [colorOf, polyAlpha])
   const getColumnColor = useCallback((f: ParcelFeatureLike) => colorOf(f, fillAlpha), [colorOf, fillAlpha])
 
@@ -1472,19 +1502,41 @@ export default function MapView() {
   // `depthWriteEnabled`), then members with normal depth — members are never
   // hidden by faded geometry. Both stay pickable with the same id scheme, so
   // hover / select work across them. Without a portfolio: one layer, as before.
+  // Fly to the focus set when the user picks a new portfolio / region (skipped
+  // for the focus present at load, so a shared link's camera is kept).
+  const fitFocusRef = useRef<string | null>(null)
+  const focusKey = `${portfolio}|${region}`
+  useEffect(() => {
+    if (!displayData?.length) return
+    if (fitFocusRef.current === null) { fitFocusRef.current = focusKey; return }
+    if (fitFocusRef.current === focusKey) return
+    fitFocusRef.current = focusKey
+    if (!focusTest) return
+    const bounds = boundsOf(displayData.filter(f => focusTest(f.properties)))
+    if (!bounds) return
+    setViewState(v => {
+      const vp = new WebMercatorViewport({ ...v, width: window.innerWidth, height: window.innerHeight })
+      const { longitude, latitude, zoom } = vp.fitBounds(bounds, { padding: Math.min(80, window.innerWidth / 8) })
+      return {
+        ...v, longitude, latitude, zoom: Math.min(zoom, 16.5),
+        transitionDuration: 800, transitionInterpolator: new FlyToInterpolator(),
+      }
+    })
+  }, [focusKey, focusTest, displayData, setViewState])
+
   const [memberData, fadedData] = useMemo((): [ParcelFeature[], ParcelFeature[]] => {
     const all = effectiveData ?? []
-    if (!portfolioTest) return [all, []]
+    if (!focusTest) return [all, []]
     const members: ParcelFeature[] = [], faded: ParcelFeature[] = []
     for (const f of all) {
       const p = f.properties
-      ;(portfolioTest(String(p?.block ?? ''), String(p?.lot ?? '')) ? members : faded).push(f)
+      ;(focusTest(p) ? members : faded).push(f)
     }
     // Faded at 0%: non-members are hidden outright (not drawn, not pickable).
     return [members, pfDim > 0 ? faded : []]
-  }, [effectiveData, portfolioTest, pfDim])
+  }, [effectiveData, focusTest, pfDim])
   const FADED_PARAMS = { depthWriteEnabled: false }
-  const fillColorTriggers = [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, portfolio, pfDim]
+  const fillColorTriggers = [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, portfolio, region, pfDim]
   const elevationTriggers = [year, stableHeightScaleRef.current, aggregateMode, metricMode, maxHeight]
   const parcelLayer = (id: string, layerData: ParcelFeature[], faded: boolean) => new GeoJsonLayer<ParcelProperties>({
     id,
@@ -1773,7 +1825,7 @@ export default function MapView() {
               style={{ width: 80 }}
             />
           </label>
-          {activePortfolio && (
+          {focusTest && (
             <label style={{ display: 'flex', alignItems: 'center', gap: 8 }} title="Opacity of parcels outside the active portfolio">
               Faded: {Math.round(pfDim * 100)}%
               <input
@@ -1860,7 +1912,7 @@ export default function MapView() {
           zIndex: 1,
           maxWidth: 'calc(100% - 20px)',
         }
-        const portfolioChip = activePortfolio && portfolioStats ? (
+        const portfolioChip = focusLabel && portfolioStats ? (
           <div style={{ marginTop: 6, textAlign: 'center' }}>
             <span
               style={{
@@ -1872,14 +1924,14 @@ export default function MapView() {
                 border: '1px solid rgba(255,255,255,0.25)',
               }}
             >
-              <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{activePortfolio.label}</span>
+              <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{focusLabel}</span>
               <span style={{ opacity: 0.85 }}>
                 · {abbr(portfolioStats.paid)} · {portfolioStats.count.toLocaleString()} parcel{portfolioStats.count === 1 ? '' : 's'}
               </span>
               <button
-                onClick={() => setPortfolio('')}
-                title="Clear portfolio highlight"
-                aria-label="Clear portfolio highlight"
+                onClick={() => { setPortfolio(''); setRegion('') }}
+                title="Clear highlight"
+                aria-label="Clear highlight"
                 style={{
                   pointerEvents: 'auto', cursor: 'pointer',
                   background: 'rgba(255,255,255,0.15)', color: 'white',

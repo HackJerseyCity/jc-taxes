@@ -2,6 +2,7 @@ import { useAction, useActions, type ActionConfig } from 'use-kbd'
 import { LinearInterpolator } from '@deck.gl/core'
 import { useCallback, useEffect, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
 import type { Portfolio } from './portfolios'
+import { WARDS } from './regions'
 
 const AVAILABLE_YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
 
@@ -81,6 +82,8 @@ type Props = {
   setExtruded: (v: boolean) => void
   portfolios: Portfolio[]
   setPortfolio: (v: string) => void
+  hoods: string[]
+  setRegion: (v: string) => void
   playing: boolean
   togglePlay: () => void
 }
@@ -110,6 +113,8 @@ export function useKeyboardShortcuts({
   setExtruded,
   portfolios,
   setPortfolio,
+  hoods,
+  setRegion,
   playing,
   togglePlay,
 }: Props) {
@@ -307,6 +312,36 @@ export function useKeyboardShortcuts({
     return acts
   }, [portfolios, setPortfolio])
   useActions(portfolioActions)
+
+  // Geographic focus (`rg`): wards + neighborhoods. Same fade/hide + totals chip
+  // as portfolios, and the camera flies to the selection.
+  const regionActions = useMemo(() => {
+    const acts: Record<string, ActionConfig> = {}
+    for (const w of WARDS) {
+      acts[`region:ward:${w}`] = {
+        label: `Ward ${w}`,
+        group: 'Regions',
+        keywords: ['ward', `ward ${w.toLowerCase()}`, 'region', 'council'],
+        handler: () => setRegion(`ward:${w}`),
+      }
+    }
+    for (const h of hoods) {
+      acts[`region:hood:${h}`] = {
+        label: `Neighborhood: ${h}`,
+        group: 'Regions',
+        keywords: ['neighborhood', 'hood', 'region', h.toLowerCase()],
+        handler: () => setRegion(`hood:${h}`),
+      }
+    }
+    acts['region:clear'] = {
+      label: 'Clear ward / neighborhood',
+      group: 'Regions',
+      keywords: ['clear region', 'all wards', 'citywide'],
+      handler: () => setRegion(''),
+    }
+    return acts
+  }, [hoods, setRegion])
+  useActions(regionActions)
 
   // Cycle metrics: $/sqft → total $ → ($/capita, where population data exists)
   const metricCycle = hasPopulation ? ['per_sqft', 'total', 'per_capita'] : ['per_sqft', 'total']
