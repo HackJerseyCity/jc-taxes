@@ -131,6 +131,35 @@ function RollingYear({ year, fontSize = 56 }: { year: number, fontSize?: number 
 // native <select> styled to read as inline title text; it's the app's primary
 // year control. Steps within `years`; the select snaps to the nearest integer so it
 // tracks fractional-year animation/playback without falling back.
+const SCRUB_W = 190
+// Native range thumbs sit inset by ~their radius at each end; the sparkline's
+// x-axis uses the same inset so each year's point lines up with its thumb spot.
+const THUMB_INSET = 8
+
+// Per-year totals drawn behind the transport scrubber: an area sparkline with a
+// dot per year and a marker at the current (fractional) year. Tapping the track
+// already scrubs, so the chart doubles as a year picker.
+function YearSparkline({ totals, year, width, height }: { totals: [number, number][], year: number, width: number, height: number }) {
+  const y0 = totals[0][0], y1 = totals[totals.length - 1][0]
+  const max = Math.max(...totals.map(([, v]) => v)) || 1
+  const x = (yr: number) => THUMB_INSET + (yr - y0) / (y1 - y0) * (width - 2 * THUMB_INSET)
+  const y = (v: number) => height - 3 - v / max * (height - 8)
+  const line = totals.map(([yr, v], i) => `${i ? 'L' : 'M'}${x(yr).toFixed(1)},${y(v).toFixed(1)}`).join('')
+  const area = `${line}L${x(y1).toFixed(1)},${height}L${x(y0).toFixed(1)},${height}Z`
+  const i = Math.min(Math.max(Math.floor(year - y0), 0), totals.length - 2)
+  const t = Math.min(Math.max(year - totals[i][0], 0), 1)
+  const cur = totals[i][1] + (totals[i + 1][1] - totals[i][1]) * t
+  return (
+    <svg width={width} height={height} style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }} aria-hidden>
+      <path d={area} fill="var(--text-accent)" opacity={0.18} />
+      <path d={line} fill="none" stroke="var(--text-accent)" strokeWidth={1.5} opacity={0.8} />
+      {totals.map(([yr, v]) => <circle key={yr} cx={x(yr)} cy={y(v)} r={1.6} fill="var(--text-accent)" opacity={0.8} />)}
+      <line x1={x(year)} x2={x(year)} y1={0} y2={height} stroke="var(--text-primary)" strokeWidth={1} opacity={0.35} />
+      <circle cx={x(year)} cy={y(cur)} r={3} fill="var(--text-primary)" />
+    </svg>
+  )
+}
+
 function YearControl({ year, setYear, years, onPlay }: { year: number, setYear: (y: number) => void, years: number[], onPlay?: () => void }) {
   const cur = Math.round(year)
   const idx = years.indexOf(cur)
@@ -1439,6 +1468,23 @@ export default function MapView() {
     return { count, paid }
   }, [focusTest, displayData])
 
+  // Per-year total paid (focus members, else all) for the transport sparkline;
+  // available once the player has preloaded every year.
+  const yearTotals = useMemo((): [number, number][] | null => {
+    if (!yearsReady) return null
+    const out: [number, number][] = []
+    for (const y of AVAILABLE_YEARS) {
+      const features = yearCacheRef.current.get(cacheKey(aggregateMode, y))
+      if (!features) return null
+      let paid = 0
+      for (const f of features) {
+        if (!focusTest || focusTest(f.properties)) paid += f.properties?.paid ?? 0
+      }
+      out.push([y, paid])
+    }
+    return out
+  }, [yearsReady, aggregateMode, cacheKey, focusTest])
+
   const colorOf = useCallback((f: ParcelFeatureLike, alpha: number): [number, number, number, number] => {
     if (staleData) return LOADING_COLOR
     const id = getFeatureId(f)
@@ -1994,19 +2040,23 @@ export default function MapView() {
               ? <span className="play-buffering" />
               : playing ? '❚❚' : '▶'}
           </button>
-          <input
-            type="range"
-            min={AVAILABLE_YEARS[0]}
-            max={YEAR_MAX}
-            step={0.01}
-            value={year}
-            onChange={(e) => onScrub(Number(e.target.value))}
-            onPointerUp={commitScrub}
-            onKeyUp={commitScrub}
-            aria-label="Tax year scrubber"
-            title="Drag to scrub through years"
-            style={{ width: 170, cursor: 'pointer' }}
-          />
+          <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', width: SCRUB_W, height: 30 }}>
+            {yearTotals && <YearSparkline totals={yearTotals} year={year} width={SCRUB_W} height={30} />}
+            <input
+              type="range"
+              min={AVAILABLE_YEARS[0]}
+              max={YEAR_MAX}
+              step={0.01}
+              value={year}
+              onChange={(e) => onScrub(Number(e.target.value))}
+              onPointerUp={commitScrub}
+              onKeyUp={commitScrub}
+              aria-label="Tax year scrubber"
+              title="Drag to scrub through years"
+              className="year-scrub"
+              style={{ position: 'relative', width: SCRUB_W, height: 30, margin: 0 }}
+            />
+          </span>
           <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, minWidth: 40, textAlign: 'center' }}>
             {playing && !yearsReady
               ? <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.8 }} title="Loading all years before playing">

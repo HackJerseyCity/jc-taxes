@@ -387,3 +387,36 @@ html, body, #root {
   .story-view { grid-template-columns: 1fr; gap: 20px; margin-top: 56px; }
   .story-view-flip .story-view-media { order: 0; }
 }
+
+/* Transport scrubber: transparent track (the year sparkline shows through),
+   thin baseline rail, round thumb. */
+.year-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.year-scrub::-webkit-slider-runnable-track {
+  height: 30px;
+  background: linear-gradient(var(--input-border), var(--input-border)) bottom 1px left 8px / calc(100% - 16px) 2px no-repeat;
+}
+.year-scrub::-moz-range-track {
+  height: 30px;
+  background: linear-gradient(var(--input-border), var(--input-border)) bottom 1px left 8px / calc(100% - 16px) 2px no-repeat;
+}
+.year-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid var(--text-accent);
+}
+.year-scrub::-moz-range-thumb {
+  width: 16px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid var(--text-accent);
+}
