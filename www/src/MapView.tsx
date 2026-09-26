@@ -3,7 +3,7 @@ import { Map as MaplibreMap, type MapRef } from 'react-map-gl/maplibre'
 import DeckGL, { type DeckGLRef } from '@deck.gl/react'
 import { WebMercatorViewport, FlyToInterpolator, LinearInterpolator } from '@deck.gl/core'
 import { ColumnLayer, GeoJsonLayer } from '@deck.gl/layers'
-import { useUrlState, stringParam, viewStateParam } from 'use-prms'
+import { useUrlAlias, useUrlState, stringParam, viewStateParam } from 'use-prms'
 import { useHotkeysContext } from 'use-kbd'
 import { MdFolderOpen } from 'react-icons/md'
 import AppSpeedDial from './AppSpeedDial'
@@ -11,6 +11,7 @@ import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
+import { aggAlias, hoodParam, metricAlias, portfolioAlias, wardParam, yearParam } from './urlParams'
 import { WARDS, boundsOf, hoodsOf, parseRegion, regionLabel, regionTest } from './regions'
 import { useTouchPitch } from './useTouchPitch'
 import { useParcelSearch } from './useParcelSearch'
@@ -78,15 +79,6 @@ const YEAR_MAX = AVAILABLE_YEARS[AVAILABLE_YEARS.length - 1]
 // Float-aware ?y param: accepts integer years for normal use and fractional
 // values (e.g. ?y=2020.5) for deterministic mid-animation states. Adjacent
 // integer years' data is interpolated per-feature in getElevation/getFillColor.
-const yearParam = {
-  decode: (s: string | undefined) => {
-    if (s == null) return YEAR_MAX
-    const n = parseFloat(s)
-    return isNaN(n) ? YEAR_MAX : n
-  },
-  encode: (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(3).replace(/\.?0+$/, ''),
-}
-
 // Odometer-style year display for animation captures. Digits that differ
 // between floor(year) and ceil(year) are stacked vertically inside a clipped
 // column and scrolled up by `year - floor(year)`, so the fractional part
@@ -446,11 +438,12 @@ const MODE_DEFAULTS: Record<string, ModeConfig> = {
   'census-block:total':     { max: 20e6,  maxHeight: 7000, scale: 'log',    columnRadius: 40,  stops: stopsAt([0, 250e3, 1e6, 6e6]) },
   'ward:total':             { max: 450e6, maxHeight: 6500, scale: 'linear', columnRadius: 400, stops: stopsAt([0, 100e6, 200e6, 400e6]) },
 }
+const YR_UNKNOWN_COLOR: [number, number, number] = [110, 110, 118]
 const YR_BUILT_CONFIG: ModeConfig = {
   min: 1870, max: 2025, maxHeight: 4500, scale: 'linear',
   stops: {
-    dark:  [{ value: 1870, color: [96, 96, 96] }, { value: 1910, color: [255, 0, 0] }, { value: 1960, color: [255, 217, 26] }, { value: 2025, color: [0, 255, 0] }],
-    light: [{ value: 1870, color: [255, 255, 255] }, { value: 1910, color: [255, 71, 71] }, { value: 1960, color: [230, 190, 0] }, { value: 2025, color: [0, 214, 0] }],
+    dark:  [{ value: 1870, color: [160, 80, 230] }, { value: 1910, color: [255, 0, 0] }, { value: 1960, color: [255, 217, 26] }, { value: 2025, color: [0, 255, 0] }],
+    light: [{ value: 1870, color: [140, 60, 210] }, { value: 1910, color: [255, 71, 71] }, { value: 1960, color: [230, 190, 0] }, { value: 2025, color: [0, 214, 0] }],
   },
 }
 
@@ -528,7 +521,7 @@ export default function MapView() {
   const [settingsOpen, setSettingsOpen] = useState(() => settingsOpenUrl && window.innerWidth > 768)
 
   // URL-persisted state (mh is optional; absent = use mode default)
-  const [urlYear, setUrlYear] = useUrlState('y', yearParam)
+  const [urlYear, setUrlYear] = useUrlState('y', yearParam(YEAR_MAX))
   // Transient (uncommitted) year used while the animation player is running or
   // the scrubber is being dragged. It overrides `urlYear` for rendering without
   // writing to the URL at 60fps (which history.replaceState throttles). When it
@@ -593,15 +586,35 @@ export default function MapView() {
     setPlaySpeed(next === PLAY_SPEED_DEFAULT ? undefined : next)
   }, [playSpeed, setPlaySpeed])
   const [maxHeightRaw, setMaxHeightRaw] = useUrlState('mh', optNumParam)
-  const [aggregateMode, setAggregateModeRaw] = useUrlState('agg', stringParam('block'))
-  const [portfolio, setPortfolio] = useUrlState('pf', stringParam(''))
+  const [aggRaw, setAggregateModeRaw] = useUrlAlias(aggAlias)
+  const aggregateMode = aggRaw ?? 'block'
+  const [portfolioRaw, setPortfolioRaw] = useUrlAlias(portfolioAlias)
+  const portfolio = portfolioRaw ?? ''
+  const setPortfolio = useCallback((v: string) => setPortfolioRaw(v || undefined), [setPortfolioRaw])
   const portfoliosOrNull = usePortfolios()
   const portfolios = useMemo(() => portfoliosOrNull ?? [], [portfoliosOrNull])
-  const [region, setRegion] = useUrlState('rg', stringParam(''))
+  // Region focus: `w=e` (ward) or `n=hp` (neighborhood slug); legacy
+  // `rg=ward:E` / `rg=hood:Name` is migrated on load. Internally one string,
+  // `ward:E` / `hood:Name` (see `regions.ts`).
+  const [wardSel, setWardSel] = useUrlState('w', wardParam)
+  const [hoodSel, setHoodSel] = useUrlState('n', hoodParam)
+  const [legacyRegion, setLegacyRegion] = useUrlState('rg', stringParam(''))
+  const region = wardSel ? `ward:${wardSel}` : hoodSel ? `hood:${hoodSel}` : ''
+  const setRegion = useCallback((v: string) => {
+    const r = parseRegion(v)
+    setWardSel(r?.kind === 'ward' ? r.name : '')
+    setHoodSel(r?.kind === 'hood' ? r.name : '')
+  }, [setWardSel, setHoodSel])
+  useEffect(() => {
+    if (!legacyRegion) return
+    setLegacyRegion('')
+    setRegion(legacyRegion)
+  }, [legacyRegion, setLegacyRegion, setRegion])
   const [pfDimRaw, setPfDim] = useUrlState('pfd', optNumParam)
   const pfDim = Number(pfDimRaw ?? 0)
   const [colorScaleRaw, setColorScaleRaw] = useUrlState('scale', optScaleParam)
-  const [metricMode, setMetricModeRaw] = useUrlState('mt', stringParam('per_sqft'))
+  const [metricRaw, setMetricModeRaw] = useUrlAlias(metricAlias)
+  const metricMode = metricRaw ?? 'per_sqft'
   const [wardGeom, setWardGeom] = useUrlState('wg', stringParam('merged'))
   const [wardLabels, setWardLabels] = useUrlState('wl', boolParam)
   const [extruded, setExtruded] = useUrlState('3d', boolParam)
@@ -1522,7 +1535,10 @@ export default function MapView() {
     }
 
     if (colorByYrBuilt) {
-      const yr = f.properties?.yr_built ?? 0
+      const yr = f.properties?.yr_built
+      // No recorded year: neutral grey (the gradient's oldest end is purple, so
+      // grey unambiguously means "unknown", not "old").
+      if (!yr) return [...YR_UNKNOWN_COLOR, Math.round(alpha * 0.6)]
       return interpolateColor(yr, colorStops, colorMax, colorScale, alpha, colorMin)
     }
     return interpolateColor(getMetricValue(f), colorStops, maxVal, colorScale, alpha)

@@ -97,7 +97,7 @@ test.describe('Loading & data', () => {
     await mockGeoJSON(page)
     await page.goto('/')
     await waitForLoad(page)
-    await expect(page.getByText(/\d+ parcels/)).toBeVisible()
+    await expect(page.getByText(/\$[\d.]+[KMB] · [\d,]+ (blocks|lots|wards)/)).toBeVisible()
   })
 })
 
@@ -107,57 +107,67 @@ test.describe('Aggregation modes', () => {
       await mockGeoJSON(page)
       await page.goto(`/?agg=${agg}`)
       await waitForLoad(page)
-      await expect(page.getByText(/\d+ parcels/)).toBeVisible()
+      await expect(page.getByText(/\$[\d.]+[KMB] · [\d,]+ (blocks|lots|wards)/)).toBeVisible()
     })
   }
 })
 
 test.describe('URL params round-trip', () => {
-  test('retains agg and year params after load', async ({ page }) => {
+  test('short params are retained after load', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/?agg=lot&y=2020')
+    await page.goto('/?a=l&y=20')
     await waitForLoad(page)
     const url = new URL(page.url())
-    expect(url.searchParams.get('agg')).toBe('lot')
-    expect(url.searchParams.get('y')).toBe('2020')
+    expect([...url.searchParams.entries()].filter(([k]) => k === 'a' || k === 'y')).toEqual([['a', 'l'], ['y', '20']])
+  })
+
+  test('legacy long params still load, and are rewritten to short form', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?agg=lot&mt=total&y=2020&rg=ward:E')
+    await waitForView(page, 'lot')
+    await expect(page).toHaveURL(/[?&]a=l(&|$)/)
+    const url = new URL(page.url())
+    expect(['agg', 'mt', 'rg'].map(k => url.searchParams.get(k))).toEqual([null, null, null])
+    // `y` isn't aliased: a 4-digit year still decodes, and stays as given until changed.
+    expect(['a', 'm', 'y', 'w'].map(k => url.searchParams.get(k))).toEqual(['l', 't', '2020', 'e'])
   })
 
   test('year select updates URL', async ({ page }) => {
     await mockGeoJSON(page)
     await page.goto('/')
     await waitForLoad(page)
-    await page.getByLabel('Tax Year:').selectOption('2020')
-    await expect(page).toHaveURL(/[?&]y=2020/)
+    await page.getByLabel('Change tax year').selectOption('2020')
+    await expect(page).toHaveURL(/[?&]y=20(&|$)/)
   })
 })
 
 test.describe('Keyboard shortcuts', () => {
-  test('l → agg=lot, w → agg=ward, b → agg=block', async ({ page }) => {
+  test('l → a=l, w → a=w, b → block (default, omitted)', async ({ page }) => {
     await mockGeoJSON(page)
     await page.goto('/')
     await waitForLoad(page)
 
     await page.keyboard.press('l')
-    await expect(page).toHaveURL(/[?&]agg=lot/)
+    await expect(page).toHaveURL(/[?&]a=l(&|$)/)
 
     await page.keyboard.press('w')
-    await expect(page).toHaveURL(/[?&]agg=ward/)
+    await expect(page).toHaveURL(/[?&]a=w(&|$)/)
 
     await page.keyboard.press('b')
     // block is the default agg, so the param is omitted from URL
-    await expect(page).not.toHaveURL(/[?&]agg=/)
+    await expect(page).not.toHaveURL(/[?&]a=/)
   })
 
   test('] increments year, [ decrements year', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/?y=2022')
+    await page.goto('/?y=22')
     await waitForLoad(page)
 
     await page.keyboard.press(']')
-    await expect(page).toHaveURL(/[?&]y=2023/)
+    await expect(page).toHaveURL(/[?&]y=23(&|$)/)
 
     await page.keyboard.press('[')
-    await expect(page).toHaveURL(/[?&]y=2022/)
+    await expect(page).toHaveURL(/[?&]y=22(&|$)/)
   })
 })
 
@@ -262,8 +272,9 @@ test.describe('Color by year built', () => {
     await mockGeoJSON(page)
     await page.goto('/?agg=lot&cb=yr_built')
     await waitForLoad(page)
-    await expect(page.getByText('1870')).toBeVisible()
-    await expect(page.locator('span', { hasText: /^2025$/ })).toBeVisible()
+    // Gradient endpoint labels (the title's year picker also reads 2025, hence `.last()`).
+    await expect(page.getByText('1870', { exact: true })).toBeVisible()
+    await expect(page.getByText('2025', { exact: true }).last()).toBeVisible()
   })
 
   test('hoverbox highlights yr_built when coloring active', async ({ page }) => {
@@ -287,18 +298,18 @@ test.describe('Color by year built', () => {
 })
 
 test.describe('Total-$ metric', () => {
-  test('mt=total retitles the map and exposes the bar-radius control', async ({ page }) => {
+  test('m=t retitles the map and exposes the bar-radius control', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/?mt=total')
+    await page.goto('/?m=t')
     await waitForLoad(page)
-    await expect(page.getByText(/Total paid · by block/)).toBeVisible()
+    await expect(page.getByLabel('Metric')).toHaveValue('total')
     // Uniform-footprint columns only exist in 3D
     await expect(page.getByText('Bar radius:')).toBeVisible()
   })
 
   test('bar-radius control is hidden in 2D', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/?mt=total&3d=0')
+    await page.goto('/?m=t&3d=0')
     await waitForLoad(page)
     await expect(page.getByText('Bar radius:')).not.toBeVisible()
   })
@@ -309,29 +320,29 @@ test.describe('Total-$ metric', () => {
     await waitForLoad(page)
 
     await page.keyboard.press('m')
-    await expect(page).toHaveURL(/[?&]mt=total/)
+    await expect(page).toHaveURL(/[?&]m=t(&|$)/)
 
     await page.keyboard.press('m')
     // per_sqft is the default metric, so the param drops out of the URL
-    await expect(page).not.toHaveURL(/[?&]mt=/)
+    await expect(page).not.toHaveURL(/[?&]m=/)
   })
 
-  test('mt=total survives an aggregation switch', async ({ page }) => {
+  test('m=t survives an aggregation switch', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/?mt=total')
+    await page.goto('/?m=t')
     await waitForLoad(page)
     await page.keyboard.press('l')
     await waitForView(page, 'lot')
-    await expect(page).toHaveURL(/[?&]mt=total/)
+    await expect(page).toHaveURL(/[?&]m=t(&|$)/)
   })
 
   test('per_capita downgrades to per_sqft when leaving ward view', async ({ page }) => {
     await mockGeoJSON(page)
-    await page.goto('/?agg=ward&mt=per_capita')
+    await page.goto('/?a=w&m=c')
     await waitForLoad(page)
     await page.keyboard.press('b')
     await waitForView(page, 'block')
-    await expect(page).not.toHaveURL(/[?&]mt=per_capita/)
+    await expect(page).not.toHaveURL(/[?&]m=c(&|$)/)
   })
 })
 
@@ -341,7 +352,7 @@ test.describe('Settings panel', () => {
     await page.goto('/')
     await waitForLoad(page)
 
-    const taxYearLabel = page.getByText('Tax Year:')
+    const taxYearLabel = page.getByText('Max height:')
     const initiallyVisible = await taxYearLabel.isVisible()
 
     await page.keyboard.press('s')
@@ -365,7 +376,7 @@ test.describe('Routing', () => {
     await mockGeoJSON(page)
     await page.goto('/')
     await waitForLoad(page)
-    await expect(page.getByText(/\d+ parcels/)).toBeVisible()
+    await expect(page.getByText(/\$[\d.]+[KMB] · [\d,]+ (blocks|lots|wards)/)).toBeVisible()
     expect(new URL(page.url()).pathname).toBe('/')
   })
 
