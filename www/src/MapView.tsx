@@ -658,6 +658,7 @@ export default function MapView() {
   // All years fetched (and `crossYearMax` computed); playback holds on its
   // first frame until then, instead of animating through not-yet-loaded years.
   const [yearsReady, setYearsReady] = useState(false)
+  const [yearsLoaded, setYearsLoaded] = useState(0)
   const yearsReadyRef = useRef(yearsReady)
   yearsReadyRef.current = yearsReady
   const dataMax = useMemo(() => {
@@ -667,7 +668,12 @@ export default function MapView() {
     // Use the cross-year max once it's computed (covers the ward case where
     // mode-default `max=10` is a color clamp but actual Ward E reaches $21+),
     // falling back to the mode default while preload is still in-flight.
-    if (animYr || playing || transportOpen || !Number.isInteger(year)) return crossYearMax ?? modeConf.max
+    // scrns `animYr` captures need a stable scale from frame 0, so fall back to
+    // the mode default there; the in-app player instead keeps the current
+    // per-year fit until the cross-year max lands (it swaps scale and jumps to
+    // the start year in the same frame, see the rAF loop).
+    if (animYr) return crossYearMax ?? modeConf.max
+    if (crossYearMax != null && (playing || transportOpen || !Number.isInteger(year))) return crossYearMax
     if (sortedVals.length === 0) return modeConf.max
     if (percentile != null) {
       return sortedVals[Math.floor(sortedVals.length * percentile / 100)] || modeConf.max
@@ -979,7 +985,12 @@ export default function MapView() {
     setYearsReady(false)
     if (!preloadAll) return
     let cancelled = false
-    Promise.all(AVAILABLE_YEARS.map(y => fetchYear(aggregateMode, y).catch(() => null)))
+    let loaded = 0
+    setYearsLoaded(0)
+    Promise.all(AVAILABLE_YEARS.map(y => fetchYear(aggregateMode, y).catch(() => null).then(r => {
+      if (!cancelled) setYearsLoaded(++loaded)
+      return r
+    })))
       .then(() => {
         if (cancelled) return
         let m = 0
@@ -992,8 +1003,18 @@ export default function MapView() {
             if (v > m) m = v
           }
         }
-        setCrossYearMax(m || null)
-        setYearsReady(true)
+        // Settle before starting the clock: let the GC from parsing every
+        // year's GeoJSON (tens of MB in lot view) run, so the first animated
+        // years don't stutter. The scale and readiness flip together, so the
+        // player's rescale coincides with its jump to the start year.
+        const idle = (cb: () => void) => 'requestIdleCallback' in window
+          ? window.requestIdleCallback(cb, { timeout: 1500 })
+          : setTimeout(cb, 500)
+        requestAnimationFrame(() => idle(() => {
+          if (cancelled) return
+          setCrossYearMax(m || null)
+          setYearsReady(true)
+        }))
       })
     return () => { cancelled = true }
   }, [preloadAll, aggregateMode, metricMode, fetchYear, cacheKey, scalesHeight])
@@ -1014,14 +1035,21 @@ export default function MapView() {
     // already parked at the end (so pressing play always plays something).
     let pos = yearRef.current
     if (pos >= last) pos = first
-    setPlayYear(pos)
     let raf = 0
     let prev: number | null = null
+    let started = false
     const tick = (t: number) => {
+      // Buffering: hold the current view (year + scale) until every year is
+      // loaded, then jump to the start year in the same frame the cross-year
+      // scale applies.
       if (!yearsReadyRef.current) {
-        prev = null
         raf = requestAnimationFrame(tick)
         return
+      }
+      if (!started) {
+        started = true
+        setPlayYear(pos)
+        prev = null
       }
       if (prev != null) {
         const dt = Math.min((t - prev) / 1000, 0.1)
@@ -1910,7 +1938,9 @@ export default function MapView() {
               lineHeight: 1,
             }}
           >
-            {playing ? '❚❚' : '▶'}
+            {playing && !yearsReady
+              ? <span className="play-buffering" />
+              : playing ? '❚❚' : '▶'}
           </button>
           <input
             type="range"
@@ -1926,7 +1956,11 @@ export default function MapView() {
             style={{ width: 170, cursor: 'pointer' }}
           />
           <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, minWidth: 40, textAlign: 'center' }}>
-            {playing && !yearsReady ? '…' : Math.round(year)}
+            {playing && !yearsReady
+              ? <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.8 }} title="Loading all years before playing">
+                  {yearsLoaded}/{AVAILABLE_YEARS.length}
+                </span>
+              : Math.round(year)}
           </span>
           <button
             onClick={cycleSpeed}
