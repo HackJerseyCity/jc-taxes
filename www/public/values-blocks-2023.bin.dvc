@@ -1,0 +1,5 @@
+outs:
+- md5: 16cd8961a17d87f5c82041508eeb47c6
+  size: 20120
+  hash: md5
+  path: values-blocks-2023.bin

@@ -1,9 +1,10 @@
 import { resolve as dvcResolve } from 'virtual:dvc-data'
 import type { ParcelFeature, ParcelProperties } from './types'
 
-// Block / lot / unit views load one geometry file (fixed properties) and one
-// all-years values file per view (`jct bundle`), instead of a full GeoJSON per
-// year: switching years or playing every year then downloads nothing more.
+// Block / lot / unit views load one geometry file (fixed properties) per view
+// and a small values file per year (`jct bundle`), instead of a full GeoJSON
+// per year: a year change or playback frame downloads only that year's values
+// (~0.13 MB for lots).
 // `yearFeatures` rebuilds a year's features with the same properties the
 // per-year GeoJSON had (the pipeline's rounding for derived metrics), so the
 // rest of the app is unchanged. Wards / census blocks keep per-year GeoJSON.
@@ -11,7 +12,7 @@ const SUFFIX: Record<string, string> = { block: 'blocks', lot: 'lots', unit: 'un
 
 export const isBundled = (view: string) => view in SUFFIX
 
-/** `values-{view}.bin` (see the format comment in `src/jc_taxes/bundle.py`). */
+/** `values-{view}-{year}.bin` (see the format comment in `src/jc_taxes/bundle.py`). */
 interface Values {
   years: number[]
   count: number
@@ -43,47 +44,50 @@ function parseValues(buf: ArrayBuffer): Values {
   }
 }
 
-interface Bundle {
-  geom: ParcelFeature[]
-  values: Values
+const geoms = new Map<string, Promise<ParcelFeature[]>>()
+const values = new Map<string, Promise<Values>>()
+
+function get(name: string): Promise<Response> {
+  return fetch(dvcResolve(name)).then(r => {
+    if (!r.ok) throw new Error(`${name}: ${r.status} ${r.statusText}`)
+    return r
+  })
 }
 
-const bundles = new Map<string, Promise<Bundle>>()
-
-export function loadBundle(view: string): Promise<Bundle> {
-  let b = bundles.get(view)
-  if (!b) {
-    const get = (name: string) => fetch(dvcResolve(name)).then(r => {
-      if (!r.ok) throw new Error(`${name}: ${r.status} ${r.statusText}`)
-      return r
-    })
-    b = Promise.all([
-      get(`geom-${SUFFIX[view]}.geojson`).then(r => r.json() as Promise<{ features: ParcelFeature[] }>),
-      get(`values-${SUFFIX[view]}.bin`).then(r => r.arrayBuffer()).then(parseValues),
-    ])
-      .then(([geom, values]) => {
-        if (geom.features.length !== values.count) {
-          throw new Error(`${view}: ${geom.features.length} features vs ${values.count} values`)
-        }
-        return { geom: geom.features, values }
-      })
-    b.catch(() => bundles.delete(view))
-    bundles.set(view, b)
+function memo<T>(cache: Map<string, Promise<T>>, key: string, load: () => Promise<T>): Promise<T> {
+  let p = cache.get(key)
+  if (!p) {
+    p = load()
+    p.catch(() => cache.delete(key))
+    cache.set(key, p)
   }
-  return b
+  return p
+}
+
+export function loadGeom(view: string): Promise<ParcelFeature[]> {
+  return memo(geoms, view, () =>
+    get(`geom-${SUFFIX[view]}.geojson`).then(r => r.json() as Promise<{ features: ParcelFeature[] }>).then(g => g.features))
+}
+
+export function loadValues(view: string, year: number): Promise<Values> {
+  return memo(values, `${view}|${year}`, () =>
+    get(`values-${SUFFIX[view]}-${year}.bin`).then(r => r.arrayBuffer()).then(parseValues))
 }
 
 // `round(x, 2)` as the pipeline writes `paid_per_sqft` etc.
 const round2 = (x: number) => Math.round(x * 100) / 100
 
-export function yearFeatures({ geom, values }: Bundle, year: number): ParcelFeature[] {
-  const yi = values.years.indexOf(year)
-  if (yi < 0) return []
-  const ny = values.years.length
+/** A year's features: the view's geometry with that year's amounts. */
+export async function yearFeatures(view: string, year: number): Promise<ParcelFeature[]> {
+  const [geom, v] = await Promise.all([loadGeom(view), loadValues(view, year)])
+  if (geom.length !== v.count) throw new Error(`${view} ${year}: ${geom.length} features vs ${v.count} values`)
+  const yi = v.years.indexOf(year)
+  if (yi < 0) throw new Error(`${view}: values file lacks ${year}`)
+  const ny = v.years.length
   return geom.map((g, i) => {
     const k = i * ny + yi
-    const paid = values.paid[k] / 100
-    const billed = (values.paid[k] + values.billedMinusPaid[k]) / 100
+    const paid = v.paid[k] / 100
+    const billed = (v.paid[k] + v.billedMinusPaid[k]) / 100
     const area = g.properties.area_sqft ?? 0
     const properties: ParcelProperties = {
       ...g.properties,

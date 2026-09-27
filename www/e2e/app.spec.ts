@@ -23,12 +23,11 @@ function readFixture(name: string): string {
   return fixtureCache.get(name) as string
 }
 
-// Bundled views (`src/bundle.ts`): geometry + all-years values, synthesized from
+// Bundled views (`src/bundle.ts`): geometry + per-year values, synthesized from
 // the 2025 fixture (same amounts every year).
 const BUNDLE_DYNAMIC = new Set(['paid', 'billed', 'paid_per_sqft', 'billed_per_sqft', 'year'])
-const YEARS = Array.from({ length: 12 }, (_, i) => 2015 + i)
-function bundleFixture(kind: 'geom' | 'values', view: string): string | Buffer {
-  const key = `${kind}-${view}`
+function bundleFixture(kind: 'geom' | 'values', view: string, year?: number): string | Buffer {
+  const key = `${kind}-${view}-${year ?? ''}`
   if (!fixtureCache.has(key)) {
     const features: { geometry: unknown, properties: Record<string, unknown> }[] = JSON.parse(readFixture(FIXTURES[view])).features
     if (kind === 'geom') {
@@ -42,11 +41,11 @@ function bundleFixture(kind: 'geom' | 'values', view: string): string | Buffer {
       }))
     } else {
       // `values-{view}.bin` (VALUES_FORMAT in src/jc_taxes/bundle.py).
-      const n = features.length, ny = YEARS.length
+      const n = features.length, ny = 1
       const buf = Buffer.alloc(24 + 16 * n * ny)
       buf.write('JCTV', 0, 'ascii')
       // version 1, f64 elements (fixture amounts include block totals over i32 cents)
-      buf.writeUInt32LE(1, 4); buf.writeUInt32LE(2, 8); buf.writeUInt32LE(YEARS[0], 12); buf.writeUInt32LE(ny, 16); buf.writeUInt32LE(n, 20)
+      buf.writeUInt32LE(1, 4); buf.writeUInt32LE(2, 8); buf.writeUInt32LE(year!, 12); buf.writeUInt32LE(ny, 16); buf.writeUInt32LE(n, 20)
       features.forEach((f, i) => {
         const paid = Math.round(Number(f.properties.paid ?? 0) * 100)
         const delta = Math.round(Number(f.properties.billed ?? 0) * 100) - paid
@@ -65,8 +64,10 @@ function bundleFixture(kind: 'geom' | 'values', view: string): string | Buffer {
 function fixtureFor(name: string): string | Buffer | null {
   let m = name.match(/^taxes-\d{4}-([\w-]+)\.geojson$/)
   if (m && FIXTURES[m[1]]) return readFixture(FIXTURES[m[1]])
-  m = name.match(/^(geom|values)-(blocks|lots|units)\.(?:geojson|bin)$/)
-  if (m) return bundleFixture(m[1] as 'geom' | 'values', m[2])
+  m = name.match(/^geom-(blocks|lots|units)\.geojson$/)
+  if (m) return bundleFixture('geom', m[1])
+  m = name.match(/^values-(blocks|lots|units)-(\d{4})\.bin$/)
+  if (m) return bundleFixture('values', m[1], Number(m[2]))
   return null
 }
 const DATA_NAME = /(taxes-\d{4}-[\w-]+\.geojson|(?:geom|values)-[\w-]+\.(?:geojson|bin))/

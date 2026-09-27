@@ -1,6 +1,6 @@
 import struct
 
-from jc_taxes.bundle import build, encode_values, round_coords, run_length
+from jc_taxes.bundle import build, encode_values, round_coords, run_length, year_values
 
 
 def feat(block, lot, paid, billed, owner, qual=None, area=100.0):
@@ -53,3 +53,8 @@ def test_encode_values_overflow_uses_f64():
 
 def test_round_coords():
     assert round_coords([[[-74.05539630685645, 40.762894620061346]]]) == [[[-74.055396, 40.762895]]]
+
+
+def test_year_values():
+    values = {"years": [2025, 2026], "count": 2, "paid": [[1000, 10050], [1100, 0]], "billed_minus_paid": [[200, 0], [200, 20025]]}
+    assert year_values(values, 2026) == {"years": [2026], "count": 2, "paid": [[1100, 0]], "billed_minus_paid": [[200, 20025]]}

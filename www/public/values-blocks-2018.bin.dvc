@@ -1,0 +1,5 @@
+outs:
+- md5: c40915b7780da195834171532eb8d316
+  size: 20120
+  hash: md5
+  path: values-blocks-2018.bin

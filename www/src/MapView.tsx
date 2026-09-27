@@ -12,7 +12,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { AVAILABLE_YEARS, DEFAULT_YEAR, YEAR_MAX } from './years'
 import { summaryFocus, useSummary, type SummaryMetric } from './summary'
-import { isBundled, loadBundle, yearFeatures } from './bundle'
+import { isBundled, yearFeatures } from './bundle'
 import { useParcelOwner } from './parcel'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
 import { fit3d } from './fit3d'
@@ -1093,7 +1093,7 @@ export default function MapView() {
     const p = (async () => {
       let features: ParcelFeature[]
       if (isBundled(agg)) {
-        features = yearFeatures(await loadBundle(agg), yr)
+        features = await yearFeatures(agg, yr)
       } else {
         const suffix = SUFFIX_MAP[agg] ?? '-lots'
         const geojson = await fetch(dvcResolve(`taxes-${yr}${suffix}.geojson`)).then(r => r.json())

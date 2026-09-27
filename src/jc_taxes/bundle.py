@@ -7,9 +7,12 @@ instead loads, once per view:
 - `geom-{view}.geojson`: geometry + fixed properties (latest year's values),
   minus the per-year amounts and owner.
   Coordinates are rounded to 6 decimals (~0.1 m).
-- `values-{view}.bin`: every year's paid and billed, integer cents aligned to the
-  geometry's feature order (`VALUES_FORMAT` below). Binary with each feature's
-  years adjacent compresses ~30% smaller than the equivalent JSON. Derived metrics
+- `values-{view}-{year}.bin`: that year's paid and billed, integer cents aligned
+  to the geometry's feature order (format below). One file per year, so a first
+  load fetches one year (~0.13 MB brotli for lots) and each year step or
+  playback frame fetches only what it shows (all 12 years ≈ 1.6 MB). A custom
+  layout, not Parquet: it's smaller here (Parquet: ~1.6× for the same data) and
+  reads straight into typed arrays. Derived metrics
   (`paid_per_sqft`, …) are recomputed client-side, as the pipeline does.
 
 so switching years or playing every year downloads nothing more. Owners go to
@@ -39,7 +42,7 @@ EDGE = ROOT / "edge"
 DEFAULT_SQL = ROOT / "tmp" / "owners.sql"
 COORD_DECIMALS = 6
 
-# `values-{view}.bin` (little-endian; parsed by `www/src/bundle.ts`):
+# `values-{view}-{year}.bin` (little-endian; parsed by `www/src/bundle.ts`):
 #   magic  b"JCTV"
 #   u32    version (1)
 #   u32    element type: 1 = i32, 2 = f64 (i32 unless some amount overflows,
@@ -66,6 +69,12 @@ def encode_values(values: dict) -> bytes:
     elem, fmt = (1, "i") if fits else (2, "d")
     head = VALUES_MAGIC + struct.pack("<5I", VALUES_VERSION, elem, years[0], len(years), n)
     return head + b"".join(struct.pack(f"<{len(arr)}{fmt}", *arr) for arr in flat)
+
+
+def year_values(values: dict, year: int) -> dict:
+    """One year's slice of `values` (the per-year file's contents)."""
+    y = values["years"].index(year)
+    return {"years": [year], "count": values["count"], "paid": [values["paid"][y]], "billed_minus_paid": [values["billed_minus_paid"][y]]}
 
 
 def round_coords(c, n: int = COORD_DECIMALS):
@@ -158,7 +167,10 @@ def bundle(cache_dir: Path | None, db: str, local: bool, dry_run: bool, out_dir:
         geom, values, owners = build(view, per_year)
         outputs = (
             (f"geom-{suffix}.geojson", (json.dumps(geom, separators=(",", ":")) + "\n").encode()),
-            (f"values-{suffix}.bin", encode_values(values)),
+            *(
+                (f"values-{suffix}-{y}.bin", encode_values(year_values(values, y)))
+                for y in values["years"]
+            ),
         )
         for name, data in outputs:
             path = out_dir / name
