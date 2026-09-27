@@ -268,6 +268,23 @@ def _parent_lot(lot: str) -> str:
     return lot.rsplit(".", 1)[0] if "." in lot else lot
 
 
+def drop_condo_diagrams(parcels: pd.DataFrame) -> pd.DataFrame:
+    """Drop qualified (condo-unit) polygons of lots that also have an unqualified polygon.
+
+    Tax maps draw condo units as schematic diagrams, often laid out beside the
+    lot rather than on its real footprint (e.g. 10601-1.01: a 1,590 sqft lot
+    whose 17 unit rectangles bring the union to 5,689 sqft). Dissolving them
+    into the lot / block inflates area (understating $/sqft) and distorts the
+    shape. The unit view keeps them; lots with only unit polygons keep them too.
+    """
+    qual = parcels["qual"].fillna("").astype(str).str.strip()
+    lot = parcels["block"].astype(str).str.strip() + "-" + parcels["lot"].astype(str).str.strip()
+    has_base = set(lot[qual == ""])
+    drop = (qual != "") & lot.isin(has_base)
+    err(f"  dropping {int(drop.sum()):,} condo-unit diagram polygons of {lot[drop].nunique():,} lots with a lot polygon")
+    return parcels[~drop].reset_index(drop=True)
+
+
 def fold_orphan_payments(pay_dict: dict, present: list[tuple]) -> dict:
     """Fold payments whose join_key has no parcel geometry onto a same-block sink.
 
@@ -393,6 +410,8 @@ def generate_yearly_geojson(
         # Year-aware parcel sets (`jct parcels combine`): the lots on this year's roll.
         parcels = parcels[parcels["years"].map(lambda ys: year in set(ys))].drop(columns="years").reset_index(drop=True)
         err(f"  {len(parcels):,} parcels active in {year}")
+    if aggregate != "unit":
+        parcels = drop_condo_diagrams(parcels)
 
     err(f"Loading payments for year {year}")
     payments = pd.read_parquet(payments_path)
