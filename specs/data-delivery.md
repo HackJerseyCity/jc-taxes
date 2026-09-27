@@ -23,7 +23,7 @@ Separate four things that are currently fused, and send each only when needed:
    - deck.gl `MVTLayer` (or `TileLayer` + `pmtiles` source) with `uniqueIdProperty` for hover / selection.
 2. **Values → one small binary per view with every year.** `values-{view}.bin`: `uint32` paid (and billed) dollars, `[feature][year]`, indexed by tile feature id; header with year range + counts. Lots ≈ 0.85 MB gz for all 11 years; blocks tiny. Colors / heights / interpolation read from this array, so **animation downloads nothing extra**. (Alternative: embed per-year values as tile attributes; costs bytes in every tile at every zoom and bloats low-zoom tiles. Prefer the side array.)
 3. **Details → on demand.** Hover box / selection fetches the parcel's detail record (addr, owner, building info, streets) from sharded JSON on R2 (`details/{block}.json`, a few KB each) or a Worker + D1 endpoint. Nothing detailed is downloaded for parcels nobody looks at.
-4. **Aggregates → precomputed.** Totals chip, sparkline, focus camera (bbox + per-member tops), and height/color scale maxima come from one precomputed `aggregates.json` (citywide, wards, neighborhoods, portfolios × years × metrics; tens of KB). Extends today's `jct stats` / `stats.json`. The client never needs every feature loaded to show a total.
+4. **Aggregates → server-side.** Totals chip, sparkline, focus camera (bbox + per-member tops), and height/color scale maxima come from the Worker's aggregates API, backed by D1 tables the pipeline fills (citywide, wards, neighborhoods, portfolios × years × metrics; extends today's `jct stats`). The client never needs every feature loaded to show a total.
 
 Plus: **search** (omnibar address → parcel) becomes a lazy index (`addr → id, centroid`, ~0.4 MB gz) fetched when the omnibar first opens, or a Worker endpoint.
 
@@ -37,12 +37,19 @@ Plus: **search** (omnibar address → parcel) becomes a lazy index (`addr → id
 | animation, all years | +250 MB | 0 |
 | hover / select | 0 (already downloaded) | ~few KB per block, cached |
 
+## Decisions (2026-09-27)
+
+- **Server computes, client renders.** Anything derived from many parcels (height-scale maxima, totals chip, sparkline, focus camera bbox / bar tops, citywide paid-so-far) comes from the `jct-edge` Worker; the client never downloads data just to compute an aggregate. The client only gets per-feature values for what it draws.
+- **Storage:** records and queryable data live in **D1** (`jct`, `edge/d1/migrations`): portfolios (done), aggregates / scales / totals, parcel details, search, later TTM-by-date. Bulk arrays read whole by every client (tiles, per-feature values) stay **content-addressed R2 objects** served by the Worker (edge-cached, immutable); the Worker can front them with API URLs so storage stays an implementation detail. No new "small JSON file" app data.
+- **Height scale:** default = one scale across all years (so growth over time is visible; playback already does this); Settings toggle for per-year fit. The cross-year max comes from the aggregates API, not from loading every year.
+- **Measure:** `www/net` download-size suite (baseline + history) runs against deploys; each phase lands with a baseline update showing its effect.
+
 ## Phases
 
-1. **Serving fix (hours).** Content-Type + compression + caching for the existing R2 objects (object metadata at `dvc push`, or serve via the Worker). Immediate 6× on prod, no format change.
-2. **Split values from geometry (≈1 day).** Emit `values-{view}.bin` + `aggregates.json`; client loads geometry once (still GeoJSON for now, trimmed properties) + values; details split out. Lots animation ≈ 3–4 MB gz total. The client-side interfaces (values array, aggregates, detail fetch) are the ones phase 3 keeps.
-3. **Vector tiles for geometry (≈2–3 days).** PMTiles per view, `MVTLayer`, id-indexed values; verify extrusion across tiles, picking, focus fade / hide via `DataFilterExtension` or accessor, and portfolio membership by id set.
-4. **Search index + details endpoint polish.**
+1. ✅ **Serving fix** (done 2026-09-27, via the Worker rather than bucket metadata): `jct-edge` `/d/*` serves the DVC objects as JSON, edge-compressed and immutable-cached, same-origin (lots 25.1 MB → 4.1 MB). `jct.rbw.sh` cut over from GitHub Pages to the Worker.
+2. **Aggregates API + values arrays.** Pipeline (`jct stats`) computes per (view × metric × focus × year) totals / maxima / camera extents → D1 tables (seeded by a script, like portfolios; focus includes portfolios, wards, neighborhoods). Worker `/api/scale`, `/api/totals` (or one `/api/summary?view=&metric=&focus=`). Emit `values-{view}` (uint32 paid + billed, `[feature][year]`) as R2 objects via `/d` or `/api/values`. Client: geometry once (trimmed GeoJSON for now) + values; details split out to `/api/parcel/:id` (D1). Lots animation ≈ 3–4 MB total.
+3. **Vector tiles for geometry.** PMTiles per view (R2, range requests through the Worker), `MVTLayer` extruded with id-indexed values; verify extrusion across tiles (`--no-clipping`), picking, focus fade / hide, portfolio membership by id set.
+4. **Search** (`/api/search`, D1 FTS) and details polish.
 
 ## Open questions
 

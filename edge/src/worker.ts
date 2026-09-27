@@ -4,10 +4,12 @@
  *  - per-URL Open Graph tags rewritten into the HTML shell at the edge
  *  - `/og` renders a 1200×630 stats card (satori + resvg-wasm), cached in R2
  *  - `/api/portfolios` serves the curated developer portfolios (D1 → R2)
+ *  - `/api/summary` per view × focus × year totals / height-scale maxima (D1)
  *  - `/d/*` serves DVC-cached map data from the `jc-taxes` bucket (`dvc.ts`)
  */
 import type { Env } from './data'
 import { handleDvc } from './dvc'
+import { handleSummary } from './summary'
 import { getStats, getPortfolios } from './data'
 import { normalizeParams, canonicalQuery, type CardParams } from './params'
 import { cardContent, ogMeta } from './content'
@@ -65,6 +67,7 @@ export default {
     const path = url.pathname
 
     if (path === '/api/portfolios') return handlePortfolios(env)
+    if (path === '/api/summary') return handleSummary(url, env)
     if (path.startsWith('/d/')) return (await handleDvc(request, env, ctx)) ?? new Response('Not found', { status: 404 })
     if (path === '/og' || path === '/api/og') return handleOg(url, env, ctx)
 
