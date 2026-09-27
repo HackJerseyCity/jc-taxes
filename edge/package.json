@@ -8,7 +8,8 @@
     "dev": "wrangler dev",
     "tc": "tsc --noEmit",
     "deploy": "node scripts/prune-dvc-assets.mjs && wrangler deploy",
-    "seed:d1": "node scripts/seed-portfolios.mjs"
+    "seed:d1": "node scripts/seed-portfolios.mjs",
+    "deploy:dev": "node scripts/prune-dvc-assets.mjs && wrangler deploy --env dev"
   },
   "dependencies": {
     "@resvg/resvg-wasm": "^2.6.2",

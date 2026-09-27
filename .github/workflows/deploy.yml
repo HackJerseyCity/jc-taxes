@@ -6,7 +6,14 @@ on:
   pull_request:
     branches: [main]
     paths: ['www/**', 'edge/**', '.github/workflows/deploy.yml']
+  # Promote: run manually with `env: prod` to deploy the selected commit to jct.rbw.sh.
   workflow_dispatch:
+    inputs:
+      env:
+        description: 'Environment: dev (jct-edge-dev) or prod (jct.rbw.sh)'
+        type: choice
+        options: [dev, prod]
+        default: dev
 
 permissions:
   contents: read
@@ -69,9 +76,10 @@ jobs:
         working-directory: ./edge
         run: pnpm install --frozen-lockfile
 
-      - name: Deploy Worker
+      # Pushes to main deploy dev; prod only via a manual `env: prod` run.
+      - name: Deploy Worker (${{ inputs.env || 'dev' }})
         if: github.ref == 'refs/heads/main'
         working-directory: ./edge
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: pnpm run deploy
+        run: pnpm run ${{ inputs.env == 'prod' && 'deploy' || 'deploy:dev' }}

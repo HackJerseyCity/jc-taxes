@@ -63,6 +63,24 @@
   "dev": {
     "port": 3205
   },
+  // Dev environment (`wrangler deploy --env dev` → `jct-edge-dev`): same code and
+  // static assets, its own D1 (data loads land here first, then get promoted to
+  // `jct`). The DATA bucket is shared: DVC objects are content-addressed, so a dev
+  // build's data never overwrites prod's. OG cards are content-hash keyed too.
+  // Bindings aren't inherited by envs, hence repeated.
+  "env": {
+    "dev": {
+      "name": "jct-edge-dev",
+      "workers_dev": true,
+      "d1_databases": [
+        { "binding": "DB", "database_name": "jct-dev", "database_id": "1549563d-77c7-4abc-806e-42f339e38815", "migrations_dir": "d1/migrations" }
+      ],
+      "r2_buckets": [
+        { "binding": "OG", "bucket_name": "jct-og", "remote": true },
+        { "binding": "DATA", "bucket_name": "jc-taxes", "remote": true }
+      ]
+    }
+  },
   "observability": {
     "enabled": true
   }

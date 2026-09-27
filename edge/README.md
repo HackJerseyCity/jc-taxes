@@ -58,6 +58,12 @@ curl -s "$U/api/portfolios" | jq .source        # → "d1"
 ```
 The seed script also accepts a URL. Keys missing from the JSON are deleted.
 
+## Dev → prod
+
+- **dev**: `jct-edge-dev` (`wrangler deploy --env dev` / `pnpm run deploy:dev`), D1 `jct-dev`, at <https://jct-edge-dev.ryan-0dc.workers.dev>. CI deploys it on every push to `main`. Pipeline data loads go to `jct-dev` first (`jct aggregates -d jct-dev`, `wrangler d1 execute jct-dev --remote --env dev --file tmp/parcels.sql`).
+- **promote**: after checking dev, load the same SQL into `jct` and run the Deploy workflow manually with `env: prod` (deploys that commit's build to `jct.rbw.sh`).
+- Map data files are content-addressed (`/d/files/md5/…`), so dev and prod builds share the `jc-taxes` bucket without interfering.
+
 ## Production
 
 `jct.rbw.sh` is a Workers custom domain on `jct-edge` (cut over from GitHub Pages on 2026-09-27; Pages is unpublished). CI (`.github/workflows/deploy.yml`) builds `www` with `VITE_DVC_BASE_URL=/d`, runs the e2e suite, and on `main` runs `wrangler deploy` here (repo secret `CLOUDFLARE_API_TOKEN`).
