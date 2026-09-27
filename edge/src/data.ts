@@ -11,6 +11,8 @@
 export interface Env {
   ASSETS: Fetcher
   OG: R2Bucket
+  // Production `jc-taxes` bucket, read-only use: DVC-cached map data (`dvc.ts`).
+  DATA: R2Bucket
   // Bound only once a D1 database is provisioned (see edge/README.md); the
   // portfolios endpoint falls back to R2 when it's absent.
   DB?: D1Database

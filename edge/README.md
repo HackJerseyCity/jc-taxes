@@ -7,6 +7,7 @@ This Worker serves the built map SPA (`../www/dist`) and adds per-URL Open Graph
 | `/`, `/about`, `/files/*`, `/index.html` | SPA shell, with `<title>`, `og:*` and `twitter:*` tags rewritten per query (HTMLRewriter) |
 | `/og?agg=&mt=&y=` / `/og?pf=&y=` | 1200×630 PNG stats card (satori + resvg-wasm), cached in R2 |
 | `/api/portfolios` | Curated portfolios as JSON (D1 if bound, else R2 `portfolios.json`) |
+| `/d/files/md5/…` | DVC-cached map data from the `jc-taxes` bucket (read-only binding), as compressed JSON with immutable edge caching; the SPA is built with `VITE_DVC_BASE_URL=/d` |
 | everything else | Static assets (SPA fallback serves `index.html` with the default tags) |
 
 The test deploy is at <https://jct-edge.ryan-0dc.workers.dev> (`workers_dev: true`, no custom domain).
@@ -29,7 +30,7 @@ npx wrangler r2 object put jct-og/portfolios.json --file ../www/public/portfolio
 ```bash
 pnpm install          # postinstall extracts satori's Yoga wasm → generated/yoga.wasm
 pnpm dev              # wrangler dev on :3205 (R2 binding is remote → real jct-og bucket)
-(cd ../www && VITE_DVC_BASE_URL=https://data.jct.rbw.sh/.dvc/cache pnpm build)
+(cd ../www && VITE_DVC_BASE_URL=/d pnpm build)
 pnpm run deploy
 ```
 

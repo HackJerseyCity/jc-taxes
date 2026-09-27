@@ -31,7 +31,7 @@
     // JS/CSS/images are served straight from Assets — free, and not counted
     // against Worker request quotas. Other deep links still get the SPA
     // fallback, just with the default (static) OG tags.
-    "run_worker_first": ["/", "/index.html", "/about", "/files/*", "/og", "/api/*"]
+    "run_worker_first": ["/", "/index.html", "/about", "/files/*", "/og", "/api/*", "/d/*"]
   },
   "r2_buckets": [
     {
@@ -40,6 +40,13 @@
       // can touch production data.
       "binding": "OG",
       "bucket_name": "jct-og",
+      "remote": true
+    },
+    {
+      // Production map data (DVC cache), read by `/d/*` (src/dvc.ts) and
+      // never written.
+      "binding": "DATA",
+      "bucket_name": "jc-taxes",
       "remote": true
     }
   ],
