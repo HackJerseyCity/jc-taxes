@@ -74,3 +74,7 @@ We are **not overriding** the government geometry data. Instead:
 - [Google Maps (satellite, 120m)](https://www.google.com/maps/place/33+Bayside+Terrace,+Jersey+City,+NJ+07305/@40.6992333,-74.0806087,120m/data=!3m1!1e3)
 - [Google Earth (3D)](https://earth.google.com/web/search/33+Bayside+Terrace,+Jersey+City,+NJ/@40.69933431,-74.08044733,13.41026608a,149.03853473d,35y)
 - [jc-taxes map (lot view, selected)](http://m3.rbw.sh:3201/?v=40.6993-74.0804+17.8+20+123&wl=1&agg=lot&sel=26001-47)
+
+## Status (2026-09-27)
+
+Done via the notes approach: `www/src/notes.ts` (`getLotNote`) surfaces the 26001-47 note in the tooltip. Geometry itself is left as published.

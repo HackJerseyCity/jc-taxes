@@ -49,3 +49,7 @@ The gradient editor currently shows $/sqft or $/capita labels. For `yr_built`, l
 - Should `yr_built` metric be available at block level? Would require computing median/mode per block in `geojson_yearly.py`.
 - Color direction: old=red→new=green, or reversed? Old=warm/new=cool could also work.
 - Should null `yr_built` values be visually distinct from 0 (which doesn't exist in the data)?
+
+## Status (2026-09-27)
+
+Done: color-by-year-built (`cb=yr_built`, lot / unit views; `Y` key) with its own gradient, and grey for unknown year.
