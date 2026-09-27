@@ -236,39 +236,40 @@
     "fetched": [
       "/api/portfolios",
       "/api/summary",
-      "taxes-2015-wards.geojson",
-      "taxes-2016-wards.geojson",
-      "taxes-2017-wards.geojson",
-      "taxes-2018-wards.geojson",
-      "taxes-2019-wards.geojson",
-      "taxes-2020-wards.geojson",
-      "taxes-2021-wards.geojson",
-      "taxes-2022-wards.geojson",
-      "taxes-2023-wards.geojson",
-      "taxes-2024-wards.geojson",
-      "taxes-2025-wards.geojson",
-      "taxes-2026-wards.geojson"
+      "geom-wards.geojson",
+      "values-wards-2015.json",
+      "values-wards-2016.json",
+      "values-wards-2017.json",
+      "values-wards-2018.json",
+      "values-wards-2019.json",
+      "values-wards-2020.json",
+      "values-wards-2021.json",
+      "values-wards-2022.json",
+      "values-wards-2023.json",
+      "values-wards-2024.json",
+      "values-wards-2025.json",
+      "values-wards-2026.json"
     ],
     "byKind": {
       "app": {
         "requests": 11,
-        "transfer": 704878,
-        "decoded": 2472236
+        "transfer": 706092,
+        "decoded": 2476078
       },
       "basemap": {
         "requests": 10,
-        "transfer": 222010,
+        "transfer": 222175,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3178,
+        "transfer": 3176,
         "decoded": 5891
       },
       "data": {
-        "requests": 12,
-        "transfer": 2253494,
-        "decoded": 14169072
+        "requests": 13,
+        "transfer": 19917,
+        "decoded": 66034
       }
     }
   },
@@ -276,39 +277,40 @@
     "fetched": [
       "/api/portfolios",
       "/api/summary",
-      "taxes-2015-census-blocks.geojson",
-      "taxes-2016-census-blocks.geojson",
-      "taxes-2017-census-blocks.geojson",
-      "taxes-2018-census-blocks.geojson",
-      "taxes-2019-census-blocks.geojson",
-      "taxes-2020-census-blocks.geojson",
-      "taxes-2021-census-blocks.geojson",
-      "taxes-2022-census-blocks.geojson",
-      "taxes-2023-census-blocks.geojson",
-      "taxes-2024-census-blocks.geojson",
-      "taxes-2025-census-blocks.geojson",
-      "taxes-2026-census-blocks.geojson"
+      "geom-census-blocks.geojson",
+      "values-census-blocks-2015.json",
+      "values-census-blocks-2016.json",
+      "values-census-blocks-2017.json",
+      "values-census-blocks-2018.json",
+      "values-census-blocks-2019.json",
+      "values-census-blocks-2020.json",
+      "values-census-blocks-2021.json",
+      "values-census-blocks-2022.json",
+      "values-census-blocks-2023.json",
+      "values-census-blocks-2024.json",
+      "values-census-blocks-2025.json",
+      "values-census-blocks-2026.json"
     ],
     "byKind": {
       "app": {
         "requests": 9,
-        "transfer": 704029,
-        "decoded": 2472308
+        "transfer": 706345,
+        "decoded": 2476150
       },
       "basemap": {
-        "requests": 10,
-        "transfer": 221977,
-        "decoded": 439672
+        "requests": 7,
+        "transfer": 80056,
+        "decoded": 201254
       },
       "api": {
         "requests": 2,
-        "transfer": 3199,
+        "transfer": 3211,
         "decoded": 5976
       },
       "data": {
-        "requests": 12,
-        "transfer": 2904762,
-        "decoded": 15375221
+        "requests": 13,
+        "transfer": 283808,
+        "decoded": 1095222
       }
     }
   },
