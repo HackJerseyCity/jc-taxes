@@ -4,6 +4,8 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+packageExtensionsChecksum: sha256-3sGf9w1r9ERT/mekyhAMJ7yHxTskgkoNCuo7Lr9g8W0=
+
 importers:
 
   .:
@@ -27,8 +29,8 @@ importers:
         specifier: ^9.2.6
         version: 9.2.6(@luma.gl/core@9.2.6)
       '@rdub/file-tree':
-        specifier: https://github.com/runsascoded/file-tree#d6d2eeef87ad6a601289bfa7639145d01f38d014
-        version: https://codeload.github.com/runsascoded/file-tree/tar.gz/d6d2eeef87ad6a601289bfa7639145d01f38d014(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@19.2.4(react@19.2.4))(react-markdown@10.1.0(@types/react@19.2.10)(react@19.2.4))(react-router-dom@7.17.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(remark-gfm@4.0.1)(use-prms@0.5.0(react@19.2.4))(yaml@2.9.0)
+        specifier: https://github.com/runsascoded/file-tree#ca0c1d8a2b9234e0084655182605e197b9a11d10
+        version: https://codeload.github.com/runsascoded/file-tree/tar.gz/ca0c1d8a2b9234e0084655182605e197b9a11d10(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@19.2.4(react@19.2.4))(react-markdown@10.1.0(@types/react@19.2.10)(react@19.2.4))(react-router-dom@7.17.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(remark-gfm@4.0.1)(use-prms@0.5.0(react@19.2.4))(yaml@2.9.0)
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.2.4)
@@ -1245,10 +1247,11 @@ packages:
       '@types/react':
         optional: true
 
-  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/d6d2eeef87ad6a601289bfa7639145d01f38d014':
-    resolution: {tarball: https://codeload.github.com/runsascoded/file-tree/tar.gz/d6d2eeef87ad6a601289bfa7639145d01f38d014}
-    version: 0.0.1-dist.94a116e
+  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/ca0c1d8a2b9234e0084655182605e197b9a11d10':
+    resolution: {tarball: https://codeload.github.com/runsascoded/file-tree/tar.gz/ca0c1d8a2b9234e0084655182605e197b9a11d10}
+    version: 0.0.1-dist.d6fe2aa
     peerDependencies:
+      '@rdub/treemap': '*'
       highlight.js: ^11
       hyparquet: ^1
       jq-web: ^0.6
@@ -1257,14 +1260,23 @@ packages:
       react-markdown: ^7 || ^8 || ^9 || ^10
       react-router-dom: ^6 || ^7
       remark-gfm: ^3 || ^4
-      use-prms: ^0.4
+      use-prms: ^0.5.0
+      wa-sqlite: ^1
       yaml: ^2
     peerDependenciesMeta:
+      '@rdub/treemap':
+        optional: true
+      jq-web:
+        optional: true
       react:
         optional: true
       react-dom:
         optional: true
       react-router-dom:
+        optional: true
+      wa-sqlite:
+        optional: true
+      yaml:
         optional: true
 
   '@remix-run/router@1.23.4':
@@ -6351,20 +6363,20 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.10
 
-  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/d6d2eeef87ad6a601289bfa7639145d01f38d014(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@19.2.4(react@19.2.4))(react-markdown@10.1.0(@types/react@19.2.10)(react@19.2.4))(react-router-dom@7.17.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(remark-gfm@4.0.1)(use-prms@0.5.0(react@19.2.4))(yaml@2.9.0)':
+  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/ca0c1d8a2b9234e0084655182605e197b9a11d10(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@19.2.4(react@19.2.4))(react-markdown@10.1.0(@types/react@19.2.10)(react@19.2.4))(react-router-dom@7.17.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(remark-gfm@4.0.1)(use-prms@0.5.0(react@19.2.4))(yaml@2.9.0)':
     dependencies:
       aws4fetch: 1.0.20
       highlight.js: 11.12.0
       hyparquet: 1.29.2
-      jq-web: 0.6.2
       react-markdown: 10.1.0(@types/react@19.2.10)(react@19.2.4)
       remark-gfm: 4.0.1
       use-prms: 0.5.0(react@19.2.4)
-      yaml: 2.9.0
     optionalDependencies:
+      jq-web: 0.6.2
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
       react-router-dom: 7.17.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      yaml: 2.9.0
 
   '@remix-run/router@1.23.4': {}
 
@@ -10838,7 +10850,8 @@ snapshots:
 
   yallist@3.1.1: {}
 
-  yaml@2.9.0: {}
+  yaml@2.9.0:
+    optional: true
 
   yargs-parser@21.1.1: {}
 

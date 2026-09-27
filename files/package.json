@@ -12,7 +12,7 @@
     "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {
-    "@rdub/file-tree": "https://github.com/runsascoded/file-tree#579fe01e8b18e20eed8b3f443fb99fb607328e97",
+    "@rdub/file-tree": "https://github.com/runsascoded/file-tree#ca0c1d8a2b9234e0084655182605e197b9a11d10",
     "highlight.js": "^11.11.1",
     "hyparquet": "^1.25.8",
     "react": "^18.3.1",
@@ -32,6 +32,27 @@
     "wrangler": "^4.20.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "workerd"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd"
+    ],
+    "packageExtensions": {
+      "@rdub/file-tree": {
+        "peerDependenciesMeta": {
+          "@rdub/treemap": {
+            "optional": true
+          },
+          "jq-web": {
+            "optional": true
+          },
+          "wa-sqlite": {
+            "optional": true
+          },
+          "yaml": {
+            "optional": true
+          }
+        }
+      }
+    }
   }
 }

@@ -4,13 +4,15 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+packageExtensionsChecksum: sha256-3sGf9w1r9ERT/mekyhAMJ7yHxTskgkoNCuo7Lr9g8W0=
+
 importers:
 
   .:
     dependencies:
       '@rdub/file-tree':
-        specifier: https://github.com/runsascoded/file-tree#579fe01e8b18e20eed8b3f443fb99fb607328e97
-        version: https://codeload.github.com/runsascoded/file-tree/tar.gz/579fe01e8b18e20eed8b3f443fb99fb607328e97(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@18.3.1(react@18.3.1))(react-markdown@10.1.0(@types/react@18.3.31)(react@18.3.1))(react-router-dom@6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(remark-gfm@4.0.1)(use-prms@0.5.0(react@18.3.1))
+        specifier: https://github.com/runsascoded/file-tree#ca0c1d8a2b9234e0084655182605e197b9a11d10
+        version: https://codeload.github.com/runsascoded/file-tree/tar.gz/ca0c1d8a2b9234e0084655182605e197b9a11d10(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@18.3.1(react@18.3.1))(react-markdown@10.1.0(@types/react@18.3.31)(react@18.3.1))(react-router-dom@6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(remark-gfm@4.0.1)(use-prms@0.5.0(react@18.3.1))
       highlight.js:
         specifier: ^11.11.1
         version: 11.12.0
@@ -688,25 +690,36 @@ packages:
   '@poppinss/exception@1.2.3':
     resolution: {integrity: sha512-dCED+QRChTVatE9ibtoaxc+WkdzOSjYTKi/+uacHWIsfodVfpsueo3+DKpgU5Px8qXjgmXkSvhXvSCz3fnP9lw==}
 
-  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/579fe01e8b18e20eed8b3f443fb99fb607328e97':
-    resolution: {tarball: https://codeload.github.com/runsascoded/file-tree/tar.gz/579fe01e8b18e20eed8b3f443fb99fb607328e97}
-    version: 0.0.1-dist.ac38c76
+  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/ca0c1d8a2b9234e0084655182605e197b9a11d10':
+    resolution: {tarball: https://codeload.github.com/runsascoded/file-tree/tar.gz/ca0c1d8a2b9234e0084655182605e197b9a11d10}
+    version: 0.0.1-dist.d6fe2aa
     peerDependencies:
+      '@rdub/treemap': '*'
       highlight.js: ^11
       hyparquet: ^1
       jq-web: ^0.6
       react: ^18 || ^19
       react-dom: ^18 || ^19
-      react-markdown: ^9 || ^10
+      react-markdown: ^7 || ^8 || ^9 || ^10
       react-router-dom: ^6 || ^7
-      remark-gfm: ^4
-      use-prms: ^0.4
+      remark-gfm: ^3 || ^4
+      use-prms: ^0.5.0
+      wa-sqlite: ^1
+      yaml: ^2
     peerDependenciesMeta:
+      '@rdub/treemap':
+        optional: true
+      jq-web:
+        optional: true
       react:
         optional: true
       react-dom:
         optional: true
       react-router-dom:
+        optional: true
+      wa-sqlite:
+        optional: true
+      yaml:
         optional: true
 
   '@remix-run/router@1.23.4':
@@ -1937,16 +1950,16 @@ snapshots:
 
   '@poppinss/exception@1.2.3': {}
 
-  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/579fe01e8b18e20eed8b3f443fb99fb607328e97(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@18.3.1(react@18.3.1))(react-markdown@10.1.0(@types/react@18.3.31)(react@18.3.1))(react-router-dom@6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(remark-gfm@4.0.1)(use-prms@0.5.0(react@18.3.1))':
+  '@rdub/file-tree@https://codeload.github.com/runsascoded/file-tree/tar.gz/ca0c1d8a2b9234e0084655182605e197b9a11d10(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@18.3.1(react@18.3.1))(react-markdown@10.1.0(@types/react@18.3.31)(react@18.3.1))(react-router-dom@6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(remark-gfm@4.0.1)(use-prms@0.5.0(react@18.3.1))':
     dependencies:
       aws4fetch: 1.0.20
       highlight.js: 11.12.0
       hyparquet: 1.29.2
-      jq-web: 0.6.2
       react-markdown: 10.1.0(@types/react@18.3.31)(react@18.3.1)
       remark-gfm: 4.0.1
       use-prms: 0.5.0(react@18.3.1)
     optionalDependencies:
+      jq-web: 0.6.2
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       react-router-dom: 6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2280,7 +2293,8 @@ snapshots:
 
   is-plain-obj@4.1.0: {}
 
-  jq-web@0.6.2: {}
+  jq-web@0.6.2:
+    optional: true
 
   js-tokens@4.0.0: {}
 

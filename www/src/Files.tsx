@@ -33,7 +33,18 @@ function parcelSel(row: Record<string, unknown>): string | null {
   return `${String(block).trim()}-${String(lot).trim()}`
 }
 
-function renderCell({ column, value, row, defaultNode }: ParquetCellCtx): ReactNode {
+// Rows come grouped by account / parcel: a key column repeating the row above
+// shows as a dim 〃 (value on hover). The viewer's own `ditto` option is
+// skipped when a `renderCell` is set, so it's applied here.
+const DITTO_COLS = new Set(['AccountNumber', 'Block', 'Lot', 'Qualifier'])
+const dittoMark = (value: unknown) => (
+  <span title={String(value)} style={{ opacity: 0.3, display: 'block', textAlign: 'center' }}>〃</span>
+)
+
+function renderCell({ column, value, row, prevRow, defaultNode }: ParquetCellCtx): ReactNode {
+  if (DITTO_COLS.has(column.name) && prevRow && value != null && value !== '' && Object.is(value, prevRow[column.name])) {
+    return dittoMark(value)
+  }
   if (CURRENCY_COLS.has(column.name) && typeof value === 'number') {
     return usd.format(value)
   }
@@ -56,22 +67,16 @@ export default function Files() {
   const store = useMemo(() => HttpStore(FILES_API), [])
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '1.5em' }}>
-      {/* Until `@rdub/file-tree` grows a `home` crumb (its `specs/home-link.md`). */}
-      <nav style={{ fontSize: '0.9em', marginBottom: '0.6em' }}>
-        <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35em' }}>
-          <MdMap /> Jersey City property-tax map
-        </a>
-        {' · '}
-        <a href="/about">About</a>
-      </nav>
       <FileTree
         store={store}
         routeBase="/files"
         rootPrefix="data/"
         title="Jersey City property-tax data"
+        titleHref="/"
+        home={{ href: '/', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3em' }}><MdMap /> map</span> }}
         markdownRenderer={renderMarkdown}
         parquetRenderer={ParquetViewer}
-        parquetOptions={{ renderCell }}
+        parquetOptions={{ renderCell, foldConstantColumns: true }}
         jsonRenderer={renderJsonTree}
         csvRenderer={CsvViewer}
         codeRenderer={renderCode}

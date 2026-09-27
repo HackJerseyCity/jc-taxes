@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { FileTree } from '@rdub/file-tree/react'
 import { HttpStore } from '@rdub/file-tree/stores/http'
-import type { Store } from '@rdub/file-tree/stores'
+import type { Store } from '@rdub/file-tree'
 import type { PersistedState } from '@rdub/file-tree/react'
 import { renderMarkdown } from '@rdub/file-tree/renderers/markdown'
 import { ParquetViewer, type ParquetCellCtx } from '@rdub/file-tree/renderers/parquet'
@@ -79,6 +79,8 @@ export function Browser() {
         // root listing shows `geojson/` + `modiv/` directly.
         rootPrefix="data/"
         title="Jersey City property-tax data"
+        titleHref="https://jct.rbw.sh/"
+        home={{ href: 'https://jct.rbw.sh/', label: 'jct.rbw.sh' }}
         markdownRenderer={renderMarkdown}
         parquetRenderer={TaxParquetViewer}
         jsonRenderer={renderJsonTree}
