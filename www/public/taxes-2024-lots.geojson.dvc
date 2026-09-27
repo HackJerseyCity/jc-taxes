@@ -1,6 +1,6 @@
 outs:
-- md5: aeb4747a7dd28fa968fb5143b8941a3b
-  size: 25091683
+- md5: 59dfe3db0ec249071546c55dd788fd92
+  size: 24700789
   hash: md5
   path: taxes-2024-lots.geojson
 meta:

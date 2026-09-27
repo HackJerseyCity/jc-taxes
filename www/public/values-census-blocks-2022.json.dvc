@@ -1,5 +1,5 @@
 outs:
-- md5: 07d64bb85bdb0a9452dc6ed42609524b
-  size: 37851
+- md5: 80d1de800e76624f74e2dbfc0c8bb518
+  size: 37833
   hash: md5
   path: values-census-blocks-2022.json
