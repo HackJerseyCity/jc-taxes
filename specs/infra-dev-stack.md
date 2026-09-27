@@ -8,12 +8,13 @@ Every change (code or data) goes: build → deploy to **dev** → review it ther
 
 | | status |
 |---|---|
-| Map data files | **Already content-addressed.** The app fetches DVC objects by md5 via the Worker's `/d/files/md5/…`, and brotli copies are `br/<md5>`. A new build references new objects, so dev and prod builds can coexist on the same bucket safely. |
-| D1 (`aggregates`, `parcels`, `portfolios`) | **Mutable, single database.** A data regen reloads prod D1 in place; dev can't hold different D1 data. |
-| OG assets | Rendered cards are content-hash keyed. Map captures (`maps/<view>-WxH.jpg`) are mutable keys. |
-| Environments | Prod only (`jct-edge` on `jct.rbw.sh`; `jct-edge.ryan-0dc.workers.dev` is the same Worker). |
-| IaC | None. R2 buckets, D1, DNS / custom domains, and the API token were made by hand or ad-hoc CLI. `wrangler.jsonc` covers only the Worker. |
-| Pipeline | Runs locally. The HLS pull is ~17 h of API calls, the per-year GeoJSON regen ~1 h. Only partly DVX'd (see `dvx-pipeline.md`). |
+| Map data files | **Content-addressed.** The app fetches DVC objects by md5 via the Worker's `/d/files/md5/…`, and brotli copies are `br/<md5>`. Dev and prod builds coexist on the same bucket. |
+| D1 (`aggregates`, `parcels`, `portfolios`) | **Separate dev / prod databases, loaded from the same DVX-tracked SQL** (`data/d1/*.sql`, `jct d1 load -d jct-dev|jct`). The prod stage's `.dvc` (`deploy/prod/d1.dvc`) records which SQL prod has. |
+| OG assets | Rendered cards are content-hash keyed. Map captures (`maps/<view>-WxH.jpg`, `pnpm -C www og-maps`) are mutable keys shared by dev and prod. |
+| Environments | **Done:** dev `jct-edge-dev` (+ D1 `jct-dev`) at `jct-edge-dev.ryan-0dc.workers.dev`; CI deploys dev on push, prod on manual `env: prod`. |
+| IaC | **`infra/` (Pulumi) written, previewed clean; `pulumi up` pending (user).** Imports R2 `jc-taxes` / `jct-og`, D1 `jct` / `jct-dev`, Worker domains `jct.rbw.sh` / `jct-files.rbw.sh`; adopts `jc-taxes` CORS; `jct-dev.rbw.sh` behind `dev_domain`. |
+| Pipeline | **DVX provenance for every stage** (`jct pipeline write`, `specs/dvx-pipeline.md`). Still runs locally. |
+| Batch | `batch/` image (Dockerfile + entrypoint) written; AWS side (`dvx batch bootstrap` / Pulumi) waits on the account choice. |
 
 ## Plan
 

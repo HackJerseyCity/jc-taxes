@@ -1,0 +1,4 @@
+# Only the Dockerfile and entrypoint; the image clones the repo.
+*
+!Dockerfile
+!entrypoint.sh
