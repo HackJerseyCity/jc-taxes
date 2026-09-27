@@ -1,0 +1,5 @@
+outs:
+- md5: 20fea42207fe55ff168afdc673f6f098
+  size: 37676
+  hash: md5
+  path: values-census-blocks-2019.json

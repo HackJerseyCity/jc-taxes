@@ -1,0 +1,5 @@
+outs:
+- md5: 8302230dbb78b5c14715d754b77dc22f
+  size: 267
+  hash: md5
+  path: values-wards-2026.json

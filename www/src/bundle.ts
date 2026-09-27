@@ -7,8 +7,21 @@ import type { ParcelFeature, ParcelProperties } from './types'
 // (~0.13 MB for lots).
 // `yearFeatures` rebuilds a year's features with the same properties the
 // per-year GeoJSON had (the pipeline's rounding for derived metrics), so the
-// rest of the app is unchanged. Wards / census blocks keep per-year GeoJSON.
-const SUFFIX: Record<string, string> = { block: 'blocks', lot: 'lots', unit: 'units' }
+// rest of the app is unchanged. Wards / census blocks use small per-year JSON
+// values that include each year's area (their shapes are trimmed to that year's
+// tax-paying lots; the geometry file has the latest year's).
+const SUFFIX: Record<string, string> = {
+  block: 'blocks', lot: 'lots', unit: 'units', ward: 'wards', 'census-block': 'census-blocks',
+}
+const SMALL_VIEWS = new Set(['ward', 'census-block'])
+
+/** `values-{view}-{year}.json` for wards / census blocks. */
+interface SmallValues {
+  count: number
+  paid: number[]
+  billed: number[]
+  area_sqft: number[]
+}
 
 export const isBundled = (view: string) => view in SUFFIX
 
@@ -46,6 +59,7 @@ function parseValues(buf: ArrayBuffer): Values {
 
 const geoms = new Map<string, Promise<ParcelFeature[]>>()
 const values = new Map<string, Promise<Values>>()
+const smallValues = new Map<string, Promise<SmallValues>>()
 
 function get(name: string): Promise<Response> {
   return fetch(dvcResolve(name)).then(r => {
@@ -77,8 +91,43 @@ export function loadValues(view: string, year: number): Promise<Values> {
 // `round(x, 2)` as the pipeline writes `paid_per_sqft` etc.
 const round2 = (x: number) => Math.round(x * 100) / 100
 
+function loadSmallValues(view: string, year: number): Promise<SmallValues> {
+  return memo(smallValues, `${view}|${year}`, () =>
+    get(`values-${SUFFIX[view]}-${year}.json`).then(r => r.json() as Promise<SmallValues>))
+}
+
+type AltShapes = Record<string, { lots?: ParcelFeature['geometry'], blocks?: ParcelFeature['geometry'] }>
+const wardShapes = new Map<string, Promise<AltShapes>>()
+/** Alternate ward shapes (Settings → ward geometry "lots" / "blocks"), fetched only when chosen. */
+export function loadWardShapes(year: number): Promise<AltShapes> {
+  return memo(wardShapes, String(year), () =>
+    get(`ward-shapes-${year}.json`).then(r => r.json() as Promise<AltShapes>))
+}
+
+async function smallYearFeatures(view: string, year: number): Promise<ParcelFeature[]> {
+  const [geom, v] = await Promise.all([loadGeom(view), loadSmallValues(view, year)])
+  if (geom.length !== v.count) throw new Error(`${view} ${year}: ${geom.length} features vs ${v.count} values`)
+  return geom.map((g, i) => {
+    const paid = v.paid[i], billed = v.billed[i], area = v.area_sqft[i]
+    const pop = g.properties.population ?? 0
+    const properties: ParcelProperties = {
+      ...g.properties,
+      year,
+      paid,
+      billed,
+      area_sqft: area,
+      paid_per_sqft: area > 0 ? round2(paid / area) : 0,
+      billed_per_sqft: area > 0 ? round2(billed / area) : 0,
+      paid_per_capita: pop > 0 ? round2(paid / pop) : undefined,
+      billed_per_capita: pop > 0 ? round2(billed / pop) : undefined,
+    }
+    return { type: 'Feature', geometry: g.geometry, properties }
+  })
+}
+
 /** A year's features: the view's geometry with that year's amounts. */
 export async function yearFeatures(view: string, year: number): Promise<ParcelFeature[]> {
+  if (SMALL_VIEWS.has(view)) return smallYearFeatures(view, year)
   const [geom, v] = await Promise.all([loadGeom(view), loadValues(view, year)])
   if (geom.length !== v.count) throw new Error(`${view} ${year}: ${geom.length} features vs ${v.count} values`)
   const yi = v.years.indexOf(year)

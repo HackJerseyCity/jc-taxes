@@ -1,0 +1,5 @@
+outs:
+- md5: dc5696f989f336b0747ac77de47cedeb
+  size: 37278
+  hash: md5
+  path: values-census-blocks-2017.json

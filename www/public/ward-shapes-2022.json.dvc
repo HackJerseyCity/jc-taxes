@@ -1,0 +1,5 @@
+outs:
+- md5: a80d928fbfe508ac02eec1ef5e5c01bb
+  size: 974241
+  hash: md5
+  path: ward-shapes-2022.json

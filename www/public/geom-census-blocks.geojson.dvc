@@ -1,0 +1,5 @@
+outs:
+- md5: 1137be7661014cbc38557c73de797e80
+  size: 642707
+  hash: md5
+  path: geom-census-blocks.geojson

@@ -1,0 +1,5 @@
+outs:
+- md5: 18091960dde6cc1594c346fe3a83e678
+  size: 1062419
+  hash: md5
+  path: ward-shapes-2019.json

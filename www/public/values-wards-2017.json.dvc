@@ -1,0 +1,5 @@
+outs:
+- md5: a10986ab6af8ad355c599d6fdddcb66a
+  size: 257
+  hash: md5
+  path: values-wards-2017.json

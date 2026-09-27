@@ -35,7 +35,16 @@ from .aggregates import YEARS
 from .paths import ROOT
 from .stats import WWW_PUBLIC, _load_geojson
 
-VIEWS = {"block": "blocks", "lot": "lots", "unit": "units"}
+VIEWS = {"block": "blocks", "lot": "lots", "unit": "units", "ward": "wards", "census-block": "census-blocks"}
+# Wards / census blocks: a few thousand features at most, so values are small
+# JSON (`values-{view}-{year}.json`), and include each year's `area_sqft` (their
+# shapes are trimmed to that year's tax-paying lots, so area varies by year;
+# the geometry file carries the latest year's shape).
+SMALL_VIEWS = {"ward", "census-block"}
+SMALL_VALUE_PROPS = ("paid", "billed", "area_sqft")
+# Alternate ward shapes (Settings → ward geometry "lots" / "blocks"): big and
+# rarely used, so a separate per-year file (`ward-shapes-{year}.json`), fetched on demand.
+WARD_ALT_SHAPES = ("lots", "blocks")
 DYNAMIC = {"paid", "billed", "paid_per_sqft", "billed_per_sqft", "paid_per_capita", "billed_per_capita", "year"}
 PER_YEAR_DETAILS = {"owner"}
 # Moved from the geometry to D1 `parcels` (lot / unit views): only the tooltip
@@ -74,6 +83,27 @@ def encode_values(values: dict) -> bytes:
     return head + b"".join(struct.pack(f"<{len(arr)}{fmt}", *arr) for arr in flat)
 
 
+def small_values(view: str, per_year: dict[int, list[dict]], order: list[tuple[str, int]]) -> dict[int, dict]:
+    """Per-year `{count, paid, billed, area_sqft}` arrays (feature order = `order`)."""
+    index = {k: i for i, k in enumerate(order)}
+    out = {}
+    for y, feats in per_year.items():
+        cols = {k: [0.0] * len(order) for k in SMALL_VALUE_PROPS}
+        for k, f in zip(keyed(feats), feats):
+            for c in SMALL_VALUE_PROPS:
+                cols[c][index[k]] = round(f["properties"].get(c) or 0, 2)
+        out[y] = {"count": len(order), **cols}
+    return out
+
+
+def ward_shapes(feats: list[dict]) -> dict[str, dict]:
+    """`{ward: {lots, blocks}}` alternate shapes for one year."""
+    return {
+        f["properties"]["ward"]: {k: f["properties"][k] for k in WARD_ALT_SHAPES if f["properties"].get(k)}
+        for f in feats
+    }
+
+
 def year_values(values: dict, year: int) -> dict:
     """One year's slice of `values` (the per-year file's contents)."""
     y = values["years"].index(year)
@@ -85,7 +115,11 @@ def round_coords(c, n: int = COORD_DECIMALS):
 
 
 def feature_id(pr: dict) -> str:
-    """`featureIdOf` in MapView.tsx (block / lot / unit views)."""
+    """`featureIdOf` in MapView.tsx."""
+    if pr.get("geoid"):
+        return pr["geoid"]
+    if pr.get("ward") and not pr.get("block"):
+        return f"ward-{pr['ward']}"
     return "-".join(str(pr.get(k) or "") for k in ("block", "lot", "qual")).rstrip("-")
 
 
@@ -131,7 +165,11 @@ def build(view: str, per_year: dict[int, list[dict]]) -> tuple[dict, dict, dict[
             {
                 "type": "Feature",
                 "geometry": {**f["geometry"], "coordinates": round_coords(f["geometry"]["coordinates"])},
-                "properties": {k: v for k, v in f["properties"].items() if k not in DYNAMIC and k not in PER_YEAR_DETAILS and (not detailed or k not in DETAIL_PROPS)},
+                "properties": {
+                    k: v for k, v in f["properties"].items()
+                    if k not in DYNAMIC and k not in PER_YEAR_DETAILS and k not in WARD_ALT_SHAPES
+                    and (not detailed or k not in DETAIL_PROPS) and (view not in SMALL_VIEWS or k != "area_sqft")
+                },
             }
             for f in latest
         ],
@@ -188,13 +226,15 @@ def bundle(cache_dir: Path | None, db: str, local: bool, dry_run: bool, out_dir:
         suffix = VIEWS[view]
         per_year = {y: _load_geojson(view, y, cache_dir, force=False)["features"] for y in YEARS}
         geom, values, details = build(view, per_year)
-        outputs = (
-            (f"geom-{suffix}.geojson", (json.dumps(geom, separators=(",", ":")) + "\n").encode()),
-            *(
-                (f"values-{suffix}-{y}.bin", encode_values(year_values(values, y)))
-                for y in values["years"]
-            ),
-        )
+        dump = lambda o: (json.dumps(o, separators=(",", ":")) + "\n").encode()
+        outputs = [(f"geom-{suffix}.geojson", dump(geom))]
+        if view in SMALL_VIEWS:
+            order = keyed(per_year[max(per_year)])
+            outputs += [(f"values-{suffix}-{y}.json", dump(v)) for y, v in small_values(view, per_year, order).items()]
+            if view == "ward":
+                outputs += [(f"ward-shapes-{y}.json", dump(ward_shapes(fs))) for y, fs in per_year.items()]
+        else:
+            outputs += [(f"values-{suffix}-{y}.bin", encode_values(year_values(values, y))) for y in values["years"]]
         for name, data in outputs:
             path = out_dir / name
             path.write_bytes(data)

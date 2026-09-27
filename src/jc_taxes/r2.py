@@ -169,9 +169,8 @@ def publish(force: bool, dry_run: bool):
     print(f"{PUBLIC_BASE}/{PUBLISH_PREFIX}/")
 
 
-# Data the map app fetches via the edge Worker's `/d` route (`www/src/bundle.ts`
-# + per-year GeoJSON for the views that keep it).
-APP_DATA = re.compile(r"^(geom-[\w-]+\.geojson|values-[\w-]+\.bin|taxes-\d{4}-(wards|census-blocks)\.geojson)$")
+# Data the map app fetches via the edge Worker's `/d` route (`www/src/bundle.ts`).
+APP_DATA = re.compile(r"^(geom-[\w-]+\.geojson|values-[\w-]+\.(bin|json)|ward-shapes-\d{4}\.json)$")
 CONTENT_TYPES = {".geojson": "application/geo+json", ".json": "application/json", ".bin": "application/octet-stream"}
 BR_PREFIX = "br/"
 

@@ -4,6 +4,7 @@ import DeckGL, { type DeckGLRef } from '@deck.gl/react'
 import { WebMercatorViewport, FlyToInterpolator, LinearInterpolator } from '@deck.gl/core'
 import { ColumnLayer, GeoJsonLayer } from '@deck.gl/layers'
 import { useUrlAlias, useUrlState, stringParam, viewStateParam } from 'use-prms'
+import { useQuery } from '@tanstack/react-query'
 import { useHotkeysContext } from 'use-kbd'
 import { MdFolderOpen, MdSettings } from 'react-icons/md'
 import AppSpeedDial from './AppSpeedDial'
@@ -12,7 +13,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { AVAILABLE_YEARS, DEFAULT_YEAR, YEAR_MAX } from './years'
 import { summaryFocus, useSummary, type SummaryMetric } from './summary'
-import { isBundled, yearFeatures } from './bundle'
+import { isBundled, loadWardShapes, yearFeatures } from './bundle'
 import { useParcelDetails } from './parcel'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
 import { fit3d } from './fit3d'
@@ -1307,17 +1308,28 @@ export default function MapView() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // For ward mode: swap geometry based on wardGeom setting
+  // For ward mode: swap geometry based on wardGeom setting. `boundary` ships
+  // with the ward geometry; the "lots" / "blocks" shapes are big, so they're a
+  // separate per-year file fetched only when chosen (merged shape until then).
+  const altWardShapes = wardGeom === 'lots' || wardGeom === 'blocks'
+  const shapesYear = Math.round(year)
+  const wardShapesQ = useQuery({
+    queryKey: ['ward-shapes', shapesYear],
+    enabled: aggregateMode === 'ward' && altWardShapes,
+    staleTime: Infinity,
+    queryFn: () => loadWardShapes(shapesYear),
+  })
   const effectiveData = useMemo(() => {
     if (!data || aggregateMode !== 'ward' || wardGeom === 'merged') return data
-    const prop = wardGeom === 'lots' ? 'lots' : wardGeom === 'blocks' ? 'blocks' : wardGeom === 'boundary' ? 'boundary' : null
-    if (!prop) return data
     return data.map(f => {
-      const alt = f.properties?.[prop as keyof typeof f.properties]
+      const w = f.properties?.ward
+      const alt = wardGeom === 'boundary'
+        ? f.properties?.boundary
+        : altWardShapes && w ? wardShapesQ.data?.[w]?.[wardGeom as 'lots' | 'blocks'] : undefined
       if (!alt) return f
       return { ...f, geometry: alt as ParcelFeature['geometry'] }
     })
-  }, [data, aggregateMode, wardGeom])
+  }, [data, aggregateMode, wardGeom, altWardShapes, wardShapesQ.data])
 
   // Ward label info: stable text/metadata (doesn't depend on viewState)
   type WardLabelInfo = { ward: string; text: string; metricVal: number; rings: number[][][] }

@@ -1,0 +1,5 @@
+outs:
+- md5: dffb2a65a43f9104e6f430fff5348c85
+  size: 62895
+  hash: md5
+  path: geom-wards.geojson

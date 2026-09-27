@@ -26,6 +26,9 @@ function readFixture(name: string): string {
 // Bundled views (`src/bundle.ts`): geometry + per-year values, synthesized from
 // the 2025 fixture (same amounts every year).
 const BUNDLE_DYNAMIC = new Set(['paid', 'billed', 'paid_per_sqft', 'billed_per_sqft', 'year'])
+// Wards / census blocks: per-year JSON values (with area); ward alt shapes in `ward-shapes-{year}.json`.
+const SMALL_VIEWS = new Set(['wards', 'census-blocks'])
+const SMALL_DYNAMIC = new Set([...BUNDLE_DYNAMIC, 'area_sqft', 'paid_per_capita', 'billed_per_capita', 'lots', 'blocks'])
 // Lot / unit details served by `/api/parcel` instead (DETAIL_PROPS + owner in src/jc_taxes/bundle.py).
 const DETAIL_PROPS = new Set(['addr', 'bldg_desc', 'stories', 'units', 'bldg_sqft', 'owner'])
 function bundleFixture(kind: 'geom' | 'values', view: string, year?: number): string | Buffer {
@@ -39,9 +42,12 @@ function bundleFixture(kind: 'geom' | 'values', view: string, year?: number): st
           type: 'Feature',
           geometry: f.geometry,
           properties: Object.fromEntries(Object.entries(f.properties).filter(([k]) =>
-            !BUNDLE_DYNAMIC.has(k) && !(view !== 'blocks' && DETAIL_PROPS.has(k)))),
+            !(SMALL_VIEWS.has(view) ? SMALL_DYNAMIC : BUNDLE_DYNAMIC).has(k) && !(view !== 'blocks' && DETAIL_PROPS.has(k)))),
         })),
       }))
+    } else if (SMALL_VIEWS.has(view)) {
+      const col = (k: string) => features.map(f => Number(f.properties[k] ?? 0))
+      fixtureCache.set(key, JSON.stringify({ count: features.length, paid: col('paid'), billed: col('billed'), area_sqft: col('area_sqft') }))
     } else {
       // `values-{view}.bin` (VALUES_FORMAT in src/jc_taxes/bundle.py).
       const n = features.length, ny = 1
@@ -67,13 +73,17 @@ function bundleFixture(kind: 'geom' | 'values', view: string, year?: number): st
 function fixtureFor(name: string): string | Buffer | null {
   let m = name.match(/^taxes-\d{4}-([\w-]+)\.geojson$/)
   if (m && FIXTURES[m[1]]) return readFixture(FIXTURES[m[1]])
-  m = name.match(/^geom-(blocks|lots|units)\.geojson$/)
+  m = name.match(/^geom-(blocks|lots|units|wards|census-blocks)\.geojson$/)
   if (m) return bundleFixture('geom', m[1])
-  m = name.match(/^values-(blocks|lots|units)-(\d{4})\.bin$/)
+  m = name.match(/^values-(blocks|lots|units|wards|census-blocks)-(\d{4})\.(?:bin|json)$/)
   if (m) return bundleFixture('values', m[1], Number(m[2]))
+  if (/^ward-shapes-\d{4}\.json$/.test(name)) {
+    const wards: { properties: Record<string, unknown> }[] = JSON.parse(readFixture(FIXTURES.wards)).features
+    return JSON.stringify(Object.fromEntries(wards.map(({ properties: p }) => [p.ward, { lots: p.lots, blocks: p.blocks }])))
+  }
   return null
 }
-const DATA_NAME = /(taxes-\d{4}-[\w-]+\.geojson|(?:geom|values)-[\w-]+\.(?:geojson|bin))/
+const DATA_NAME = /(taxes-\d{4}-[\w-]+\.geojson|(?:geom|values)-[\w-]+\.(?:geojson|bin|json)|ward-shapes-\d{4}\.json)/
 
 /**
  * Build reverse map from built DVC cache URLs → data file name. Only needed for
