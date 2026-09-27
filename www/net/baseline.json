@@ -9,23 +9,23 @@
     "byKind": {
       "app": {
         "requests": 9,
-        "transfer": 703984,
-        "decoded": 2472241
+        "transfer": 705036,
+        "decoded": 2476224
       },
       "basemap": {
         "requests": 10,
-        "transfer": 222168,
+        "transfer": 222067,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3160,
+        "transfer": 3164,
         "decoded": 5899
       },
       "data": {
         "requests": 2,
-        "transfer": 246134,
-        "decoded": 1627497
+        "transfer": 264380,
+        "decoded": 1729200
       }
     }
   },
@@ -39,23 +39,23 @@
     "byKind": {
       "app": {
         "requests": 9,
-        "transfer": 704921,
-        "decoded": 2472231
+        "transfer": 704985,
+        "decoded": 2476214
       },
       "basemap": {
         "requests": 10,
-        "transfer": 221977,
+        "transfer": 222167,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3160,
-        "decoded": 5899
+        "transfer": 3187,
+        "decoded": 5897
       },
       "data": {
         "requests": 2,
-        "transfer": 1121925,
-        "decoded": 12082267
+        "transfer": 1134390,
+        "decoded": 12189080
       }
     }
   },
@@ -69,23 +69,23 @@
     "byKind": {
       "app": {
         "requests": 11,
-        "transfer": 704867,
-        "decoded": 2472239
+        "transfer": 705885,
+        "decoded": 2476222
       },
       "basemap": {
         "requests": 10,
-        "transfer": 221942,
+        "transfer": 221943,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3146,
-        "decoded": 5897
+        "transfer": 3165,
+        "decoded": 5899
       },
       "data": {
         "requests": 2,
-        "transfer": 1743081,
-        "decoded": 20407555
+        "transfer": 1820319,
+        "decoded": 21350725
       }
     }
   },
@@ -100,22 +100,22 @@
       "app": {
         "requests": 9,
         "transfer": 704983,
-        "decoded": 2472235
+        "decoded": 2476204
       },
       "basemap": {
         "requests": 10,
-        "transfer": 221949,
+        "transfer": 221829,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3136,
-        "decoded": 5832
+        "transfer": 3145,
+        "decoded": 5830
       },
       "data": {
         "requests": 2,
-        "transfer": 1121942,
-        "decoded": 12082267
+        "transfer": 1134358,
+        "decoded": 12189080
       }
     }
   },
@@ -130,23 +130,23 @@
     "byKind": {
       "app": {
         "requests": 11,
-        "transfer": 704999,
-        "decoded": 2472231
+        "transfer": 705816,
+        "decoded": 2476214
       },
       "basemap": {
         "requests": 10,
-        "transfer": 221941,
+        "transfer": 222143,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3164,
-        "decoded": 5899
+        "transfer": 3188,
+        "decoded": 5897
       },
       "data": {
         "requests": 3,
-        "transfer": 1243497,
-        "decoded": 12374691
+        "transfer": 1255684,
+        "decoded": 12482224
       }
     }
   },
@@ -171,23 +171,23 @@
     "byKind": {
       "app": {
         "requests": 11,
-        "transfer": 704931,
-        "decoded": 2472248
+        "transfer": 705878,
+        "decoded": 2476231
       },
       "basemap": {
         "requests": 7,
-        "transfer": 80050,
+        "transfer": 80089,
         "decoded": 201254
       },
       "api": {
         "requests": 2,
-        "transfer": 3148,
+        "transfer": 3158,
         "decoded": 5899
       },
       "data": {
         "requests": 13,
-        "transfer": 354201,
-        "decoded": 1848817
+        "transfer": 371118,
+        "decoded": 1951048
       }
     }
   },
@@ -212,23 +212,23 @@
     "byKind": {
       "app": {
         "requests": 9,
-        "transfer": 704016,
-        "decoded": 2472238
+        "transfer": 704976,
+        "decoded": 2476221
       },
       "basemap": {
         "requests": 7,
-        "transfer": 80139,
+        "transfer": 80053,
         "decoded": 201254
       },
       "api": {
         "requests": 2,
-        "transfer": 3154,
-        "decoded": 5899
+        "transfer": 3187,
+        "decoded": 5897
       },
       "data": {
         "requests": 13,
-        "transfer": 2623722,
-        "decoded": 15298931
+        "transfer": 2639763,
+        "decoded": 15413664
       }
     }
   },
@@ -253,23 +253,23 @@
     "byKind": {
       "app": {
         "requests": 11,
-        "transfer": 706092,
-        "decoded": 2476078
+        "transfer": 705878,
+        "decoded": 2476219
       },
       "basemap": {
         "requests": 10,
-        "transfer": 222175,
+        "transfer": 222195,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3176,
-        "decoded": 5891
+        "transfer": 3180,
+        "decoded": 5901
       },
       "data": {
         "requests": 13,
-        "transfer": 19917,
-        "decoded": 66034
+        "transfer": 20034,
+        "decoded": 66690
       }
     }
   },
@@ -294,23 +294,23 @@
     "byKind": {
       "app": {
         "requests": 9,
-        "transfer": 706345,
-        "decoded": 2476150
+        "transfer": 705000,
+        "decoded": 2476291
       },
       "basemap": {
-        "requests": 7,
-        "transfer": 80056,
-        "decoded": 201254
+        "requests": 10,
+        "transfer": 222092,
+        "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3211,
-        "decoded": 5976
+        "transfer": 3218,
+        "decoded": 5968
       },
       "data": {
         "requests": 13,
-        "transfer": 283808,
-        "decoded": 1095222
+        "transfer": 301329,
+        "decoded": 1225049
       }
     }
   },
@@ -318,9 +318,9 @@
     "fetched": [],
     "byKind": {
       "app": {
-        "requests": 8,
-        "transfer": 538273,
-        "decoded": 1832544
+        "requests": 6,
+        "transfer": 542856,
+        "decoded": 1853974
       },
       "basemap": {
         "requests": 3,
@@ -329,7 +329,7 @@
       },
       "files": {
         "requests": 3,
-        "transfer": 1716745,
+        "transfer": 1716730,
         "decoded": 1714625
       }
     }
