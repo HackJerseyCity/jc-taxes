@@ -1,4 +1,6 @@
-from jc_taxes.bundle import build, run_length
+import struct
+
+from jc_taxes.bundle import build, encode_values, round_coords, run_length
 
 
 def feat(block, lot, paid, billed, owner, qual=None, area=100.0):
@@ -31,3 +33,23 @@ def test_build_aligns_years_by_id():
 def test_run_length():
     assert run_length({2015: "A", 2016: "A", 2017: "B", 2018: "A"}) == [[2015, "A"], [2017, "B"], [2018, "A"]]
     assert run_length({2015: None, 2016: None}) == []
+
+
+def test_encode_values_layout():
+    values = {"years": [2025, 2026], "count": 2, "paid": [[1000, 10050], [1100, 0]], "billed_minus_paid": [[200, 0], [200, 20025]]}
+    b = encode_values(values)
+    assert b[:4] == b"JCTV"
+    assert struct.unpack("<5I", b[4:24]) == (1, 1, 2025, 2, 2)
+    # [feature][year]: feature 0 = (1000, 1100), feature 1 = (10050, 0); then billed − paid.
+    assert struct.unpack("<8i", b[24:]) == (1000, 1100, 10050, 0, 200, 200, 0, 20025)
+
+
+def test_encode_values_overflow_uses_f64():
+    big = 3_000_000_000  # $30M in cents: over i32
+    b = encode_values({"years": [2025], "count": 1, "paid": [[big]], "billed_minus_paid": [[0]]})
+    assert struct.unpack("<5I", b[4:24]) == (1, 2, 2025, 1, 1)
+    assert struct.unpack("<2d", b[24:]) == (float(big), 0.0)
+
+
+def test_round_coords():
+    assert round_coords([[[-74.05539630685645, 40.762894620061346]]]) == [[[-74.055396, 40.762895]]]

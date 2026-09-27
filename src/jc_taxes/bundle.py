@@ -6,9 +6,10 @@ instead loads, once per view:
 
 - `geom-{view}.geojson`: geometry + fixed properties (latest year's values),
   minus the per-year amounts and owner.
-- `values-{view}.json`: `{years, count, paid, billed_minus_paid}`, integer cents
-  per `[year][feature]` aligned to the geometry's feature order. Billed is stored
-  as its difference from paid (mostly 0, so it compresses ~40% better). Derived metrics
+  Coordinates are rounded to 6 decimals (~0.1 m).
+- `values-{view}.bin`: every year's paid and billed, integer cents aligned to the
+  geometry's feature order (`VALUES_FORMAT` below). Binary with each feature's
+  years adjacent compresses ~30% smaller than the equivalent JSON. Derived metrics
   (`paid_per_sqft`, …) are recomputed client-side, as the pipeline does.
 
 so switching years or playing every year downloads nothing more. Owners go to
@@ -20,6 +21,7 @@ Outputs are DVC data (`dvx add` + `dvc push`, then served by the Worker's `/d`);
 the owners SQL goes to `tmp/` (not committed).
 """
 import json
+import struct
 import subprocess
 from pathlib import Path
 
@@ -35,6 +37,39 @@ DYNAMIC = {"paid", "billed", "paid_per_sqft", "billed_per_sqft", "paid_per_capit
 PER_YEAR_DETAILS = {"owner"}
 EDGE = ROOT / "edge"
 DEFAULT_SQL = ROOT / "tmp" / "owners.sql"
+COORD_DECIMALS = 6
+
+# `values-{view}.bin` (little-endian; parsed by `www/src/bundle.ts`):
+#   magic  b"JCTV"
+#   u32    version (1)
+#   u32    element type: 1 = i32, 2 = f64 (i32 unless some amount overflows,
+#          e.g. block totals over ~$21M)
+#   u32    first year
+#   u32    years (Y)
+#   u32    features (N)
+#   elem   paid cents              [N][Y]
+#   elem   billed − paid cents     [N][Y]   (mostly 0)
+VALUES_MAGIC = b"JCTV"
+VALUES_VERSION = 1
+I32_MAX = 2**31 - 1
+
+
+def encode_values(values: dict) -> bytes:
+    years, n = values["years"], values["count"]
+    if years != list(range(years[0], years[0] + len(years))):
+        raise ValueError(f"years must be contiguous: {years}")
+    flat = [
+        [rows[y][i] for i in range(n) for y in range(len(years))]
+        for rows in (values["paid"], values["billed_minus_paid"])
+    ]
+    fits = all(-I32_MAX - 1 <= v <= I32_MAX for arr in flat for v in arr)
+    elem, fmt = (1, "i") if fits else (2, "d")
+    head = VALUES_MAGIC + struct.pack("<5I", VALUES_VERSION, elem, years[0], len(years), n)
+    return head + b"".join(struct.pack(f"<{len(arr)}{fmt}", *arr) for arr in flat)
+
+
+def round_coords(c, n: int = COORD_DECIMALS):
+    return [round_coords(x, n) for x in c] if isinstance(c[0], list) else [round(v, n) for v in c]
 
 
 def feature_id(pr: dict) -> str:
@@ -75,7 +110,7 @@ def build(view: str, per_year: dict[int, list[dict]]) -> tuple[dict, dict, dict[
         "features": [
             {
                 "type": "Feature",
-                "geometry": f["geometry"],
+                "geometry": {**f["geometry"], "coordinates": round_coords(f["geometry"]["coordinates"])},
                 "properties": {k: v for k, v in f["properties"].items() if k not in DYNAMIC and k not in PER_YEAR_DETAILS},
             }
             for f in latest
@@ -121,10 +156,14 @@ def bundle(cache_dir: Path | None, db: str, local: bool, dry_run: bool, out_dir:
         suffix = VIEWS[view]
         per_year = {y: _load_geojson(view, y, cache_dir, force=False)["features"] for y in YEARS}
         geom, values, owners = build(view, per_year)
-        for name, obj in ((f"geom-{suffix}.geojson", geom), (f"values-{suffix}.json", values)):
+        outputs = (
+            (f"geom-{suffix}.geojson", (json.dumps(geom, separators=(",", ":")) + "\n").encode()),
+            (f"values-{suffix}.bin", encode_values(values)),
+        )
+        for name, data in outputs:
             path = out_dir / name
-            path.write_text(json.dumps(obj, separators=(",", ":")) + "\n")
-            err(f"wrote {path} ({path.stat().st_size / 1e6:.1f} MB)")
+            path.write_bytes(data)
+            err(f"wrote {path} ({len(data) / 1e6:.1f} MB)")
         if owners:
             stmts.append(f"DELETE FROM owners WHERE view = {_sql(view)};")
             stmts += [

@@ -167,3 +167,58 @@ def publish(force: bool, dry_run: bool):
                 copied += 1
     err(f"\n{'DRY RUN — ' if dry_run else ''}{copied} copied, {uploaded} uploaded, {skipped} skipped, {len(arts)} total")
     print(f"{PUBLIC_BASE}/{PUBLISH_PREFIX}/")
+
+
+# Data the map app fetches via the edge Worker's `/d` route (`www/src/bundle.ts`
+# + per-year GeoJSON for the views that keep it).
+APP_DATA = re.compile(r"^(geom-[\w-]+\.geojson|values-[\w-]+\.bin|taxes-\d{4}-(wards|census-blocks)\.geojson)$")
+CONTENT_TYPES = {".geojson": "application/geo+json", ".json": "application/json", ".bin": "application/octet-stream"}
+BR_PREFIX = "br/"
+
+
+def _compress(path: str) -> bytes:
+    import brotli
+    return brotli.compress(Path(path).read_bytes(), quality=11)
+
+
+@r2.command()
+@click.option("-f", "--force", is_flag=True, help="Re-upload even if the compressed copy exists.")
+@click.option("-j", "--jobs", type=int, default=6, show_default=True, help="Parallel compressions (quality 11 is slow: ~40 s for 20 MB).")
+@click.option("-n", "--dry-run", is_flag=True, help="List what would be compressed + uploaded.")
+def precompress(force: bool, jobs: int, dry_run: bool):
+    """Upload max-brotli copies of the app's data (`br/<md5>`) for the Worker to serve.
+
+    Cloudflare's on-the-fly compression is light (lots GeoJSON: ~4.1 MB on the
+    wire vs 3.0 MB at brotli 11). The `/d` route serves `br/<md5>` as-is, with
+    `Content-Encoding: br`, when present. Content-addressed, so re-runs only
+    upload new data. Needs the files checked out locally.
+    """
+    from concurrent.futures import ProcessPoolExecutor
+
+    from .stats import WWW_PUBLIC, _md5_from_dvc
+
+    s3 = _client()
+    todo = []
+    for dvc in sorted(WWW_PUBLIC.glob("*.dvc")):
+        name = dvc.name[:-len(".dvc")]
+        if not APP_DATA.match(name):
+            continue
+        md5 = _md5_from_dvc(dvc)
+        key = f"{BR_PREFIX}{md5}"
+        if not force and _remote_size(s3, key) is not None:
+            continue
+        local = WWW_PUBLIC / name
+        if not local.exists():
+            err(f"skip {name}: not checked out (`dvc pull {dvc.relative_to(ROOT)}`)")
+            continue
+        todo.append((name, key, local))
+    err(f"{len(todo)} to compress + upload")
+    if dry_run:
+        for name, key, _ in todo:
+            err(f"  {name} → {key}")
+        return
+    with ProcessPoolExecutor(max_workers=jobs) as pool:
+        for (name, key, local), body in zip(todo, pool.map(_compress, [str(t[2]) for t in todo])):
+            ctype = CONTENT_TYPES[Path(name).suffix]
+            s3.put_object(Bucket=R2_BUCKET, Key=key, Body=body, ContentType=ctype)
+            err(f"{name}: {local.stat().st_size / 1e6:.1f} MB → {len(body) / 1e6:.2f} MB br ({key})")

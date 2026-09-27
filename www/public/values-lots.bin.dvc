@@ -1,0 +1,5 @@
+outs:
+- md5: 98c17c3528ca17fc23fdbc165f751e4b
+  size: 3508824
+  hash: md5
+  path: values-lots.bin

@@ -5,4 +5,4 @@ data/**
 !data/**/
 !data/**/*.dvc
 www/public/*.geojson
-www/public/values-*.json
+www/public/values-*.bin

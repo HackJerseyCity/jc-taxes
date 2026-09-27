@@ -15,51 +15,61 @@ const FIXTURES: Record<string, string> = {
   units: 'taxes-2025-units.geojson',
 }
 
-const fixtureCache = new Map<string, string>()
+const fixtureCache = new Map<string, string | Buffer>()
 function readFixture(name: string): string {
   if (!fixtureCache.has(name)) {
     fixtureCache.set(name, readFileSync(join(fixtureDir, name), 'utf-8'))
   }
-  return fixtureCache.get(name)!
+  return fixtureCache.get(name) as string
 }
 
 // Bundled views (`src/bundle.ts`): geometry + all-years values, synthesized from
 // the 2025 fixture (same amounts every year).
 const BUNDLE_DYNAMIC = new Set(['paid', 'billed', 'paid_per_sqft', 'billed_per_sqft', 'year'])
 const YEARS = Array.from({ length: 12 }, (_, i) => 2015 + i)
-function bundleFixture(kind: 'geom' | 'values', view: string): string {
+function bundleFixture(kind: 'geom' | 'values', view: string): string | Buffer {
   const key = `${kind}-${view}`
   if (!fixtureCache.has(key)) {
     const features: { geometry: unknown, properties: Record<string, unknown> }[] = JSON.parse(readFixture(FIXTURES[view])).features
-    const body = kind === 'geom'
-      ? {
-          type: 'FeatureCollection',
-          features: features.map(f => ({
-            type: 'Feature',
-            geometry: f.geometry,
-            properties: Object.fromEntries(Object.entries(f.properties).filter(([k]) => !BUNDLE_DYNAMIC.has(k))),
-          })),
+    if (kind === 'geom') {
+      fixtureCache.set(key, JSON.stringify({
+        type: 'FeatureCollection',
+        features: features.map(f => ({
+          type: 'Feature',
+          geometry: f.geometry,
+          properties: Object.fromEntries(Object.entries(f.properties).filter(([k]) => !BUNDLE_DYNAMIC.has(k))),
+        })),
+      }))
+    } else {
+      // `values-{view}.bin` (VALUES_FORMAT in src/jc_taxes/bundle.py).
+      const n = features.length, ny = YEARS.length
+      const buf = Buffer.alloc(24 + 16 * n * ny)
+      buf.write('JCTV', 0, 'ascii')
+      // version 1, f64 elements (fixture amounts include block totals over i32 cents)
+      buf.writeUInt32LE(1, 4); buf.writeUInt32LE(2, 8); buf.writeUInt32LE(YEARS[0], 12); buf.writeUInt32LE(ny, 16); buf.writeUInt32LE(n, 20)
+      features.forEach((f, i) => {
+        const paid = Math.round(Number(f.properties.paid ?? 0) * 100)
+        const delta = Math.round(Number(f.properties.billed ?? 0) * 100) - paid
+        for (let y = 0; y < ny; y++) {
+          buf.writeDoubleLE(paid, 24 + 8 * (i * ny + y))
+          buf.writeDoubleLE(delta, 24 + 8 * (n * ny + i * ny + y))
         }
-      : {
-          years: YEARS,
-          count: features.length,
-          paid: YEARS.map(() => features.map(f => Math.round(Number(f.properties.paid ?? 0) * 100))),
-          billed_minus_paid: YEARS.map(() => features.map(f => Math.round((Number(f.properties.billed ?? 0) - Number(f.properties.paid ?? 0)) * 100))),
-        }
-    fixtureCache.set(key, JSON.stringify(body))
+      })
+      fixtureCache.set(key, buf)
+    }
   }
   return fixtureCache.get(key)!
 }
 
 /** Fixture body for a data file name (`taxes-2025-lots.geojson`, `geom-lots.geojson`, `values-lots.json`), or null. */
-function fixtureFor(name: string): string | null {
+function fixtureFor(name: string): string | Buffer | null {
   let m = name.match(/^taxes-\d{4}-([\w-]+)\.geojson$/)
   if (m && FIXTURES[m[1]]) return readFixture(FIXTURES[m[1]])
-  m = name.match(/^(geom|values)-(blocks|lots|units)\.(?:geojson|json)$/)
+  m = name.match(/^(geom|values)-(blocks|lots|units)\.(?:geojson|bin)$/)
   if (m) return bundleFixture(m[1] as 'geom' | 'values', m[2])
   return null
 }
-const DATA_NAME = /(taxes-\d{4}-[\w-]+\.geojson|(?:geom|values)-[\w-]+\.(?:geojson|json))/
+const DATA_NAME = /(taxes-\d{4}-[\w-]+\.geojson|(?:geom|values)-[\w-]+\.(?:geojson|bin))/
 
 /**
  * Build reverse map from built DVC cache URLs → data file name. Only needed for
@@ -75,7 +85,7 @@ function getS3Map(): Map<string, string> {
   if (files.length === 0) return s3Map
   const js = readFileSync(join(distDir, files[0]), 'utf-8')
   // Absolute (S3 / R2 host) or same-origin (`VITE_DVC_BASE_URL=/d`, the edge Worker route).
-  const re = /"([\w.-]+\.(?:geojson|json))":"(https:\/\/[^"]*|\/d\/[^"]*)"/g
+  const re = /"([\w.-]+\.(?:geojson|json|bin))":"(https:\/\/[^"]*|\/d\/[^"]*)"/g
   let m
   while ((m = re.exec(js)) !== null) {
     s3Map.set(m[2], m[1])
@@ -94,7 +104,7 @@ async function mockGeoJSON(page: Page) {
   await page.route(new RegExp(`/${DATA_NAME.source}$`), async (route) => {
     const name = new URL(route.request().url()).pathname.slice(1)
     const body = fixtureFor(name)
-    if (body) await route.fulfill({ contentType: 'application/json', body })
+    if (body) await route.fulfill({ contentType: typeof body === 'string' ? 'application/json' : 'application/octet-stream', body })
     else await route.continue()
   })
 
@@ -108,7 +118,7 @@ async function mockGeoJSON(page: Page) {
       const url = route.request().url()
       const name = map.get(url) ?? map.get(new URL(url).pathname)
       const body = name ? fixtureFor(name) : null
-      if (body) await route.fulfill({ contentType: 'application/json', body })
+      if (body) await route.fulfill({ contentType: typeof body === 'string' ? 'application/json' : 'application/octet-stream', body })
       else await route.continue()
     })
   }

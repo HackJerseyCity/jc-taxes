@@ -51,7 +51,8 @@ Plus: **search** (omnibar address → parcel) becomes a lazy index (`addr → id
    - ✅ `jct aggregates` → D1 `aggregates` (view × focus × year totals / height maxima) → `/api/summary`: totals chip, sparkline, cross-year height scale (default; `hy` for per-year).
    - ✅ `jct bundle` → per view (block / lot / unit) `geom-{view}.geojson` (fixed props) + `values-{view}.json` (all years' paid, billed − paid; integer cents), DVC → `/d`; owners → D1 `owners` → `/api/parcel` on hover / select. Wards / census blocks keep per-year GeoJSON (geometry varies by year; small).
    - Measured (`www/net`, prod): lots playback 52.6 → 4.9 MB, blocks playback 12.2 → 1.0 MB, year step 8.1 → 4.9 MB; first load +~1 MB (lots 4.0 → 4.9) for having every year.
-   - Remaining: binary values (or tiles-embedded) to trim the values file; camera extents server-side.
+   - ✅ Values as binary (`values-{view}.bin`: i32 cents, or f64 where block totals overflow; `[feature][year]`), geometry coordinates rounded to 6 decimals, and max-brotli copies (`jct r2 precompress` → `br/<md5>`) served as-is by `/d` with `Content-Encoding: br`.
+   - Dropped: server-side camera extents. The geometry file is loaded once per view anyway, so fitting over in-memory members costs nothing extra.
 3. **Vector tiles for geometry.** PMTiles per view (R2, range requests through the Worker), `MVTLayer` extruded with id-indexed values; verify extrusion across tiles (`--no-clipping`), picking, focus fade / hide, portfolio membership by id set.
 4. **Search** (`/api/search`, D1 FTS) and details polish.
 

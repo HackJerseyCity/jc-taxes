@@ -11,12 +11,36 @@ const SUFFIX: Record<string, string> = { block: 'blocks', lot: 'lots', unit: 'un
 
 export const isBundled = (view: string) => view in SUFFIX
 
+/** `values-{view}.bin` (see the format comment in `src/jc_taxes/bundle.py`). */
 interface Values {
   years: number[]
   count: number
-  /** Integer cents, `[year][feature]`. */
-  paid: number[][]
-  billed_minus_paid: number[][]
+  /** Cents, `[feature][year]`. */
+  paid: Int32Array | Float64Array
+  billedMinusPaid: Int32Array | Float64Array
+}
+
+const HEAD = 24
+
+function parseValues(buf: ArrayBuffer): Values {
+  const head = new DataView(buf, 0, HEAD)
+  const magic = String.fromCharCode(...new Uint8Array(buf, 0, 4))
+  const version = head.getUint32(4, true), elem = head.getUint32(8, true)
+  if (magic !== 'JCTV' || version !== 1 || (elem !== 1 && elem !== 2)) {
+    throw new Error(`values: bad header ${magic} v${version} elem ${elem}`)
+  }
+  const first = head.getUint32(12, true), nYears = head.getUint32(16, true), count = head.getUint32(20, true)
+  const n = count * nYears
+  const Arr = elem === 1 ? Int32Array : Float64Array
+  if (buf.byteLength !== HEAD + 2 * n * Arr.BYTES_PER_ELEMENT) {
+    throw new Error(`values: ${buf.byteLength} bytes, expected ${HEAD + 2 * n * Arr.BYTES_PER_ELEMENT}`)
+  }
+  return {
+    years: Array.from({ length: nYears }, (_, i) => first + i),
+    count,
+    paid: new Arr(buf, HEAD, n),
+    billedMinusPaid: new Arr(buf, HEAD + n * Arr.BYTES_PER_ELEMENT, n),
+  }
 }
 
 interface Bundle {
@@ -31,10 +55,13 @@ export function loadBundle(view: string): Promise<Bundle> {
   if (!b) {
     const get = (name: string) => fetch(dvcResolve(name)).then(r => {
       if (!r.ok) throw new Error(`${name}: ${r.status} ${r.statusText}`)
-      return r.json()
+      return r
     })
-    b = Promise.all([get(`geom-${SUFFIX[view]}.geojson`), get(`values-${SUFFIX[view]}.json`)])
-      .then(([geom, values]: [{ features: ParcelFeature[] }, Values]) => {
+    b = Promise.all([
+      get(`geom-${SUFFIX[view]}.geojson`).then(r => r.json() as Promise<{ features: ParcelFeature[] }>),
+      get(`values-${SUFFIX[view]}.bin`).then(r => r.arrayBuffer()).then(parseValues),
+    ])
+      .then(([geom, values]) => {
         if (geom.features.length !== values.count) {
           throw new Error(`${view}: ${geom.features.length} features vs ${values.count} values`)
         }
@@ -52,10 +79,11 @@ const round2 = (x: number) => Math.round(x * 100) / 100
 export function yearFeatures({ geom, values }: Bundle, year: number): ParcelFeature[] {
   const yi = values.years.indexOf(year)
   if (yi < 0) return []
-  const paidY = values.paid[yi], deltaY = values.billed_minus_paid[yi]
+  const ny = values.years.length
   return geom.map((g, i) => {
-    const paid = paidY[i] / 100
-    const billed = (paidY[i] + deltaY[i]) / 100
+    const k = i * ny + yi
+    const paid = values.paid[k] / 100
+    const billed = (values.paid[k] + values.billedMinusPaid[k]) / 100
     const area = g.properties.area_sqft ?? 0
     const properties: ParcelProperties = {
       ...g.properties,
