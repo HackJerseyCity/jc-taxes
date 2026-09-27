@@ -5,7 +5,7 @@ This Worker serves the built map SPA (`../www/dist`) and adds per-URL Open Graph
 | Path | What it does |
 |---|---|
 | `/`, `/about`, `/files/*`, `/index.html` | SPA shell, with `<title>`, `og:*` and `twitter:*` tags rewritten per query (HTMLRewriter) |
-| `/og?agg=&mt=&y=[&w=]` / `/og?pf=&y=` `[&layout=a\|b\|c\|d]` | 1200×630 PNG card (satori + resvg-wasm), cached in R2 by content hash. Totals + sparkline from the D1 `aggregates`; layouts `b`–`d` embed a pre-rendered map (`jct-og` bucket `maps/<view>-WxH.jpg`, e.g. `citywide`, `ward-e`, `<portfolio key>`; falls back to `citywide`) |
+| `/og?agg=&mt=&y=[&w=]` / `/og?pf=&y=` `[&layout=a\|b\|c\|d]` | 1200×630 PNG card (satori + resvg-wasm), cached in R2 by content hash. Totals + sparkline from the D1 `aggregates`; default layout `d` (stats left, map right); `a` is text-only. Layouts `b`–`d` embed a pre-rendered map (`jct-og` bucket `maps/<view>-WxH.jpg`: `citywide`, `ward-a`…`ward-f`, `<portfolio key>`), captured by `pnpm -C www og-maps [-b <app>] [-u]`; a view without one renders text-only |
 | `/og/review` | Side-by-side comparison of card layouts for a few views |
 | `/api/portfolios` | Curated portfolios as JSON (D1 if bound, else R2 `portfolios.json`) |
 | `/d/files/md5/…` | DVC-cached map data from the `jc-taxes` bucket (read-only binding), as compressed JSON with immutable edge caching; the SPA is built with `VITE_DVC_BASE_URL=/d` |
@@ -15,16 +15,9 @@ The test deploy is at <https://jct-edge.ryan-0dc.workers.dev> (`workers_dev: tru
 
 ## Data (kept out of git)
 
-The `jct-og` R2 bucket is separate from the production `jc-taxes` bucket and holds:
-- `stats.json`: per-view (agg×year) and per-portfolio `count`/`paid`, written by `python -m jc_taxes.cli stats -u` (~11 KB; the edge never parses the 20–40 MB GeoJSONs).
-- `portfolios.json`: a mirror of the DVC-tracked `www/public/portfolios.json`, used as the `/api/portfolios` fallback and for validating `?pf=`.
-- `cards/<CARD_VERSION>/<stats-generated>/<view>-<year>.png`: rendered cards. The key embeds the stats generation time, so regenerating stats yields fresh cards without a purge. Bump `CARD_VERSION` in `src/worker.ts` when the layout changes.
-
-To refresh after a data change:
-```bash
-python -m jc_taxes.cli stats -u -p www/public/portfolios.json
-npx wrangler r2 object put jct-og/portfolios.json --file ../www/public/portfolios.json --content-type application/json --remote
-```
+Totals, parcel details and portfolios live in D1 (see [D1](#d1)). The `jct-og` R2 bucket holds:
+- `maps/<view>-WxH.jpg`: map captures the cards embed (`pnpm -C www og-maps -b <app> -u`; rerun after a data change or a portfolio edit).
+- `cards/<CARD_VERSION>/<hash>.png`: rendered cards, keyed by a hash of the card's content and its map image's etag, so new data or maps yield fresh cards without a purge. Bump `CARD_VERSION` in `src/worker.ts` when the layout code changes.
 
 ## Dev / deploy
 

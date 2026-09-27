@@ -14,7 +14,7 @@ import yogaWasm from '../../generated/yoga.wasm'
 import interRegular from '../../assets/Inter-Regular.ttf'
 import interBold from '../../assets/Inter-Bold.ttf'
 import type { CardContent } from '../content'
-import { abbr } from '../content'
+import { abbr, counted } from '../content'
 
 const WIDTH = 1200
 const HEIGHT = 630
@@ -65,7 +65,7 @@ const COL = {
 
 function textCard(c: CardContent): unknown {
   const paid = c.amount != null ? abbr(c.amount) : '—'
-  const countLine = c.count != null ? `${c.count.toLocaleString()} ${c.countNoun}` : ''
+  const countLine = c.count != null ? counted(c.count, c.countNoun) : ''
 
   return h('div', {
     style: {
@@ -150,7 +150,7 @@ function statsColumn(c: CardContent, width: number, big: number): unknown {
     h('div', { style: { display: 'flex', flexDirection: 'column' } },
       h('div', { style: { display: 'flex', fontSize: big, fontWeight: 700, color: COL.accent, lineHeight: 1 } }, amount),
       h('div', { style: { display: 'flex', fontSize: 26, color: COL.muted, marginTop: 8 } },
-        `${c.billed ? 'billed' : 'paid'} in ${c.year}${c.count != null ? ` · ${c.count.toLocaleString()} ${c.countNoun}` : ''}`),
+        `${c.billed ? 'billed' : 'paid'} in ${c.year}${c.count != null ? ` · ${counted(c.count, c.countNoun)}` : ''}`),
       spark ? h('img', { src: spark, width, height: 110, style: { marginTop: 22 } }) : h('div', { style: { display: 'flex' } }, ''),
       h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 22, color: COL.muted, marginTop: 6 } },
         h('div', { style: { display: 'flex' } }, g ?? ''),

@@ -7,6 +7,11 @@ import type { Env } from './data'
 import { getPortfolios } from './data'
 
 // Compact dollars — mirrors `abbr` in `www/src/MapView.tsx`.
+/** `count` with its noun, singular for 1 ("1 lot", "2 census blocks"). */
+export function counted(count: number, plural: string): string {
+  return `${count.toLocaleString()} ${count === 1 ? plural.replace(/s$/, '') : plural}`
+}
+
 export function abbr(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
@@ -110,7 +115,7 @@ export function ogMeta(p: CardParams, c: CardContent): OgMeta {
   const verb = c.billed ? 'billed' : 'paid'
   if (p.pf) {
     const totals = c.amount != null && c.count != null
-      ? `${c.count.toLocaleString()} lots · ${abbr(c.amount)} ${verb} in ${c.year}`
+      ? `${counted(c.count, 'lots')} · ${abbr(c.amount)} ${verb} in ${c.year}`
       : `Jersey City property portfolio`
     return {
       title: `${c.scope} — JC property portfolio`,
@@ -118,7 +123,7 @@ export function ogMeta(p: CardParams, c: CardContent): OgMeta {
     }
   }
   const totals = c.amount != null && c.count != null
-    ? `${c.count.toLocaleString()} ${c.countNoun} · ${abbr(c.amount)} ${verb} in ${c.year}. `
+    ? `${counted(c.count, c.countNoun)} · ${abbr(c.amount)} ${verb} in ${c.year}. `
     : ''
   return {
     title: `${p.ward ? `Ward ${p.ward} — ` : ''}JC Property Taxes — ${c.measure}`,
