@@ -1,0 +1,9 @@
+name: jct-infra
+description: Cloudflare infra for jc-taxes (R2, D1, Worker custom domains)
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv
+backend:
+  url: file://./state
