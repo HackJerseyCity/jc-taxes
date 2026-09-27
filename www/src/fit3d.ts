@@ -12,9 +12,11 @@ export interface Frame { left: number; top: number; right: number; bottom: numbe
  * `WebMercatorViewport.fitBounds` is 2D (it ignores pitch and extrusion), which
  * under-frames tilted views of tall bars.
  *
- * Projects those points, then repeatedly (a) zooms by the ratio of the frame to
- * their screen bbox and (b) re-centers so the bbox center lands on the frame
- * center. Perspective makes this nonlinear, hence iterate rather than solve.
+ * Bisects zoom: at each candidate zoom, re-centers a few times (so the
+ * projected bbox center lands on the frame center; perspective makes this
+ * nonlinear) and tests whether the bbox fits the frame. Scaling zoom by the
+ * frame / bbox ratio instead diverges when tall bars near the camera blow up
+ * under perspective.
  */
 export function fit3d(
   bounds: [[number, number], [number, number]],
@@ -28,22 +30,37 @@ export function fit3d(
   const corners: [number, number, number][] = [...tops]
   for (const x of [x0, x1]) for (const y of [y0, y1]) corners.push([x, y, 0])
   const { width, height } = size
-  const flat = new WebMercatorViewport({ width, height, longitude: (x0 + x1) / 2, latitude: (y0 + y1) / 2, zoom: 12 })
-  let { longitude, latitude, zoom } = flat.fitBounds(bounds, { padding: 40 })
   const fw = frame.right - frame.left, fh = frame.bottom - frame.top
   const fcx = (frame.left + frame.right) / 2, fcy = (frame.top + frame.bottom) / 2
-  for (let i = 0; i < 6; i++) {
-    let vp = new WebMercatorViewport({ width, height, longitude, latitude, zoom, ...cam })
-    let pts = corners.map(c => vp.project(c))
-    const bw = Math.max(...pts.map(p => p[0])) - Math.min(...pts.map(p => p[0]))
-    const bh = Math.max(...pts.map(p => p[1])) - Math.min(...pts.map(p => p[1]))
-    zoom = Math.min(maxZoom, zoom + Math.log2(Math.min(fw / bw, fh / bh)))
-    vp = new WebMercatorViewport({ width, height, longitude, latitude, zoom, ...cam })
-    pts = corners.map(c => vp.project(c))
-    const bcx = (Math.max(...pts.map(p => p[0])) + Math.min(...pts.map(p => p[0]))) / 2
-    const bcy = (Math.max(...pts.map(p => p[1])) + Math.min(...pts.map(p => p[1]))) / 2
-    // Move the camera so the box center shifts from (bcx, bcy) to the frame center.
-    ;[longitude, latitude] = vp.unproject([width / 2 + (bcx - fcx), height / 2 + (bcy - fcy)])
+  const place = (zoom: number) => {
+    let longitude = (x0 + x1) / 2, latitude = (y0 + y1) / 2
+    let fits = false
+    for (let i = 0; i < 4; i++) {
+      const vp = new WebMercatorViewport({ width, height, longitude, latitude, zoom, ...cam })
+      // A point behind the camera (clip w ≤ 0) projects mirrored and can
+      // look like it fits; treat that zoom as too close.
+      const m = vp.viewProjectionMatrix as number[]
+      const behind = corners.some(c => {
+        const [x, y, z] = vp.projectPosition(c)
+        return m[3] * x + m[7] * y + m[11] * z + m[15] <= 0
+      })
+      if (behind) return { longitude, latitude, fits: false }
+      const pts = corners.map(c => vp.project(c))
+      const xs = pts.map(p => p[0]), ys = pts.map(p => p[1])
+      const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys)
+      fits = isFinite(minX + maxX + minY + maxY) && maxX - minX <= fw && maxY - minY <= fh
+      // Move the camera so the box center shifts to the frame center.
+      ;[longitude, latitude] = vp.unproject([width / 2 + ((minX + maxX) / 2 - fcx), height / 2 + ((minY + maxY) / 2 - fcy)])
+      if (!isFinite(longitude + latitude)) return { longitude: (x0 + x1) / 2, latitude: (y0 + y1) / 2, fits: false }
+    }
+    return { longitude, latitude, fits }
   }
-  return { longitude, latitude, zoom, ...cam }
+  let lo = 8, hi = maxZoom
+  let best = { ...place(lo), zoom: lo }
+  for (let i = 0; i < 16; i++) {
+    const zoom = (lo + hi) / 2
+    const p = place(zoom)
+    if (p.fits) { lo = zoom; best = { ...p, zoom } } else hi = zoom
+  }
+  return { longitude: best.longitude, latitude: best.latitude, zoom: best.zoom, ...cam }
 }

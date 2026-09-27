@@ -45,13 +45,13 @@ function pngResponse(body: BodyInit, cache: 'HIT' | 'MISS' | 'BYPASS'): Response
   })
 }
 
-/** The pre-rendered map for a card (`maps/<key>-WxH.jpg`, captured offline),
- *  falling back to the citywide map when that view has none. */
+/** The pre-rendered map for a card (`maps/<key>-WxH.jpg`, captured offline).
+ *  A view with none renders text-only (another view's map would mislead). */
 async function mapImage(env: Env, c: CardContent): Promise<R2ObjectBody | null> {
   const size = mapSize(c.layout)
   if (!size) return null
   const [w, hgt] = size
-  return (await env.OG.get(`maps/${c.mapKey}-${w}x${hgt}.jpg`)) ?? env.OG.get(`maps/citywide-${w}x${hgt}.jpg`)
+  return env.OG.get(`maps/${c.mapKey}-${w}x${hgt}.jpg`)
 }
 
 async function handleOg(url: URL, env: Env, ctx: ExecutionContext): Promise<Response> {

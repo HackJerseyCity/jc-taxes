@@ -1748,6 +1748,8 @@ export default function MapView() {
   useEffect(() => {
     if (!displayData?.length) return
     if (portfolio && portfoliosOrNull === null) return
+    // Bar heights scale to the summary's max: fit once it's in.
+    if (summaryQ.isLoading) return
     const initial = fitFocusRef.current === null
     if (!initial && fitFocusRef.current === focusKey) return
     fitFocusRef.current = focusKey
@@ -1766,9 +1768,10 @@ export default function MapView() {
         const width = window.innerWidth, height = window.innerHeight
         // Fit the extruded box (footprint × tallest bar) into the screen area
         // left free by the title / chip overlay and the bottom controls.
-        const pad = Math.min(40, width / 12)
-        const top = (titleRef.current?.getBoundingClientRect().bottom ?? 120) + 12
-        const frame = { left: pad, right: width - pad, top, bottom: height - 70 }
+        // `clean` captures have no overlays: fill the whole image.
+        const pad = clean ? 12 : Math.min(40, width / 12)
+        const top = clean ? pad : (titleRef.current?.getBoundingClientRect().bottom ?? 120) + 12
+        const frame = { left: pad, right: width - pad, top, bottom: height - (clean ? pad : 70) }
         const pitch = Math.max(Number(v.pitch), FOCUS_PITCH)
         const cam = fit3d(bounds, tops, { pitch, bearing: Number(v.bearing) }, { width, height }, frame)
         return {
@@ -1780,7 +1783,7 @@ export default function MapView() {
       })
     }
     setInitialFitDone(true)
-  }, [focusKey, focusTest, displayData, setViewState, portfolio, portfoliosOrNull, getBarElevation, polysExtruded, isTotal, extruded])
+  }, [focusKey, focusTest, displayData, setViewState, portfolio, portfoliosOrNull, getBarElevation, polysExtruded, isTotal, extruded, clean, summaryQ.isLoading])
 
   const [memberData, fadedData] = useMemo((): [ParcelFeature[], ParcelFeature[]] => {
     const all = effectiveData ?? []

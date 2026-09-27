@@ -12,6 +12,7 @@ export const MAX_YEAR = 2026
 export const BILLED_YEARS = new Set([2026])
 export const LAYOUTS = ['a', 'b', 'c', 'd'] as const
 export type Layout = (typeof LAYOUTS)[number]
+export const DEFAULT_LAYOUT: Layout = 'd'
 
 export type Agg = (typeof AGGS)[number]
 export type Metric = (typeof METRICS)[number]
@@ -23,7 +24,7 @@ export interface CardParams {
   pf: string
   /** Ward focus (`w=e` → 'E'), when no portfolio. */
   ward: string
-  /** Card layout (see `og/card.ts`); `a` = text-only. */
+  /** Card layout (see `og/card.ts`): `d` (stats left, map right) by default; `a` = text-only. */
   layout: Layout
 }
 
@@ -60,7 +61,7 @@ export function normalizeParams(url: URL, portfolioKeys: Set<string>): CardParam
 
   const wRaw = (url.searchParams.get('w') ?? '').toUpperCase()
   const ward = !pf && /^[A-F]$/.test(wRaw) ? wRaw : ''
-  const layout = pick(url.searchParams.get('layout'), LAYOUTS, 'a')
+  const layout = pick(url.searchParams.get('layout'), LAYOUTS, DEFAULT_LAYOUT)
 
   return { agg, metric, year, pf, ward, layout }
 }
@@ -78,6 +79,6 @@ export function canonicalQuery(p: CardParams): string {
     if (p.ward) sp.set('w', p.ward.toLowerCase())
   }
   sp.set('y', String(p.year))
-  if (p.layout !== 'a') sp.set('layout', p.layout)
+  if (p.layout !== DEFAULT_LAYOUT) sp.set('layout', p.layout)
   return sp.toString()
 }
