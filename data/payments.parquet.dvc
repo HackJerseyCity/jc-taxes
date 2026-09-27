@@ -1,0 +1,13 @@
+outs:
+- md5: edc8bfaaa22d5684ba175b75259b9510
+  size: 20598991
+  hash: md5
+  path: payments.parquet
+meta:
+  computation:
+    cmd: python -m jc_taxes.payments
+    deps:
+      cache: eaad0c9753e4e8ff540cef1c6a75aad2
+    git_deps:
+      /src/jc_taxes/payments.py: 699f98b9c02b86dd94b18a1b1496cb8bb0683f63
+      /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b

@@ -32,7 +32,7 @@ import click
 from utz import err
 
 from .aggregates import YEARS
-from .paths import ROOT
+from .paths import D1_SQL, ROOT
 from .stats import WWW_PUBLIC, _load_geojson
 
 VIEWS = {"block": "blocks", "lot": "lots", "unit": "units", "ward": "wards", "census-block": "census-blocks"}
@@ -51,7 +51,7 @@ PER_YEAR_DETAILS = {"owner"}
 # and search use them. (`yr_built` stays: color-by-year-built needs it for every parcel.)
 DETAIL_PROPS = ("addr", "bldg_desc", "stories", "units", "bldg_sqft")
 EDGE = ROOT / "edge"
-DEFAULT_SQL = ROOT / "tmp" / "parcels.sql"
+DEFAULT_SQL = D1_SQL / "parcels.sql"
 COORD_DECIMALS = 6
 
 # `values-{view}-{year}.bin` (little-endian; parsed by `www/src/bundle.ts`):

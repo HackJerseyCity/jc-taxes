@@ -8,6 +8,9 @@ ROOT = Path(__file__).parent.parent.parent
 # Data directory
 DATA = ROOT / "data"
 
+# Generated D1 SQL (DVX-tracked; loaded by `jct d1 load`)
+D1_SQL = DATA / "d1"
+
 # Cache root (per-muni subdirs underneath)
 CACHE_ROOT = DATA / "cache"
 

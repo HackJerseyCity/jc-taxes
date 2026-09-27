@@ -3,3 +3,23 @@ outs:
   size: 486744
   hash: md5
   path: values-units-2022.bin
+meta:
+  computation:
+    cmd: python -m jc_taxes.cli bundle -n
+    deps:
+      taxes-2015-units.geojson: b654096066add4d716459ca0bf257cd2
+      taxes-2016-units.geojson: f18acd974ad4c99198d01689079466aa
+      taxes-2017-units.geojson: 274fedaa1d663fe37a62ed94970de7b4
+      taxes-2018-units.geojson: f9a6b0696f1ebd21e3393cc6af097838
+      taxes-2019-units.geojson: a759352d4524dbe1e2e5dd42095328dd
+      taxes-2020-units.geojson: b4e6d03855558141ba56b7700ca8a336
+      taxes-2021-units.geojson: 9b0fe6f7f51c5b8801c211568c826578
+      taxes-2022-units.geojson: 874cc34e6acb7f81b39580d89d873341
+      taxes-2023-units.geojson: 98c5c1469b8970c94c73b5e320f6fb64
+      taxes-2024-units.geojson: e576991575549ce7da5a765d8969830c
+      taxes-2025-units.geojson: a97cbd6ee44427152709a79674c5ff90
+      taxes-2026-units.geojson: 20800af33be88106d918983c98081b0d
+    git_deps:
+      /src/jc_taxes/bundle.py: fa9ef8c0114956aa29f949ba909f52104f4113a7
+      /src/jc_taxes/stats.py: 8681db54d74f0abba0117944caa7467c9ad48e3a
+      /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b

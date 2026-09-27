@@ -3,3 +3,23 @@ outs:
   size: 293144
   hash: md5
   path: values-lots-2022.bin
+meta:
+  computation:
+    cmd: python -m jc_taxes.cli bundle -n
+    deps:
+      taxes-2015-lots.geojson: 178f53976f3b83b7d428f204739275dc
+      taxes-2016-lots.geojson: c118e28cdcb7897da4697cba3cfc3175
+      taxes-2017-lots.geojson: 0e8c55bf8a90c73d154a4f2345e802b8
+      taxes-2018-lots.geojson: 61d229a7768f280853779aac5ebf8df9
+      taxes-2019-lots.geojson: 052050f485e3561e179e8bb0669f70b5
+      taxes-2020-lots.geojson: dbef3d5075d0acca002624996093acc4
+      taxes-2021-lots.geojson: c98fda99588d512ff03d60a43798fd78
+      taxes-2022-lots.geojson: d26bf2537df77efec48f82477b1d2f06
+      taxes-2023-lots.geojson: 9c6f1534ddc98868a453e0ed6c2eba5c
+      taxes-2024-lots.geojson: 59dfe3db0ec249071546c55dd788fd92
+      taxes-2025-lots.geojson: ca9cf23b55f003e66d340e00b6c211ab
+      taxes-2026-lots.geojson: 4572f4e5357d9dd07568288c876c57b3
+    git_deps:
+      /src/jc_taxes/bundle.py: fa9ef8c0114956aa29f949ba909f52104f4113a7
+      /src/jc_taxes/stats.py: 8681db54d74f0abba0117944caa7467c9ad48e3a
+      /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b

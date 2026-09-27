@@ -3,3 +3,13 @@ outs:
   size: 3997834
   hash: md5
   path: jc_parcels_combined.parquet
+meta:
+  computation:
+    cmd: python -m jc_taxes.cli parcels combine -c data/parcels/Hudson_County_Parcels_April_2026.geojson
+    deps:
+      parcels/Hudson_County_Parcels_April_2026.geojson: accf091115036c5abe6a95d8c3a7b11e
+      parcels/legacy_combined.parquet: ab6ecb32b62cca32e59eb64c7d668acf
+      payments.parquet: edc8bfaaa22d5684ba175b75259b9510
+    git_deps:
+      /src/jc_taxes/parcels.py: 0c29a428db888578cf4729a5d36b84bdbe2f5e03
+      /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b

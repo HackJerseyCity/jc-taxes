@@ -6,3 +6,16 @@ outs:
 meta:
   computation:
     cmd: python -m jc_taxes.geojson_yearly -y 2017 -a lot -o www/public
+    deps:
+      /data/jc_parcels_combined.parquet: 41c2ed6e654b3c1bc3d6657920c0bfbd
+      /data/payments.parquet: edc8bfaaa22d5684ba175b75259b9510
+      /data/taxrecords_enriched.parquet: 74f0564aa6b17d78eacec63cc20ef8b4
+      /data/cache: eaad0c9753e4e8ff540cef1c6a75aad2
+      /data/tiger/tl_2023_34017_areawater.zip: 1c4a0dfba56851b970472ac5418eb86f
+    git_deps:
+      /src/jc_taxes/geojson_yearly.py: 45af7365aa07d3ab39492b9106cc1a37050c9fb0
+      /src/jc_taxes/census.py: b51ccc72946879c06eb83aaff221a566e2a052a8
+      /src/jc_taxes/coastline.py: 52323f726d335eca36b1898356bbffb9f1de9a9c
+      /src/jc_taxes/building_desc.py: 94d69b2a971735c991bb5899f1cba264138d4b95
+      /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b
+      /census: 4ec46076ca43c4b24296079772fe6d4ec6135245

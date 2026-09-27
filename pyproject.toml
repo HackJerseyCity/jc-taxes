@@ -19,6 +19,7 @@ dependencies = [
     "boto3>=1.34",
     "openpyxl>=3.1",
     "brotli>=1.2.0",
+    "dvx[s3]",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +40,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/jc_taxes"]
+
+[tool.uv.sources]
+# DVX Python API (`dvx.run.artifact`) for `jct pipeline`; PyPI lags main.
+dvx = { git = "https://github.com/runsascoded/dvx.git", rev = "93e790a6c" }
 
 [tool.uv]
 dev-dependencies = [

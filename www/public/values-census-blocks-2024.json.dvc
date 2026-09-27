@@ -3,3 +3,23 @@ outs:
   size: 37972
   hash: md5
   path: values-census-blocks-2024.json
+meta:
+  computation:
+    cmd: python -m jc_taxes.cli bundle -n
+    deps:
+      taxes-2015-census-blocks.geojson: bc0d49a9a0b286480fc1110de1913c1e
+      taxes-2016-census-blocks.geojson: 62bb98c6a445a3bc6d136a7ebec9264a
+      taxes-2017-census-blocks.geojson: fa405f59796b037b41de35ddfd403369
+      taxes-2018-census-blocks.geojson: 6d68627fc9a5a3d733b5c34dc7687a48
+      taxes-2019-census-blocks.geojson: 111638db985db58e27c070368b65a1e6
+      taxes-2020-census-blocks.geojson: e173773c17dcbb3882ab7796f8ccad62
+      taxes-2021-census-blocks.geojson: e8c9cad73ae02885ffca1c3150942325
+      taxes-2022-census-blocks.geojson: 0d7ae2742699dd6ea05dccce379304bb
+      taxes-2023-census-blocks.geojson: 05dd1f8151bd4c001f149cc1f002add8
+      taxes-2024-census-blocks.geojson: ff051dd7c05e3cc81bdba223e3b53141
+      taxes-2025-census-blocks.geojson: 72ed057d893f32692b8bdbd6ef9151fe
+      taxes-2026-census-blocks.geojson: ac9b458991c75ef225c16f9ad849db9f
+    git_deps:
+      /src/jc_taxes/bundle.py: fa9ef8c0114956aa29f949ba909f52104f4113a7
+      /src/jc_taxes/stats.py: 8681db54d74f0abba0117944caa7467c9ad48e3a
+      /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b

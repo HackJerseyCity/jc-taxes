@@ -3,3 +3,23 @@ outs:
   size: 1532362
   hash: md5
   path: ward-shapes-2018.json
+meta:
+  computation:
+    cmd: python -m jc_taxes.cli bundle -n
+    deps:
+      taxes-2015-wards.geojson: 9771c6cdd2707a7d616a87fe88017f38
+      taxes-2016-wards.geojson: df0bcd0f715827e388e2e22ba96bfd82
+      taxes-2017-wards.geojson: 0b1c90142c1e738585969fdf95c5a8ec
+      taxes-2018-wards.geojson: c81fdee1a9d55d1501ad731cc871fbd7
+      taxes-2019-wards.geojson: a0fed918afd60288ff0978204982f52d
+      taxes-2020-wards.geojson: 571382ae4e1039c2b21e2d0b478d58f3
+      taxes-2021-wards.geojson: 8840a3252409d26672ae58b79de63287
+      taxes-2022-wards.geojson: c12ffa473454bf408f9ed2e2a062c929
+      taxes-2023-wards.geojson: 4a02df4dc2653a77906ed6ba7f69ffbe
+      taxes-2024-wards.geojson: 5fe89244a1de23541f6789341a7ec061
+      taxes-2025-wards.geojson: 507a1bd5b0b349318913818a4618906a
+      taxes-2026-wards.geojson: 5636f6d42f812168f4256e4fdfd89386
+    git_deps:
+      /src/jc_taxes/bundle.py: fa9ef8c0114956aa29f949ba909f52104f4113a7
+      /src/jc_taxes/stats.py: 8681db54d74f0abba0117944caa7467c9ad48e3a
+      /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b

@@ -1,0 +1,10 @@
+meta:
+  computation:
+    cmd: python -m jc_taxes.cli d1 load -d jct-dev
+    deps:
+      /data/d1/parcels.sql: 0fed94ef27ab0f5a659ce63954f08b2b
+      /data/d1/aggregates.sql: b7a4c4ef6c1d8854c8564f31a54afa43
+      /data/d1/portfolios.sql: 10bf28333a8d83f9b059e39d3473dde8
+    git_deps:
+      /src/jc_taxes/d1.py: 79a0c0fb5a7d57a8db5f2c6ecfee9caa07e26464
+      /edge/d1/migrations: c4a6637237a095d4bc918e952d6843e54c4b66fd

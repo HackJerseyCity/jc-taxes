@@ -2,48 +2,44 @@
 
 ## Problem
 
-Only the 2015–2025 per-year GeoJSONs record provenance, and only a `cmd` (no `deps`), so `dvx status` can't say what's stale. Everything else is either tracked without provenance or not tracked at all:
+Only the 2015–2025 per-year GeoJSONs recorded provenance, and only a `cmd` (no `deps`), so `dvx status` couldn't say what was stale. Intermediates in `data/` (`payments.parquet`, `taxrecords_enriched.parquet`, …) were untracked; the D1 loads, R2 uploads and OG captures were ad-hoc commands run in a remembered order. The HLS re-pull (2026-09-26) even left `data/cache.dvc` stale: `payments.parquet` was built from cache files no `.dvc` recorded.
 
-- Untracked intermediates in `data/`: `payments.parquet`, `taxrecords_enriched.parquet`, `taxrecords_jc.parquet`, `accounts_index.parquet`, `taxes.parquet`, …
-- Tracked, no provenance:
-  - `data/cache` (HLS pull)
-  - 2026 GeoJSONs
-  - `geom-*` / `values-*` / `ward-shapes-*` bundles
-  - `data/parcels/*`, `jc_parcels_combined.parquet`
-  - `portfolios.json`
-- Side effects with no stage at all:
-  - D1 loads: `jct aggregates`, `jct bundle`'s `parcels` table, `seed-portfolios`
-  - R2 uploads: `jct r2 precompress`, `jct r2 publish`, the OG map captures
-  - `wrangler deploy` (CI does this on push; data changes don't trigger it)
+## Design (implemented)
 
-After an HLS re-pull, rebuilding means remembering the order by hand. That's error-prone: a missed `precompress` just silently serves on-the-fly compression, and a missed `aggregates` leaves the chip and scale stale.
-
-## Stages (inputs → outputs)
+`src/jc_taxes/pipeline.py` declares every stage with DVX's Python API (`dvx.run.artifact.Artifact` / `Computation`, as ctbk does); `jct pipeline write` (re)writes each stage's `.dvc` `meta.computation`: `cmd`, `deps` (md5s of data inputs), `git_deps` (blob / tree SHAs of the code that runs). Outputs' recorded hashes are kept.
 
 | stage | cmd | deps | outs |
 |---|---|---|---|
-| HLS pull | `python -m jc_taxes.cli pull …` | — (external; fetch schedule) | `data/cache/` |
-| payments | `python -m jc_taxes.payments` | `data/cache/` | `data/payments.parquet` |
-| enriched records | (existing script) | `data/cache/`, MOD-IV | `data/taxrecords_enriched.parquet` |
-| county parcels | `jct parcels fetch` | — (external, snapshot-named) | `data/parcels/Hudson_County_Parcels_<M_YYYY>.geojson` |
-| combine | `jct parcels combine` | county GeoJSON, `legacy_combined.parquet`, `payments.parquet` | `data/jc_parcels_combined.parquet` |
-| per-year GeoJSON (×12 years × 5 views) | `python -m jc_taxes.geojson_yearly -y Y -a A -o www/public` | combined parcels, `payments.parquet`, `taxrecords_enriched.parquet`, census / neighborhoods, coastline | `www/public/taxes-Y-A.geojson` |
-| bundle | `jct bundle -n` | all 60 per-year GeoJSONs | `geom-*`, `values-*`, `ward-shapes-*`, `tmp/parcels.sql` |
-| D1 parcels | `wrangler d1 execute jct --file tmp/parcels.sql` | bundle SQL | side effect |
-| aggregates | `jct aggregates` | per-year GeoJSONs, `portfolios.json` | side effect (D1 `aggregates`) |
-| portfolios | `node edge/scripts/seed-portfolios.mjs …` | `portfolios.json` | side effect (D1 `portfolios`) |
-| precompress | `jct r2 precompress` | bundle outputs | side effect (R2 `br/<md5>`) |
-| OG maps | (capture script → `jct og maps`) | deployed app | side effect (R2 `jct-og/maps/*`) |
+| payments | `python -m jc_taxes.payments` | `data/cache` | `data/payments.parquet` |
+| combine | `jct parcels combine -c <county>` | county GeoJSON, `legacy_combined.parquet`, payments | `data/jc_parcels_combined.parquet` |
+| per-year GeoJSON (12 years × 5 views) | `python -m jc_taxes.geojson_yearly -y Y -a V -o www/public` | combined parcels, payments, `taxrecords_enriched.parquet`, `data/cache` (owners, addresses), TIGER water; code + `census/` | `www/public/taxes-Y-V.geojson` |
+| bundle (co-outputs, one cmd) | `jct bundle -n` | that view's 12 GeoJSONs | `geom-*`, `values-*`, `ward-shapes-*`, `data/d1/parcels.sql` |
+| aggregates | `jct aggregates -n` | all 60 GeoJSONs, `portfolios.json` | `data/d1/aggregates.sql` |
+| portfolios | `jct d1 portfolios` | `portfolios.json` | `data/d1/portfolios.sql` |
+| R2 brotli copies (side effect) | `jct r2 precompress` | bundle outputs | `deploy/r2-br.dvc` |
+| D1 dev (side effect) | `jct d1 load -d jct-dev` | the 3 SQL files; migrations | `deploy/dev/d1.dvc` |
+| D1 prod promote (side effect) | `jct d1 load -d jct` | same | `deploy/prod/d1.dvc` |
 
-## Plan
+- The generated D1 SQL is DVX-tracked (R2 cache, not git): it embeds portfolio membership and owner history. A promote replays the same files into prod, so prod gets byte-identical data to what was checked on dev; `deploy/prod/d1.dvc`'s dep hashes record what prod has.
+- `jct d1 load` applies `edge/d1/migrations` first, then executes `parcels.sql`, `aggregates.sql`, `portfolios.sql`. It replaces `edge/scripts/seed-portfolios.mjs` (same SQL, now a tracked output).
+- External inputs are tracked leaves (no computation); refresh commands:
+  - HLS cache (`data/cache`, ~17 h): `jct fetch -m JerseyCity -t 7d data/accounts_index.parquet`, then `dvx add data/cache`
+  - county parcels: `jct parcels fetch` (new snapshot-named file; bump `COUNTY` in `pipeline.py`)
+  - `taxrecords_enriched.parquet`, `legacy_combined.parquet`, TIGER water zip: static snapshots
 
-1. Track the intermediates in `data/` with DVX (they're large; R2 cache).
-2. Write `meta.computation` (`cmd` + `deps` with md5s) into each `.dvc`, via a small `jct dvx provenance` helper that knows the table above. That avoids hand-editing ~80 `.dvc` files.
-3. Side-effect stages as DVX side-effect `.dvc`s (no outs; deps + cmd), so `dvx status` flags e.g. "aggregates stale: `taxes-2026-lot.geojson` changed".
-4. `dvx run` then rebuilds a re-pull end to end, in parallel where independent (the 60 per-year GeoJSONs).
-5. Document the one-command refresh in the README.
+## Usage
 
-## Open questions
+```bash
+dvx status                      # what's stale, and why
+dvx run deploy/dev/d1.dvc deploy/r2-br.dvc   # rebuild + load dev
+# check dev (jct-edge-dev), then:
+dvx run deploy/prod/d1.dvc      # promote D1 to prod
+```
 
-- External inputs (HLS, county layer): DVX fetch schedules, or leave as manual `fetch` stages with URL provenance?
-- `payments.parquet` also has stray far-future rows (2032–2035); filter at the `payments` stage.
+Until DVX has explicit-only stages (`~/c/dvx/specs/explicit-only-stages.md`), a bare `dvx run` would also run the prod promote: name targets.
+
+## Remaining
+
+- Fold the re-pull's resilience (`tmp/hls-repull.sh`: truncated-gzip cleanup, stall watchdog, retries) into `jct fetch`, then make the HLS pull a scheduled fetch stage (`fetch.schedule: weekly`) for Batch.
+- OG map captures (`www/scripts/og-maps.mjs`) depend on a deployed app, not files: keep as a manual step after a dev deploy.
+- `payments.parquet` has stray far-future rows (2032–2035); filter at the `payments` stage.

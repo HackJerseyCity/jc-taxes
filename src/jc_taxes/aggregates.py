@@ -8,8 +8,8 @@ loads them into the `jct` D1 database, which the `jct-edge` Worker serves at
 `/api/summary`.
 
 Portfolio membership comes from the DVC-tracked `portfolios.json` (never
-committed), so the generated SQL goes to `tmp/` and is applied with
-`wrangler d1 execute`, not committed either.
+committed), so the generated SQL (`data/d1/aggregates.sql`) is DVX-tracked,
+not committed, and loaded by `jct d1 load`.
 """
 import json
 import subprocess
@@ -18,7 +18,7 @@ from pathlib import Path
 import click
 from utz import err
 
-from .paths import ROOT
+from .paths import D1_SQL, ROOT
 from .stats import AGG_SUFFIX, DEFAULT_PORTFOLIOS, _load_geojson, _load_portfolios
 
 YEARS = list(range(2015, 2027))
@@ -29,7 +29,7 @@ MIN_SCALE_AREA_SQFT = 500
 BLOCK_GRANULAR = {"block", "ward", "census-block"}
 WARDS = list("ABCDEF")
 EDGE = ROOT / "edge"
-DEFAULT_SQL = ROOT / "tmp" / "aggregates.sql"
+DEFAULT_SQL = D1_SQL / "aggregates.sql"
 
 
 def portfolio_predicate(p: dict, block_granular: bool):
@@ -106,7 +106,7 @@ def _sql_value(v) -> str:
 @click.option("-d", "--db", default="jct", show_default=True, help="D1 database name.")
 @click.option("-l", "--local", is_flag=True, help="Apply to the local (wrangler dev) D1 instead of remote.")
 @click.option("-n", "--dry-run", is_flag=True, help="Write the SQL but don't apply it.")
-@click.option("-o", "--out", type=click.Path(dir_okay=False, path_type=Path), default=DEFAULT_SQL, show_default=True, help="Generated SQL (kept out of git: embeds portfolio totals).")
+@click.option("-o", "--out", type=click.Path(dir_okay=False, path_type=Path), default=DEFAULT_SQL, show_default=True, help="Generated SQL (DVX-tracked, not committed: embeds portfolio totals).")
 @click.option("-p", "--portfolios", "portfolios_path", type=click.Path(dir_okay=False, path_type=Path), default=DEFAULT_PORTFOLIOS, show_default=True, help="portfolios.json (curated list).")
 @click.option("-v", "--view", "views", multiple=True, type=click.Choice(list(AGG_SUFFIX)), help="Only these views (default: all). Other views' rows are kept.")
 def aggregates(cache_dir: Path | None, db: str, local: bool, dry_run: bool, out: Path, portfolios_path: Path, views: tuple[str, ...]):
