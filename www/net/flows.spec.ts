@@ -41,6 +41,8 @@ const FLOWS: Flow[] = [
   { name: 'step year (lots, j)', path: '/?a=l', then: async page => { await page.keyboard.press('j') } },
   { name: 'playback (blocks)', path: '/?play=1' },
   { name: 'playback (lots)', path: '/?a=l&play=1' },
+  { name: 'playback (wards)', path: '/?a=w&play=1' },
+  { name: 'playback (census blocks)', path: '/?a=c&play=1' },
   { name: 'files (parquet)', path: '/files/records/payments.parquet', ready: 'text=/row group \\d+/' },
 ]
 

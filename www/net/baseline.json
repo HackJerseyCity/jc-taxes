@@ -4,28 +4,28 @@
       "/api/portfolios",
       "/api/summary",
       "geom-blocks.geojson",
-      "values-blocks.json"
+      "values-blocks.bin"
     ],
     "byKind": {
       "app": {
-        "requests": 11,
-        "transfer": 703928,
-        "decoded": 2468029
+        "requests": 9,
+        "transfer": 703341,
+        "decoded": 2468690
       },
       "basemap": {
         "requests": 10,
-        "transfer": 221919,
+        "transfer": 222033,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3147,
+        "transfer": 3155,
         "decoded": 5899
       },
       "data": {
         "requests": 2,
-        "transfer": 1006508,
-        "decoded": 2768098
+        "transfer": 337981,
+        "decoded": 1848553
       }
     }
   },
@@ -34,28 +34,28 @@
       "/api/portfolios",
       "/api/summary",
       "geom-lots.geojson",
-      "values-lots.json"
+      "values-lots.bin"
     ],
     "byKind": {
       "app": {
         "requests": 9,
-        "transfer": 703029,
-        "decoded": 2468019
+        "transfer": 703278,
+        "decoded": 2468680
       },
       "basemap": {
         "requests": 10,
-        "transfer": 221932,
+        "transfer": 222031,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3159,
+        "transfer": 3153,
         "decoded": 5899
       },
       "data": {
         "requests": 2,
-        "transfer": 4929854,
-        "decoded": 23480128
+        "transfer": 2668714,
+        "decoded": 18325679
       }
     }
   },
@@ -64,28 +64,28 @@
       "/api/portfolios",
       "/api/summary",
       "geom-units.geojson",
-      "values-units.json"
+      "values-units.bin"
     ],
     "byKind": {
       "app": {
-        "requests": 13,
-        "transfer": 705176,
-        "decoded": 2468027
+        "requests": 11,
+        "transfer": 704189,
+        "decoded": 2468688
       },
       "basemap": {
-        "requests": 7,
-        "transfer": 80135,
-        "decoded": 201254
+        "requests": 10,
+        "transfer": 221933,
+        "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3153,
+        "transfer": 3155,
         "decoded": 5897
       },
       "data": {
         "requests": 2,
-        "transfer": 7215721,
-        "decoded": 37820610
+        "transfer": 3816842,
+        "decoded": 29742834
       }
     }
   },
@@ -94,28 +94,28 @@
       "/api/portfolios",
       "/api/summary",
       "geom-lots.geojson",
-      "values-lots.json"
+      "values-lots.bin"
     ],
     "byKind": {
       "app": {
-        "requests": 9,
-        "transfer": 703011,
-        "decoded": 2468023
+        "requests": 11,
+        "transfer": 704095,
+        "decoded": 2468684
       },
       "basemap": {
         "requests": 10,
-        "transfer": 222076,
+        "transfer": 221766,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3131,
+        "transfer": 3137,
         "decoded": 5832
       },
       "data": {
         "requests": 2,
-        "transfer": 4912677,
-        "decoded": 23480128
+        "transfer": 2668783,
+        "decoded": 18325679
       }
     }
   },
@@ -124,28 +124,28 @@
       "/api/portfolios",
       "/api/summary",
       "geom-lots.geojson",
-      "values-lots.json"
+      "values-lots.bin"
     ],
     "byKind": {
       "app": {
         "requests": 11,
-        "transfer": 703593,
-        "decoded": 2468019
+        "transfer": 703894,
+        "decoded": 2468680
       },
       "basemap": {
         "requests": 10,
-        "transfer": 221950,
+        "transfer": 222164,
         "decoded": 439672
       },
       "api": {
         "requests": 2,
-        "transfer": 3159,
+        "transfer": 3162,
         "decoded": 5899
       },
       "data": {
         "requests": 2,
-        "transfer": 4911542,
-        "decoded": 23480128
+        "transfer": 2668765,
+        "decoded": 18325679
       }
     }
   },
@@ -154,28 +154,28 @@
       "/api/portfolios",
       "/api/summary",
       "geom-blocks.geojson",
-      "values-blocks.json"
+      "values-blocks.bin"
     ],
     "byKind": {
       "app": {
         "requests": 11,
-        "transfer": 703954,
-        "decoded": 2468036
+        "transfer": 704165,
+        "decoded": 2468697
       },
       "basemap": {
         "requests": 4,
-        "transfer": 67703,
+        "transfer": 67595,
         "decoded": 156678
       },
       "api": {
         "requests": 2,
-        "transfer": 3151,
+        "transfer": 3149,
         "decoded": 5899
       },
       "data": {
         "requests": 2,
-        "transfer": 1006446,
-        "decoded": 2768098
+        "transfer": 337984,
+        "decoded": 1848553
       }
     }
   },
@@ -184,28 +184,108 @@
       "/api/portfolios",
       "/api/summary",
       "geom-lots.geojson",
-      "values-lots.json"
+      "values-lots.bin"
     ],
     "byKind": {
       "app": {
-        "requests": 9,
-        "transfer": 703419,
-        "decoded": 2468026
+        "requests": 11,
+        "transfer": 704145,
+        "decoded": 2468687
       },
       "basemap": {
-        "requests": 7,
-        "transfer": 80050,
-        "decoded": 201254
+        "requests": 4,
+        "transfer": 67595,
+        "decoded": 156678
       },
       "api": {
         "requests": 2,
-        "transfer": 3154,
+        "transfer": 3157,
         "decoded": 5899
       },
       "data": {
         "requests": 2,
-        "transfer": 4912233,
-        "decoded": 23480128
+        "transfer": 2668760,
+        "decoded": 18325679
+      }
+    }
+  },
+  "playback (wards)": {
+    "fetched": [
+      "/api/portfolios",
+      "/api/summary",
+      "taxes-2015-wards.geojson",
+      "taxes-2016-wards.geojson",
+      "taxes-2017-wards.geojson",
+      "taxes-2018-wards.geojson",
+      "taxes-2019-wards.geojson",
+      "taxes-2020-wards.geojson",
+      "taxes-2021-wards.geojson",
+      "taxes-2022-wards.geojson",
+      "taxes-2023-wards.geojson",
+      "taxes-2024-wards.geojson",
+      "taxes-2025-wards.geojson",
+      "taxes-2026-wards.geojson"
+    ],
+    "byKind": {
+      "app": {
+        "requests": 9,
+        "transfer": 702991,
+        "decoded": 2468850
+      },
+      "basemap": {
+        "requests": 10,
+        "transfer": 221945,
+        "decoded": 439672
+      },
+      "api": {
+        "requests": 2,
+        "transfer": 3185,
+        "decoded": 5891
+      },
+      "data": {
+        "requests": 12,
+        "transfer": 2253420,
+        "decoded": 14169072
+      }
+    }
+  },
+  "playback (census blocks)": {
+    "fetched": [
+      "/api/portfolios",
+      "/api/summary",
+      "taxes-2015-census-blocks.geojson",
+      "taxes-2016-census-blocks.geojson",
+      "taxes-2017-census-blocks.geojson",
+      "taxes-2018-census-blocks.geojson",
+      "taxes-2019-census-blocks.geojson",
+      "taxes-2020-census-blocks.geojson",
+      "taxes-2021-census-blocks.geojson",
+      "taxes-2022-census-blocks.geojson",
+      "taxes-2023-census-blocks.geojson",
+      "taxes-2024-census-blocks.geojson",
+      "taxes-2025-census-blocks.geojson",
+      "taxes-2026-census-blocks.geojson"
+    ],
+    "byKind": {
+      "app": {
+        "requests": 9,
+        "transfer": 703738,
+        "decoded": 2468922
+      },
+      "basemap": {
+        "requests": 10,
+        "transfer": 222188,
+        "decoded": 439672
+      },
+      "api": {
+        "requests": 2,
+        "transfer": 3201,
+        "decoded": 5976
+      },
+      "data": {
+        "requests": 12,
+        "transfer": 2904805,
+        "decoded": 15375221
       }
     }
   },
@@ -214,8 +294,8 @@
     "byKind": {
       "app": {
         "requests": 8,
-        "transfer": 537311,
-        "decoded": 1828332
+        "transfer": 537575,
+        "decoded": 1828993
       },
       "basemap": {
         "requests": 3,
@@ -224,7 +304,7 @@
       },
       "files": {
         "requests": 3,
-        "transfer": 1716733,
+        "transfer": 1716720,
         "decoded": 1714625
       }
     }

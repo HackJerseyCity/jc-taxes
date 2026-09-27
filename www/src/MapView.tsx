@@ -1081,23 +1081,32 @@ export default function MapView() {
   const yearCacheRef = useRef<Map<string, ParcelFeature[]>>(new Map())
   const yearIdMapsRef = useRef<Map<string, Map<string, ParcelFeature>>>(new Map())
   const cacheKey = useCallback((agg: string, yr: number) => `${agg}|${yr}`, [])
-  const fetchYear = useCallback(async (agg: string, yr: number): Promise<ParcelFeature[]> => {
+  // In flight, so a year requested again before it lands (e.g. the start year
+  // by the playback preload) shares one download.
+  const yearPendingRef = useRef<Map<string, Promise<ParcelFeature[]>>>(new Map())
+  const fetchYear = useCallback((agg: string, yr: number): Promise<ParcelFeature[]> => {
     const key = cacheKey(agg, yr)
     const cached = yearCacheRef.current.get(key)
-    if (cached) return cached
-    let features: ParcelFeature[]
-    if (isBundled(agg)) {
-      features = yearFeatures(await loadBundle(agg), yr)
-    } else {
-      const suffix = SUFFIX_MAP[agg] ?? '-lots'
-      const geojson = await fetch(dvcResolve(`taxes-${yr}${suffix}.geojson`)).then(r => r.json())
-      features = geojson.features
-    }
-    yearCacheRef.current.set(key, features)
-    const idMap = new Map<string, ParcelFeature>()
-    features.forEach(f => idMap.set(featureIdOf(f), f))
-    yearIdMapsRef.current.set(key, idMap)
-    return features
+    if (cached) return Promise.resolve(cached)
+    const pending = yearPendingRef.current.get(key)
+    if (pending) return pending
+    const p = (async () => {
+      let features: ParcelFeature[]
+      if (isBundled(agg)) {
+        features = yearFeatures(await loadBundle(agg), yr)
+      } else {
+        const suffix = SUFFIX_MAP[agg] ?? '-lots'
+        const geojson = await fetch(dvcResolve(`taxes-${yr}${suffix}.geojson`)).then(r => r.json())
+        features = geojson.features
+      }
+      yearCacheRef.current.set(key, features)
+      const idMap = new Map<string, ParcelFeature>()
+      features.forEach(f => idMap.set(featureIdOf(f), f))
+      yearIdMapsRef.current.set(key, idMap)
+      return features
+    })().finally(() => yearPendingRef.current.delete(key))
+    yearPendingRef.current.set(key, p)
+    return p
   }, [cacheKey])
 
   // Track whether the in-flight fetch is a year-only change (smooth transition,
