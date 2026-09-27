@@ -2,12 +2,22 @@ import { useCallback } from 'react'
 import { useOmnibarEndpoint } from 'use-kbd'
 import type { ParcelProperties, ParcelFeature } from './types'
 
+export interface AddressHit {
+  /** Lot id (`block-lot`). */
+  id: string
+  addr: string
+  lng: number
+  lat: number
+}
+
 type Props = {
   data: ParcelFeature[] | null
   onSelect: (feature: ParcelFeature) => void
+  /** Address search (`/api/search`, D1 FTS over lot addresses, which aren't in the loaded geometry). */
+  onAddress: (hit: AddressHit) => void
 }
 
-export function useParcelSearch({ data, onSelect }: Props) {
+export function useParcelSearch({ data, onSelect, onAddress }: Props) {
   const filter = useCallback(
     (query: string, pagination: { offset: number; limit: number }) => {
       if (!data) return { entries: [], total: 0, hasMore: false }
@@ -72,6 +82,30 @@ export function useParcelSearch({ data, onSelect }: Props) {
     },
     [data, onSelect],
   )
+
+  useOmnibarEndpoint('addresses', {
+    fetch: async (query, signal, pagination) => {
+      const r = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=${pagination.offset + pagination.limit}`, { signal })
+      if (!r.ok) return { entries: [], total: 0, hasMore: false }
+      const hits: AddressHit[] = (await r.json()).results
+      const page = hits.slice(pagination.offset)
+      return {
+        entries: page.map(h => ({
+          id: `address:${h.id}`,
+          label: h.addr,
+          description: `Lot ${h.id}`,
+          group: 'Addresses',
+          handler: () => onAddress(h),
+        })),
+        total: hits.length,
+        hasMore: false,
+      }
+    },
+    group: 'Addresses',
+    priority: 110,
+    pageSize: 8,
+    minQueryLength: 2,
+  })
 
   useOmnibarEndpoint('parcels', {
     filter,

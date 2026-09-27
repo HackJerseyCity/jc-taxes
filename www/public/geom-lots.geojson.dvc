@@ -1,5 +1,5 @@
 outs:
-- md5: 5e53afecb8a87a36bec0b84744a445e7
-  size: 14816855
+- md5: dc6f28a7e75c29bf0b5aafa79d24ebf7
+  size: 11789843
   hash: md5
   path: geom-lots.geojson

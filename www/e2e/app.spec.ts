@@ -26,6 +26,8 @@ function readFixture(name: string): string {
 // Bundled views (`src/bundle.ts`): geometry + per-year values, synthesized from
 // the 2025 fixture (same amounts every year).
 const BUNDLE_DYNAMIC = new Set(['paid', 'billed', 'paid_per_sqft', 'billed_per_sqft', 'year'])
+// Lot / unit details served by `/api/parcel` instead (DETAIL_PROPS + owner in src/jc_taxes/bundle.py).
+const DETAIL_PROPS = new Set(['addr', 'bldg_desc', 'stories', 'units', 'bldg_sqft', 'owner'])
 function bundleFixture(kind: 'geom' | 'values', view: string, year?: number): string | Buffer {
   const key = `${kind}-${view}-${year ?? ''}`
   if (!fixtureCache.has(key)) {
@@ -36,7 +38,8 @@ function bundleFixture(kind: 'geom' | 'values', view: string, year?: number): st
         features: features.map(f => ({
           type: 'Feature',
           geometry: f.geometry,
-          properties: Object.fromEntries(Object.entries(f.properties).filter(([k]) => !BUNDLE_DYNAMIC.has(k))),
+          properties: Object.fromEntries(Object.entries(f.properties).filter(([k]) =>
+            !BUNDLE_DYNAMIC.has(k) && !(view !== 'blocks' && DETAIL_PROPS.has(k)))),
         })),
       }))
     } else {
@@ -137,7 +140,21 @@ async function mockPortfolios(page: Page) {
   // Aggregates are computed from the full data, which the fixtures only sample:
   // unavailable here, so the app's client-side fallback (from loaded features) runs.
   await page.route(/\/api\/summary\?/, route => route.fulfill({ status: 503, body: 'no summary in e2e' }))
-  await page.route(/\/api\/parcel\?/, route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ owners: [] }) }))
+  // Details from the lot / unit fixtures, as the D1 `parcels` table has them.
+  await page.route(/\/api\/parcel\?/, route => {
+    const u = new URL(route.request().url())
+    const view = u.searchParams.get('view') === 'unit' ? 'units' : 'lots'
+    const id = u.searchParams.get('id')
+    const f = (JSON.parse(readFixture(FIXTURES[view])).features as { properties: Record<string, unknown> }[])
+      .find(({ properties: p }) => [p.block, p.lot, p.qual].filter(Boolean).join('-') === id)
+    if (!f) return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ owners: [] }) })
+    const p = f.properties
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ addr: p.addr, bldg_desc: p.bldg_desc, stories: p.stories, units: p.units, bldg_sqft: p.bldg_sqft, owners: p.owner ? [[2015, p.owner]] : [] }),
+    })
+  })
+  await page.route(/\/api\/search\?/, route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ results: [] }) }))
 }
 
 /** Wait for the app to finish loading data (data-loaded attribute present). */
@@ -278,6 +295,26 @@ test.describe('Omnibar', () => {
 
     await page.keyboard.press('Escape')
     await expect(input).not.toBeVisible()
+  })
+
+  test('address search selects the lot in lot view', async ({ page }) => {
+    await mockGeoJSON(page)
+    // Registered after mockGeoJSON's empty-result mock, so it takes precedence.
+    await page.route(/\/api\/search\?/, route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ results: [{ id: '302-21', addr: '638 LIBERTY AVE.', lng: -74.051, lat: 40.73 }] }),
+    }))
+    await page.goto('/')
+    await waitForLoad(page)
+
+    await page.keyboard.press('Meta+k')
+    const input = page.locator('input[type="text"]').first()
+    await expect(input).toBeFocused()
+    await input.fill('638 liberty')
+    await expect(page.locator('.kbd-omnibar-result-label').first()).toHaveText('638 LIBERTY AVE.')
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/[?&]a=l(&|$)/)
+    await expect(page).toHaveURL(/[?&]sel=302-21(&|$)/)
   })
 
   test('searching a year selects it', async ({ page }) => {

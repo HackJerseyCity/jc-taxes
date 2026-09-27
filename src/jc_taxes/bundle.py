@@ -15,9 +15,9 @@ instead loads, once per view:
   reads straight into typed arrays. Derived metrics
   (`paid_per_sqft`, …) are recomputed client-side, as the pipeline does.
 
-so switching years or playing every year downloads nothing more. Owners go to
-the D1 `owners` table (run-length by year), fetched per parcel on hover /
-select via `/api/parcel`. Wards and census blocks keep per-year GeoJSON: their
+Per-parcel details (address, building info, owner history by year) go to the
+D1 `parcels` table, fetched on hover / select (`/api/parcel`) and searched
+(`/api/search`, FTS5 on address), instead of shipping with the geometry. Wards and census blocks keep per-year GeoJSON: their
 geometry is trimmed to each year's tax-paying lots, and they're small.
 
 Outputs are DVC data (`dvx add` + `dvc push`, then served by the Worker's `/d`);
@@ -38,8 +38,11 @@ from .stats import WWW_PUBLIC, _load_geojson
 VIEWS = {"block": "blocks", "lot": "lots", "unit": "units"}
 DYNAMIC = {"paid", "billed", "paid_per_sqft", "billed_per_sqft", "paid_per_capita", "billed_per_capita", "year"}
 PER_YEAR_DETAILS = {"owner"}
+# Moved from the geometry to D1 `parcels` (lot / unit views): only the tooltip
+# and search use them. (`yr_built` stays: color-by-year-built needs it for every parcel.)
+DETAIL_PROPS = ("addr", "bldg_desc", "stories", "units", "bldg_sqft")
 EDGE = ROOT / "edge"
-DEFAULT_SQL = ROOT / "tmp" / "owners.sql"
+DEFAULT_SQL = ROOT / "tmp" / "parcels.sql"
 COORD_DECIMALS = 6
 
 # `values-{view}-{year}.bin` (little-endian; parsed by `www/src/bundle.ts`):
@@ -108,9 +111,17 @@ def run_length(by_year: dict[int, str | None]) -> list[list]:
     return [e for e in out if e[1] is not None] if any(e[1] is not None for e in out) else []
 
 
-def build(view: str, per_year: dict[int, list[dict]]) -> tuple[dict, dict, dict[str, list]]:
-    """(geom FeatureCollection, values, owners by id) for one view."""
+def bbox_center(geom: dict) -> tuple[float, float]:
+    ring = geom["coordinates"][0] if geom["type"] == "Polygon" else geom["coordinates"][0][0]
+    xs, ys = [c[0] for c in ring], [c[1] for c in ring]
+    return round((min(xs) + max(xs)) / 2, 6), round((min(ys) + max(ys)) / 2, 6)
+
+
+def build(view: str, per_year: dict[int, list[dict]]) -> tuple[dict, dict, dict[str, dict]]:
+    """(geom FeatureCollection, values, details by id) for one view. Details
+    (lot / unit views only): `DETAIL_PROPS`, center, owner history."""
     latest = per_year[max(per_year)]
+    detailed = any("owner" in f["properties"] for f in latest)
     order = keyed(latest)
     index = {k: i for i, k in enumerate(order)}
     n = len(order)
@@ -120,7 +131,7 @@ def build(view: str, per_year: dict[int, list[dict]]) -> tuple[dict, dict, dict[
             {
                 "type": "Feature",
                 "geometry": {**f["geometry"], "coordinates": round_coords(f["geometry"]["coordinates"])},
-                "properties": {k: v for k, v in f["properties"].items() if k not in DYNAMIC and k not in PER_YEAR_DETAILS},
+                "properties": {k: v for k, v in f["properties"].items() if k not in DYNAMIC and k not in PER_YEAR_DETAILS and (not detailed or k not in DETAIL_PROPS)},
             }
             for f in latest
         ],
@@ -144,10 +155,22 @@ def build(view: str, per_year: dict[int, list[dict]]) -> tuple[dict, dict, dict[
         paid.append(p)
         billed.append([bi - pi for pi, bi in zip(p, b)])
     values = {"years": years, "count": n, "paid": paid, "billed_minus_paid": billed}
-    return geom, values, {i: run_length(by) for i, by in owners.items()}
+    details = {}
+    if detailed:
+        for (i, occ), f in zip(order, latest):
+            if occ:
+                continue
+            pr = f["properties"]
+            lng, lat = bbox_center(f["geometry"])
+            details[i] = {**{k: pr.get(k) for k in DETAIL_PROPS}, "lng": lng, "lat": lat, "owners": run_length(owners.get(i, {}))}
+    return geom, values, details
 
 
 def _sql(v) -> str:
+    if v is None:
+        return "NULL"
+    if isinstance(v, (int, float)):
+        return repr(v)
     return "'" + str(v).replace("'", "''") + "'"
 
 
@@ -164,7 +187,7 @@ def bundle(cache_dir: Path | None, db: str, local: bool, dry_run: bool, out_dir:
     for view in views or tuple(VIEWS):
         suffix = VIEWS[view]
         per_year = {y: _load_geojson(view, y, cache_dir, force=False)["features"] for y in YEARS}
-        geom, values, owners = build(view, per_year)
+        geom, values, details = build(view, per_year)
         outputs = (
             (f"geom-{suffix}.geojson", (json.dumps(geom, separators=(",", ":")) + "\n").encode()),
             *(
@@ -176,14 +199,15 @@ def bundle(cache_dir: Path | None, db: str, local: bool, dry_run: bool, out_dir:
             path = out_dir / name
             path.write_bytes(data)
             err(f"wrote {path} ({len(data) / 1e6:.1f} MB)")
-        if owners:
-            stmts.append(f"DELETE FROM owners WHERE view = {_sql(view)};")
-            stmts += [
-                f"INSERT INTO owners (view, id, owners) VALUES ({_sql(view)}, {_sql(i)}, {_sql(json.dumps(o, separators=(',', ':')))});"
-                for i, o in owners.items() if o
-            ]
+        if details:
+            stmts.append(f"DELETE FROM parcels WHERE view = {_sql(view)};")
+            cols = ("view", "id", *DETAIL_PROPS, "lng", "lat", "owners")
+            for i, d in details.items():
+                vals = (view, i, *(d[k] for k in DETAIL_PROPS), d["lng"], d["lat"], json.dumps(d["owners"], separators=(",", ":")))
+                stmts.append(f"INSERT INTO parcels ({', '.join(cols)}) VALUES ({', '.join(_sql(v) for v in vals)});")
     if not stmts:
         return
+    stmts.append("INSERT INTO parcels_fts(parcels_fts) VALUES('rebuild');")
     DEFAULT_SQL.parent.mkdir(parents=True, exist_ok=True)
     DEFAULT_SQL.write_text("\n".join(stmts) + "\n")
     err(f"wrote {DEFAULT_SQL} ({len(stmts)} statements)")

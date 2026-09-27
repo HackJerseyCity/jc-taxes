@@ -13,14 +13,14 @@ import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { AVAILABLE_YEARS, DEFAULT_YEAR, YEAR_MAX } from './years'
 import { summaryFocus, useSummary, type SummaryMetric } from './summary'
 import { isBundled, yearFeatures } from './bundle'
-import { useParcelOwner } from './parcel'
+import { useParcelDetails } from './parcel'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
 import { fit3d } from './fit3d'
 import FocusPicker, { type FocusOption } from './FocusPicker'
 import { HOOD_SLUGS, aggAlias, hoodParam, metricAlias, portfolioAlias, wardParam, yearParam } from './urlParams'
 import { WARDS, boundsOf, hoodsOf, parseRegion, regionLabel, regionTest } from './regions'
 import { useTouchPitch } from './useTouchPitch'
-import { useParcelSearch } from './useParcelSearch'
+import { useParcelSearch, type AddressHit } from './useParcelSearch'
 import { useTheme } from './theme'
 import GradientEditor from './GradientEditor'
 import {
@@ -1073,7 +1073,20 @@ export default function MapView() {
       }))
     }
   }, [setSelectedId, setViewState])
-  useParcelSearch({ data, onSelect: onParcelSelect })
+  // An address hit (lot-level, from the server): show it in lot view.
+  const onAddress = useCallback((hit: AddressHit) => {
+    if (aggregateMode !== 'lot') setAggregateMode('lot')
+    setSelectedId(hit.id)
+    setViewState(v => ({
+      ...v,
+      longitude: hit.lng,
+      latitude: hit.lat,
+      zoom: Math.max(v.zoom, 16),
+      transitionDuration: 500,
+      transitionInterpolator: new FlyToInterpolator(),
+    }))
+  }, [aggregateMode, setAggregateMode, setSelectedId, setViewState])
+  useParcelSearch({ data, onSelect: onParcelSelect, onAddress })
 
   // Per-(agg, year) feature cache + id maps. Populated lazily on year/agg
   // changes; preloaded eagerly when ?animYr is set (so frame-by-frame
@@ -1594,7 +1607,7 @@ export default function MapView() {
   // start year's set (the interpolation reads other years from the cache), so
   // totals must come from the per-year cache or they'd freeze at the start year.
   const yearRounded = Math.round(year)
-  const detailOwner = useParcelOwner(String(aggregateMode), selectedId ?? hoveredId, yearRounded)
+  const parcelDetails = useParcelDetails(String(aggregateMode), selectedId ?? hoveredId, yearRounded)
   const displayData = useMemo(
     () => yearCacheRef.current.get(cacheKey(aggregateMode, yearRounded)) ?? data,
     [data, aggregateMode, yearRounded, cacheKey],
@@ -2381,7 +2394,7 @@ export default function MapView() {
 
       {/* Hover/selected tooltip */}
       {(hovered || selected) && (() => {
-        const info = selected ?? hovered!
+        const info = { ...(selected ?? hovered!), ...parcelDetails }
         const isCensus = !!info.geoid || (!!info.ward && !info.block)
         const sqftActive = metricMode === 'per_sqft'
         const capitaActive = metricMode === 'per_capita'
@@ -2431,7 +2444,7 @@ export default function MapView() {
                 {info.addr && <div><strong>{info.addr}</strong></div>}
                 {info.streets && !info.addr && <div><strong>{info.streets}</strong></div>}
                 <div>Block{info.lot ? ': ' : ' '}{info.block}{info.lot ? `-${info.lot}` : ''}{info.qual ? `-${info.qual}` : ''}</div>
-                {(info.owner ?? detailOwner) && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{info.owner ?? detailOwner}</div>}
+                {info.owner && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{info.owner}</div>}
               </>
             )}
             {hasBuilding && (() => {

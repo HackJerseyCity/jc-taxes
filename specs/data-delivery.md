@@ -52,6 +52,8 @@ Plus: **search** (omnibar address → parcel) becomes a lazy index (`addr → id
    - ✅ `jct bundle` → per view (block / lot / unit) `geom-{view}.geojson` (fixed props) + `values-{view}.json` (all years' paid, billed − paid; integer cents), DVC → `/d`; owners → D1 `owners` → `/api/parcel` on hover / select. Wards / census blocks keep per-year GeoJSON (geometry varies by year; small).
    - Measured (`www/net`, prod): lots playback 52.6 → 4.9 MB, blocks playback 12.2 → 1.0 MB, year step 8.1 → 4.9 MB; first load +~1 MB (lots 4.0 → 4.9) for having every year.
    - ✅ Values as binary (`values-{view}.bin`: i32 cents, or f64 where block totals overflow; `[feature][year]`), geometry coordinates rounded to 6 decimals, and max-brotli copies (`jct r2 precompress` → `br/<md5>`) served as-is by `/d` with `Content-Encoding: br`.
+   - ✅ Per-year values files (`values-{view}-{year}.bin`): first load fetches one year's values (lots 1.38 → 0.13 MB); playback 1.62 MB total. Parquet measured ~1.6× larger than the custom layout.
+   - ✅ Details (address, building info, owners) moved from lot / unit geometry to D1 `parcels` → `/api/parcel` on hover / select; address search `/api/search` (FTS5, exact house number ranked first) in the omnibar. Lots geometry 1.29 → 1.00 MB.
    - Dropped: server-side camera extents. The geometry file is loaded once per view anyway, so fitting over in-memory members costs nothing extra.
 3. **Vector tiles for geometry.** PMTiles per view (R2, range requests through the Worker), `MVTLayer` extruded with id-indexed values; verify extrusion across tiles (`--no-clipping`), picking, focus fade / hide, portfolio membership by id set.
 4. **Search** (`/api/search`, D1 FTS) and details polish.
