@@ -1,5 +1,4 @@
--- Curated developer/owner portfolios (schema only; rows are seeded at deploy
--- time from the DVC-tracked `portfolios.json` by `scripts/seed-portfolios.mjs`,
+-- Curated developer/owner portfolios (schema only; rows are seeded from the DVC-tracked `portfolios.json` by `scripts/seed-portfolios.mjs`,
 -- never committed). List columns hold JSON arrays of strings.
 CREATE TABLE IF NOT EXISTS portfolios (
   key       TEXT PRIMARY KEY,

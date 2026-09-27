@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { resolve as dvcResolve } from 'virtual:dvc-data'
 
 // Owner/developer portfolios, surfaced via the `pf` URL param and
 // command-palette actions (hidden-but-linkable). Each highlights a set of
@@ -26,12 +25,13 @@ export function usePortfolios(): Portfolio[] | null {
   const [portfolios, setPortfolios] = useState<Portfolio[] | null>(null)
   useEffect(() => {
     let cancelled = false
-    fetch(dvcResolve('portfolios.json'))
+    // Served from D1 by the `jct-edge` Worker (dev: proxied, see vite.config.ts).
+    fetch('/api/portfolios')
       .then(r => {
         if (!r.ok) throw new Error(`${r.status} ${r.statusText}`)
-        return r.json() as Promise<Portfolio[]>
+        return r.json() as Promise<{ portfolios: Portfolio[] }>
       })
-      .then(ps => { if (!cancelled) setPortfolios(ps) })
+      .then(({ portfolios: ps }) => { if (!cancelled) setPortfolios(ps) })
       .catch(e => {
         console.error('Failed to load portfolios:', e)
         if (!cancelled) setPortfolios([])

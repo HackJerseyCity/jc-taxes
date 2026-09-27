@@ -29,7 +29,7 @@ function parseList(s: string | null): string[] | undefined {
 
 async function fromD1(db: D1Database): Promise<Portfolio[]> {
   const { results } = await db
-    .prepare('SELECT key, label, note, blocks, parcels, keywords FROM portfolios ORDER BY key')
+    .prepare('SELECT key, label, note, blocks, parcels, keywords FROM portfolios ORDER BY ord, key')
     .all<D1PortfolioRow>()
   return results.map((r) => ({
     key: r.key,

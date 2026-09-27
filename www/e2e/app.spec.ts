@@ -36,7 +36,8 @@ function getS3Map(): Map<string, string> {
   const files = readdirSync(distDir).filter(f => f.startsWith('index-') && f.endsWith('.js'))
   if (files.length === 0) return s3Map
   const js = readFileSync(join(distDir, files[0]), 'utf-8')
-  const re = /"taxes-\d{4}-(blocks|lots|wards|census-blocks|units)\.geojson":"(https:\/\/[^"]*)"/g
+  // Absolute (S3 / R2 host) or same-origin (`VITE_DVC_BASE_URL=/d`, the edge Worker route).
+  const re = /"taxes-\d{4}-(blocks|lots|wards|census-blocks|units)\.geojson":"(https:\/\/[^"]*|\/d\/[^"]*)"/g
   let m
   while ((m = re.exec(js)) !== null) {
     s3Map.set(m[2], m[1])
@@ -46,9 +47,11 @@ function getS3Map(): Map<string, string> {
 
 /**
  * Intercept GeoJSON fetches and serve local fixtures instead of real data.
- * Handles both dev mode (local paths) and build mode (S3 DVC cache URLs).
+ * Handles both dev mode (local paths) and build mode (DVC cache URLs), and
+ * mocks `/api/portfolios`.
  */
 async function mockGeoJSON(page: Page) {
+  await mockPortfolios(page)
   // Dev mode: URLs contain the filename (e.g. /taxes-2025-lots.geojson)
   await page.route(/\/taxes-\d{4}-(blocks|lots|wards|census-blocks|units)\.geojson/, async (route) => {
     const match = route.request().url().match(/taxes-\d{4}-(blocks|lots|wards|census-blocks|units)\.geojson/)
@@ -65,8 +68,9 @@ async function mockGeoJSON(page: Page) {
   // GeoJSONs instead of the fixtures, which times the suite out.
   const map = getS3Map()
   if (map.size > 0) {
-    await page.route(/jc-taxes\.s3\.amazonaws\.com|data\.jct\.rbw\.sh/, async (route) => {
-      const suffix = map.get(route.request().url())
+    await page.route(/jc-taxes\.s3\.amazonaws\.com|data\.jct\.rbw\.sh|\/d\/files\/md5\//, async (route) => {
+      const url = route.request().url()
+      const suffix = map.get(url) ?? map.get(new URL(url).pathname)
       if (suffix && FIXTURES[suffix]) {
         await route.fulfill({ contentType: 'application/json', body: readFixture(FIXTURES[suffix]) })
       } else {
@@ -74,6 +78,17 @@ async function mockGeoJSON(page: Page) {
       }
     })
   }
+}
+
+/** `/api/portfolios` (D1, via the edge Worker) from the local DVC checkout of
+ *  `portfolios.json`, or an empty list where it isn't pulled (CI). */
+async function mockPortfolios(page: Page) {
+  const local = join(__dirname, '..', 'public', 'portfolios.json')
+  const portfolios = existsSync(local) ? JSON.parse(readFileSync(local, 'utf-8')) : []
+  await page.route(/\/api\/portfolios$/, route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ source: 'fixture', portfolios }),
+  }))
 }
 
 /** Wait for the app to finish loading data (data-loaded attribute present). */

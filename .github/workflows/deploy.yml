@@ -1,24 +1,22 @@
-name: Deploy to GitHub Pages
+name: Deploy (Cloudflare Worker)
 on:
   push:
     branches: [main]
-    paths: ['www/**', '.github/workflows/deploy.yml']
+    paths: ['www/**', 'edge/**', '.github/workflows/deploy.yml']
   pull_request:
     branches: [main]
-    paths: ['www/**', '.github/workflows/deploy.yml']
+    paths: ['www/**', 'edge/**', '.github/workflows/deploy.yml']
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages"
+  group: deploy
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -32,7 +30,9 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-          cache-dependency-path: 'www/pnpm-lock.yaml'
+          cache-dependency-path: |
+            www/pnpm-lock.yaml
+            edge/pnpm-lock.yaml
 
       - name: Remove local-only workspace deps
         working-directory: ./www
@@ -51,9 +51,9 @@ jobs:
       - name: Build
         working-directory: ./www
         env:
-          # Serve the DVC cache (map geojsons) from Cloudflare R2 (free egress)
-          # via the bucket's custom domain, instead of the plugin's S3 default.
-          VITE_DVC_BASE_URL: https://data.jct.rbw.sh/.dvc/cache
+          # Map data (DVC cache) is served same-origin by the `jct-edge`
+          # Worker's `/d/*` route (compressed, edge-cached; see edge/README.md).
+          VITE_DVC_BASE_URL: /d
         run: pnpm run build
 
       - name: Install Playwright
@@ -64,24 +64,14 @@ jobs:
         working-directory: ./www
         run: pnpm test
 
-      - name: Setup Pages
+      - name: Install edge dependencies
         if: github.ref == 'refs/heads/main'
-        uses: actions/configure-pages@v6
+        working-directory: ./edge
+        run: pnpm install --frozen-lockfile
 
-      - name: Upload Pages artifact
+      - name: Deploy Worker
         if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: ./www/dist
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+        working-directory: ./edge
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm run deploy

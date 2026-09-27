@@ -42,6 +42,11 @@ export default defineConfig({
     port: 3201,  // JC area code
     host: true,
     allowedHosts: true,  // trusted-tailnet dev server, reached by bare MagicDNS name (e.g. `m3:3201`)
+    // App-data API (`/api/*`) lives in the `jct-edge` Worker; point at a local
+    // `wrangler dev` (`VITE_API_ORIGIN=http://localhost:3205`) to test edge changes.
+    proxy: {
+      '/api': { target: process.env.VITE_API_ORIGIN || 'https://jct.rbw.sh', changeOrigin: true },
+    },
   },
 
   preview: {

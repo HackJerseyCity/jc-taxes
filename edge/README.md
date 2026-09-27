@@ -48,28 +48,17 @@ curl -s -o card.png -w '%{http_code} %{content_type} x-og=%header{x-og-cache}\n'
 curl -s "$U/api/portfolios" | jq '.source, (.portfolios | length)'
 ```
 
-## D1 (groundwork, not yet provisioned)
+## D1
 
-The current `CLOUDFLARE_API_TOKEN` lacks D1 permissions (`wrangler d1 list` → auth error 10000). Once D1:Edit is added to the token:
+Database `jct` (bound as `DB`) holds app data that shouldn't live in git: currently the `portfolios` table (`d1/schema.sql`). Re-seed after editing the DVC-tracked `portfolios.json`:
 ```bash
-npx wrangler d1 create jct                      # note database_id
-# uncomment `d1_databases` in wrangler.jsonc with that id
-node scripts/seed-portfolios.mjs ../www/public/portfolios.json   # applies d1/schema.sql + upserts (reads the JSON at seed time; nothing committed)
-pnpm run deploy
+node scripts/seed-portfolios.mjs ../www/public/portfolios.json   # applies d1/schema.sql + upserts; full replace
 curl -s "$U/api/portfolios" | jq .source        # → "d1"
 ```
-The seed script also accepts a URL. It fully replaces the table: keys missing from the JSON are deleted.
+The seed script also accepts a URL. Keys missing from the JSON are deleted.
 
-## Production cutover (manual)
+## Production
 
-`jct.rbw.sh` is currently a DNS-only `CNAME jct → runsascoded.github.io` (GitHub Pages). It's a 1-level subdomain of `rbw.sh`, so the free Universal cert covers it and no ACM is needed.
+`jct.rbw.sh` is a Workers custom domain on `jct-edge` (cut over from GitHub Pages on 2026-09-27; Pages is unpublished). CI (`.github/workflows/deploy.yml`) builds `www` with `VITE_DVC_BASE_URL=/d`, runs the e2e suite, and on `main` runs `wrangler deploy` here (repo secret `CLOUDFLARE_API_TOKEN`).
 
-1. **Allow the prod origin for geojson** (already done: the `jc-taxes` bucket CORS allows `https://jct.rbw.sh`). For the *test* origin to load map data, also add `https://jct-edge.ryan-0dc.workers.dev` to that bucket's CORS `allowed_origins`.
-2. Build `www` from `main` and run `pnpm run deploy` here. Then smoke-test the workers.dev URL.
-3. In CF dashboard → DNS for `rbw.sh`, **delete** the `jct` CNAME → `runsascoded.github.io`.
-4. Workers & Pages → `jct-edge` → Settings → Domains & Routes → **Add Custom Domain** `jct.rbw.sh`. CF creates the proxied record and the edge cert (usually within a minute or two). CLI alternative: add `"routes": [{ "pattern": "jct.rbw.sh", "custom_domain": true }]` and redeploy.
-5. Verify: `curl -sI https://jct.rbw.sh/ | grep -i server` → `cloudflare`, then re-run the checks above against `https://jct.rbw.sh`. The `og:image` URLs switch automatically, since they derive from the request origin.
-6. GitHub repo → Settings → Pages: remove the custom domain, or disable Pages / the `deploy.yml` deploy job. Otherwise GH keeps expecting `jct.rbw.sh`.
-7. Optional: set up CI to `wrangler deploy` on push (replacing the Pages deploy job), and pre-warm the social caches with the Facebook Sharing Debugger / LinkedIn Post Inspector.
-
-Rollback: remove the custom domain from the Worker and recreate `CNAME jct → runsascoded.github.io` (DNS only).
+Rollback: remove the custom domain from the Worker, recreate `CNAME jct → runsascoded.github.io` (DNS only), and re-publish Pages.

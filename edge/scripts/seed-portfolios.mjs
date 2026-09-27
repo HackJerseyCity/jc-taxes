@@ -6,7 +6,7 @@
 // Portfolio data (labels, parcel lists) is deliberately kept out of git: it
 // lives in the DVC-tracked `www/public/portfolios.json` (→ R2). This script
 // reads it at seed time, writes the upsert SQL to a temp file outside the repo,
-// and runs `wrangler d1 execute` on it (schema applied first). Full replace:
+// and runs `wrangler d1 execute` on it (after `wrangler d1 migrations apply`). Full replace:
 // rows absent from the JSON are deleted.
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -37,16 +37,17 @@ if (!Array.isArray(portfolios)) throw new Error('portfolios.json must be an arra
 const q = (v) => (v == null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`)
 const list = (v) => (Array.isArray(v) && v.length ? q(JSON.stringify(v)) : 'NULL')
 
-const stmts = [readFileSync(resolve(here, '..', 'd1', 'schema.sql'), 'utf8')]
+// Schema comes from `d1/migrations` (`wrangler d1 migrations apply`), run first.
+const stmts = []
 const keys = []
 for (const p of portfolios) {
   if (!p.key || !p.label) throw new Error(`portfolio missing key/label: ${JSON.stringify(p).slice(0, 80)}`)
-  keys.push(p.key)
+  const ord = keys.push(p.key) - 1
   stmts.push(
-    `INSERT INTO portfolios (key, label, note, blocks, parcels, keywords, updated_at) VALUES ` +
-    `(${q(p.key)}, ${q(p.label)}, ${q(p.note)}, ${list(p.blocks)}, ${list(p.parcels)}, ${list(p.keywords)}, datetime('now')) ` +
+    `INSERT INTO portfolios (key, label, note, blocks, parcels, keywords, ord, updated_at) VALUES ` +
+    `(${q(p.key)}, ${q(p.label)}, ${q(p.note)}, ${list(p.blocks)}, ${list(p.parcels)}, ${list(p.keywords)}, ${ord}, datetime('now')) ` +
     `ON CONFLICT(key) DO UPDATE SET label=excluded.label, note=excluded.note, blocks=excluded.blocks, ` +
-    `parcels=excluded.parcels, keywords=excluded.keywords, updated_at=excluded.updated_at;`,
+    `parcels=excluded.parcels, keywords=excluded.keywords, ord=excluded.ord, updated_at=excluded.updated_at;`,
   )
 }
 stmts.push(`DELETE FROM portfolios WHERE key NOT IN (${keys.map(q).join(', ') || "''"});`)
