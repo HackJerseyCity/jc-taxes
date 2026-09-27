@@ -1754,14 +1754,23 @@ export default function MapView() {
     if (!initial && fitFocusRef.current === focusKey) return
     fitFocusRef.current = focusKey
     if (initial && urlHadViewRef.current) { setInitialFitDone(true); return }
-    const members = focusTest ? displayData.filter(f => focusTest(f.properties)) : []
+    const all = focusTest ? displayData.filter(f => focusTest(f.properties)) : []
+    // Frame members with a bar; zero-tax parcels (bay / river lots) would
+    // stretch the fit over water.
+    const nonzero = all.filter(f => getBarElevation(f) > 0)
+    const members = nonzero.length ? nonzero : all
     const bounds = boundsOf(members)
     if (bounds) {
       const extrudedNow = polysExtruded || (isTotal && extruded)
+      // Large focuses (wards) let rare outlier bars run off the top, so one
+      // tower doesn't shrink the rest.
+      const hs = members.map(f => getBarElevation(f))
+      const sorted = [...hs].sort((a, b) => a - b)
+      const cap = hs.length >= 20 ? 1.5 * sorted[Math.floor(0.95 * (sorted.length - 1))] : Infinity
       const tops: [number, number, number][] = extrudedNow
-        ? members.map(f => {
+        ? members.map((f, i) => {
           const b = boundsOf([f])!
-          return [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2, getBarElevation(f)]
+          return [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2, Math.min(hs[i], cap)]
         })
         : []
       setViewState(v => {

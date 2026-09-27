@@ -24,35 +24,40 @@ export function fit3d(
   cam: { pitch: number; bearing: number },
   size: { width: number; height: number },
   frame: Frame,
-  maxZoom = 17,
+  // Caps single-building focuses, keeping surrounding streets in view.
+  maxZoom = 15.5,
 ): Camera {
   const [[x0, y0], [x1, y1]] = bounds
   const corners: [number, number, number][] = [...tops]
   for (const x of [x0, x1]) for (const y of [y0, y1]) corners.push([x, y, 0])
   const { width, height } = size
-  const fw = frame.right - frame.left, fh = frame.bottom - frame.top
   const fcx = (frame.left + frame.right) / 2, fcy = (frame.top + frame.bottom) / 2
+  // Screen bbox of the corners at a camera, or null when a point is behind
+  // the camera (clip w ≤ 0: it projects mirrored and can look like it fits).
+  const bbox = (longitude: number, latitude: number, zoom: number) => {
+    const vp = new WebMercatorViewport({ width, height, longitude, latitude, zoom, ...cam })
+    const m = vp.viewProjectionMatrix as number[]
+    const behind = corners.some(c => {
+      const [x, y, z] = vp.projectPosition(c)
+      return m[3] * x + m[7] * y + m[11] * z + m[15] <= 0
+    })
+    if (behind) return null
+    const pts = corners.map(c => vp.project(c))
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1])
+    return { vp, minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) }
+  }
   const place = (zoom: number) => {
     let longitude = (x0 + x1) / 2, latitude = (y0 + y1) / 2
-    let fits = false
     for (let i = 0; i < 4; i++) {
-      const vp = new WebMercatorViewport({ width, height, longitude, latitude, zoom, ...cam })
-      // A point behind the camera (clip w ≤ 0) projects mirrored and can
-      // look like it fits; treat that zoom as too close.
-      const m = vp.viewProjectionMatrix as number[]
-      const behind = corners.some(c => {
-        const [x, y, z] = vp.projectPosition(c)
-        return m[3] * x + m[7] * y + m[11] * z + m[15] <= 0
-      })
-      if (behind) return { longitude, latitude, fits: false }
-      const pts = corners.map(c => vp.project(c))
-      const xs = pts.map(p => p[0]), ys = pts.map(p => p[1])
-      const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys)
-      fits = isFinite(minX + maxX + minY + maxY) && maxX - minX <= fw && maxY - minY <= fh
+      const b = bbox(longitude, latitude, zoom)
+      if (!b) return { longitude, latitude, fits: false }
       // Move the camera so the box center shifts to the frame center.
-      ;[longitude, latitude] = vp.unproject([width / 2 + ((minX + maxX) / 2 - fcx), height / 2 + ((minY + maxY) / 2 - fcy)])
-      if (!isFinite(longitude + latitude)) return { longitude: (x0 + x1) / 2, latitude: (y0 + y1) / 2, fits: false }
+      ;[longitude, latitude] = b.vp.unproject([width / 2 + ((b.minX + b.maxX) / 2 - fcx), height / 2 + ((b.minY + b.maxY) / 2 - fcy)])
+      if (!isFinite(longitude + latitude)) return { longitude, latitude, fits: false }
     }
+    // Test at the final center (re-centering can diverge near the horizon).
+    const b = bbox(longitude, latitude, zoom)
+    const fits = !!b && b.minX >= frame.left - 1 && b.maxX <= frame.right + 1 && b.minY >= frame.top - 1 && b.maxY <= frame.bottom + 1
     return { longitude, latitude, fits }
   }
   let lo = 8, hi = maxZoom
