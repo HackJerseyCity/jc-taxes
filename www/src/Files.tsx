@@ -56,6 +56,14 @@ export default function Files() {
   const store = useMemo(() => HttpStore(FILES_API), [])
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '1.5em' }}>
+      {/* Until `@rdub/file-tree` grows a `home` crumb (its `specs/home-link.md`). */}
+      <nav style={{ fontSize: '0.9em', marginBottom: '0.6em' }}>
+        <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35em' }}>
+          <MdMap /> Jersey City property-tax map
+        </a>
+        {' · '}
+        <a href="/about">About</a>
+      </nav>
       <FileTree
         store={store}
         routeBase="/files"
