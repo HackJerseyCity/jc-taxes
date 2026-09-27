@@ -127,10 +127,14 @@ function sparkline(c: CardContent, w: number, hgt: number): string | null {
   return `data:image/svg+xml;base64,${btoa(svg)}`
 }
 
+/** "×2.09 since 2015"; omitted when the first year's total is small next to
+ *  the card's (mostly new construction, where a ×45 reads as noise). */
+const MAX_GROWTH_SHOWN = 5
 function growth(c: CardContent): string | null {
   const first = c.series.find(s => s.amount > 0), cur = c.series.find(s => s.year === c.year)
   if (!first || !cur || first.year === cur.year) return null
-  return `×${(cur.amount / first.amount).toFixed(2)} since ${first.year}`
+  const ratio = cur.amount / first.amount
+  return ratio > MAX_GROWTH_SHOWN ? null : `×${ratio.toFixed(2)} since ${first.year}`
 }
 
 function statsColumn(c: CardContent, width: number, big: number): unknown {

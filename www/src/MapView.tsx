@@ -672,6 +672,8 @@ export default function MapView() {
   const posBottom = settingsPos.startsWith('b')
   const [titleMode] = useUrlState('ti', stringParam(''))
   const showTitle = titleMode !== '0' && titleMode !== 'off'
+  // `clean=1`: no controls (settings, speed dial, compass), for OG map captures.
+  const [clean] = useUrlState('clean', flagParam)
   // Animation: ?animYr=2018-2025[:secsPerYear] cycles year forward, dwelling at each.
   // Year is parked at `from` on mount; ticking begins on `scrns:capture-start`
   // (for recordings, so frame 0 = `from` with no fresh-fetch spinner) or after
@@ -2374,7 +2376,7 @@ export default function MapView() {
           left: posRight ? undefined : 10,
           zIndex: 1,
         }}>
-          {settingsPanel}
+          {!clean && settingsPanel}
         </div>
       )}
 
@@ -2390,13 +2392,13 @@ export default function MapView() {
         gap: 10,
         zIndex: 1,
       }}>
-        {posBottom && settingsPanel}
-        <AppSpeedDial
+        {posBottom && !clean && settingsPanel}
+        {!clean && <AppSpeedDial
           className="speed-dial-inline"
           extraActions={[
             { key: 'data', label: 'Browse the data', icon: <MdFolderOpen />, href: '/files' },
           ]}
-        />
+        />}
         <div style={{ fontSize: 10, color: 'var(--text-secondary)', whiteSpace: 'nowrap', padding: '2px 4px' }}>
           <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>© OpenStreetMap</a>
           {' '}
@@ -2608,6 +2610,7 @@ export default function MapView() {
           cursor: viewState.bearing !== 0 ? 'pointer' : undefined,
           zIndex: 1,
           opacity: viewState.bearing === 0 ? 0.3 : 0.85,
+          ...(clean ? { display: 'none' } : {}),
         }}
         title={viewState.bearing !== 0 ? `Bearing: ${Math.round(viewState.bearing)}° — Click to reset` : 'North up'}
       >
