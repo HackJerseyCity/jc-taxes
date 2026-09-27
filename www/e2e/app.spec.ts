@@ -23,9 +23,47 @@ function readFixture(name: string): string {
   return fixtureCache.get(name)!
 }
 
+// Bundled views (`src/bundle.ts`): geometry + all-years values, synthesized from
+// the 2025 fixture (same amounts every year).
+const BUNDLE_DYNAMIC = new Set(['paid', 'billed', 'paid_per_sqft', 'billed_per_sqft', 'year'])
+const YEARS = Array.from({ length: 12 }, (_, i) => 2015 + i)
+function bundleFixture(kind: 'geom' | 'values', view: string): string {
+  const key = `${kind}-${view}`
+  if (!fixtureCache.has(key)) {
+    const features: { geometry: unknown, properties: Record<string, unknown> }[] = JSON.parse(readFixture(FIXTURES[view])).features
+    const body = kind === 'geom'
+      ? {
+          type: 'FeatureCollection',
+          features: features.map(f => ({
+            type: 'Feature',
+            geometry: f.geometry,
+            properties: Object.fromEntries(Object.entries(f.properties).filter(([k]) => !BUNDLE_DYNAMIC.has(k))),
+          })),
+        }
+      : {
+          years: YEARS,
+          count: features.length,
+          paid: YEARS.map(() => features.map(f => Math.round(Number(f.properties.paid ?? 0) * 100))),
+          billed_minus_paid: YEARS.map(() => features.map(f => Math.round((Number(f.properties.billed ?? 0) - Number(f.properties.paid ?? 0)) * 100))),
+        }
+    fixtureCache.set(key, JSON.stringify(body))
+  }
+  return fixtureCache.get(key)!
+}
+
+/** Fixture body for a data file name (`taxes-2025-lots.geojson`, `geom-lots.geojson`, `values-lots.json`), or null. */
+function fixtureFor(name: string): string | null {
+  let m = name.match(/^taxes-\d{4}-([\w-]+)\.geojson$/)
+  if (m && FIXTURES[m[1]]) return readFixture(FIXTURES[m[1]])
+  m = name.match(/^(geom|values)-(blocks|lots|units)\.(?:geojson|json)$/)
+  if (m) return bundleFixture(m[1] as 'geom' | 'values', m[2])
+  return null
+}
+const DATA_NAME = /(taxes-\d{4}-[\w-]+\.geojson|(?:geom|values)-[\w-]+\.(?:geojson|json))/
+
 /**
- * Build reverse map from remote DVC cache URLs → GeoJSON suffix.
- * Only needed for build/preview mode where dvcResolve returns opaque hash URLs.
+ * Build reverse map from built DVC cache URLs → data file name. Only needed for
+ * build/preview mode, where `dvcResolve` returns opaque hash URLs.
  */
 let s3Map: Map<string, string> | undefined
 function getS3Map(): Map<string, string> {
@@ -37,7 +75,7 @@ function getS3Map(): Map<string, string> {
   if (files.length === 0) return s3Map
   const js = readFileSync(join(distDir, files[0]), 'utf-8')
   // Absolute (S3 / R2 host) or same-origin (`VITE_DVC_BASE_URL=/d`, the edge Worker route).
-  const re = /"taxes-\d{4}-(blocks|lots|wards|census-blocks|units)\.geojson":"(https:\/\/[^"]*|\/d\/[^"]*)"/g
+  const re = /"([\w.-]+\.(?:geojson|json))":"(https:\/\/[^"]*|\/d\/[^"]*)"/g
   let m
   while ((m = re.exec(js)) !== null) {
     s3Map.set(m[2], m[1])
@@ -46,36 +84,32 @@ function getS3Map(): Map<string, string> {
 }
 
 /**
- * Intercept GeoJSON fetches and serve local fixtures instead of real data.
+ * Intercept map data fetches and serve local fixtures instead of real data.
  * Handles both dev mode (local paths) and build mode (DVC cache URLs), and
- * mocks `/api/portfolios`.
+ * mocks the `/api/*` endpoints.
  */
 async function mockGeoJSON(page: Page) {
   await mockPortfolios(page)
-  // Dev mode: URLs contain the filename (e.g. /taxes-2025-lots.geojson)
-  await page.route(/\/taxes-\d{4}-(blocks|lots|wards|census-blocks|units)\.geojson/, async (route) => {
-    const match = route.request().url().match(/taxes-\d{4}-(blocks|lots|wards|census-blocks|units)\.geojson/)
-    if (match && FIXTURES[match[1]]) {
-      await route.fulfill({ contentType: 'application/json', body: readFixture(FIXTURES[match[1]]) })
-    } else {
-      await route.continue()
-    }
+  // Dev mode: URLs contain the filename (e.g. /taxes-2025-wards.geojson, /geom-lots.geojson)
+  await page.route(new RegExp(`/${DATA_NAME.source}$`), async (route) => {
+    const name = new URL(route.request().url()).pathname.slice(1)
+    const body = fixtureFor(name)
+    if (body) await route.fulfill({ contentType: 'application/json', body })
+    else await route.continue()
   })
 
   // Build mode: URLs are opaque cache hashes; use reverse map from built JS.
-  // Hosts: S3 (plugin default) and R2 (`VITE_DVC_BASE_URL`, what CI builds
-  // with) — missing the live host means every test downloads the real 20-40 MB
-  // GeoJSONs instead of the fixtures, which times the suite out.
+  // Hosts: S3 (plugin default), R2, and same-origin `/d` (what CI builds
+  // with). Missing the live host means every test downloads the real 20-40 MB
+  // data instead of the fixtures, which times the suite out.
   const map = getS3Map()
   if (map.size > 0) {
     await page.route(/jc-taxes\.s3\.amazonaws\.com|data\.jct\.rbw\.sh|\/d\/files\/md5\//, async (route) => {
       const url = route.request().url()
-      const suffix = map.get(url) ?? map.get(new URL(url).pathname)
-      if (suffix && FIXTURES[suffix]) {
-        await route.fulfill({ contentType: 'application/json', body: readFixture(FIXTURES[suffix]) })
-      } else {
-        await route.continue()
-      }
+      const name = map.get(url) ?? map.get(new URL(url).pathname)
+      const body = name ? fixtureFor(name) : null
+      if (body) await route.fulfill({ contentType: 'application/json', body })
+      else await route.continue()
     })
   }
 }
@@ -92,6 +126,7 @@ async function mockPortfolios(page: Page) {
   // Aggregates are computed from the full data, which the fixtures only sample:
   // unavailable here, so the app's client-side fallback (from loaded features) runs.
   await page.route(/\/api\/summary\?/, route => route.fulfill({ status: 503, body: 'no summary in e2e' }))
+  await page.route(/\/api\/parcel\?/, route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ owners: [] }) }))
 }
 
 /** Wait for the app to finish loading data (data-loaded attribute present). */

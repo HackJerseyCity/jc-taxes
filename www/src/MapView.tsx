@@ -12,6 +12,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { AVAILABLE_YEARS, DEFAULT_YEAR, YEAR_MAX } from './years'
 import { summaryFocus, useSummary, type SummaryMetric } from './summary'
+import { isBundled, loadBundle, yearFeatures } from './bundle'
+import { useParcelOwner } from './parcel'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
 import { fit3d } from './fit3d'
 import FocusPicker, { type FocusOption } from './FocusPicker'
@@ -1083,9 +1085,14 @@ export default function MapView() {
     const key = cacheKey(agg, yr)
     const cached = yearCacheRef.current.get(key)
     if (cached) return cached
-    const suffix = SUFFIX_MAP[agg] ?? '-lots'
-    const geojson = await fetch(dvcResolve(`taxes-${yr}${suffix}.geojson`)).then(r => r.json())
-    const features: ParcelFeature[] = geojson.features
+    let features: ParcelFeature[]
+    if (isBundled(agg)) {
+      features = yearFeatures(await loadBundle(agg), yr)
+    } else {
+      const suffix = SUFFIX_MAP[agg] ?? '-lots'
+      const geojson = await fetch(dvcResolve(`taxes-${yr}${suffix}.geojson`)).then(r => r.json())
+      features = geojson.features
+    }
     yearCacheRef.current.set(key, features)
     const idMap = new Map<string, ParcelFeature>()
     features.forEach(f => idMap.set(featureIdOf(f), f))
@@ -1578,6 +1585,7 @@ export default function MapView() {
   // start year's set (the interpolation reads other years from the cache), so
   // totals must come from the per-year cache or they'd freeze at the start year.
   const yearRounded = Math.round(year)
+  const detailOwner = useParcelOwner(String(aggregateMode), selectedId ?? hoveredId, yearRounded)
   const displayData = useMemo(
     () => yearCacheRef.current.get(cacheKey(aggregateMode, yearRounded)) ?? data,
     [data, aggregateMode, yearRounded, cacheKey],
@@ -2414,7 +2422,7 @@ export default function MapView() {
                 {info.addr && <div><strong>{info.addr}</strong></div>}
                 {info.streets && !info.addr && <div><strong>{info.streets}</strong></div>}
                 <div>Block{info.lot ? ': ' : ' '}{info.block}{info.lot ? `-${info.lot}` : ''}{info.qual ? `-${info.qual}` : ''}</div>
-                {info.owner && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{info.owner}</div>}
+                {(info.owner ?? detailOwner) && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{info.owner ?? detailOwner}</div>}
               </>
             )}
             {hasBuilding && (() => {

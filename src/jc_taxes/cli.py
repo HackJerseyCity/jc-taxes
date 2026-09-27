@@ -16,6 +16,7 @@ from .pilots import pilots
 from .r2 import r2
 from .stats import stats
 from .aggregates import aggregates
+from .bundle import bundle
 from .paths import (
     HUDSON_PARCELS, MUNIS, PARCELS,
     accounts_index as muni_accounts_index,
@@ -42,6 +43,7 @@ main.add_command(pilots)
 main.add_command(r2)
 main.add_command(stats)
 main.add_command(aggregates)
+main.add_command(bundle)
 
 
 def _block_list_for_muni(muni: str) -> list[str]:

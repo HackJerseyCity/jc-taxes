@@ -1,0 +1,5 @@
+outs:
+- md5: c69b8975b4dd313807ab653a991e7f62
+  size: 2535365
+  hash: md5
+  path: geom-blocks.geojson

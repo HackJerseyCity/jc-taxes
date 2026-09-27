@@ -1,0 +1,5 @@
+outs:
+- md5: be2b6d5189dbd9d17a092132f2780b91
+  size: 4765021
+  hash: md5
+  path: values-lots.json
