@@ -379,6 +379,8 @@ function metricField(metric: string): 'paid_per_sqft' | 'paid_per_capita' | 'pai
 // Years whose payments are still coming in (final-quarter bills not yet due):
 // shown by amount BILLED, with a caveat, rather than a misleadingly low paid.
 const BILLED_YEARS = new Set([2026])
+const YEAR_TWEEN_MS = 450
+interface YearTween { from: number, to: number, t: number, fromMax: number }
 const isBilledYear = (y: number | undefined) => y != null && BILLED_YEARS.has(Math.round(y))
 const BILLED_FIELDS = { paid_per_sqft: 'billed_per_sqft', paid_per_capita: 'billed_per_capita', paid: 'billed' } as const
 /** The displayed metric for a feature: paid, or billed for `BILLED_YEARS`. */
@@ -565,6 +567,27 @@ export default function MapView() {
     setPlayYear(null)
     setUrlYear(y)
   }, [setPlaying, setUrlYear])
+  // Discrete year changes from the UI (j/k, stepper, dropdown, omnibar) tween
+  // bars from the old year's values to the new one's: the URL commits at once,
+  // and `yearTween.t` (0→1, eased) lerps each feature between the two years'
+  // cached values (see `getMetricValue`) and the height scale between the two
+  // years' fits (see `tweenedMax`). The clock holds at t=0 until the target
+  // year is loaded. A new step mid-tween starts from the previous target.
+  const [yearTween, setYearTween] = useState<YearTween | null>(null)
+  const yearTweenRef = useRef(yearTween)
+  yearTweenRef.current = yearTween
+  const tweenedMaxRef = useRef(0)
+  const goToYear = useCallback((y: number) => {
+    const from = yearTweenRef.current?.to ?? urlYear
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (playing || playYearRef.current != null || y === from || reduce) {
+      setYearTween(null)
+      setYear(y)
+      return
+    }
+    setYearTween({ from, to: y, t: 0, fromMax: tweenedMaxRef.current })
+    setUrlYear(y)
+  }, [playing, urlYear, setYear, setUrlYear])
   const togglePlay = useCallback(() => {
     if (playing) {
       // Pausing: freeze the current animated year into the URL so the paused
@@ -797,7 +820,12 @@ export default function MapView() {
     'block': 'blocks', 'lot': 'lots', 'unit': 'units',
     'census-block': 'census blocks', 'ward': 'wards',
   } as Record<string, string>)[aggregateMode] ?? aggregateMode
-  const heightScale = maxHeight / dataMax
+  // Mid-tween, `dataMax` already reflects the target year once its data has
+  // swapped in (before that, t=0), so lerping from the start fit lands exactly
+  // on the target fit.
+  const tweenedMax = yearTween ? yearTween.fromMax + (dataMax - yearTween.fromMax) * yearTween.t : dataMax
+  tweenedMaxRef.current = tweenedMax
+  const heightScale = maxHeight / tweenedMax
   // Freeze height scale while loading to prevent stale data rendered with new-mode elevation
   const stableHeightScaleRef = useRef(heightScale)
   if (!loading) stableHeightScaleRef.current = heightScale
@@ -983,7 +1011,7 @@ export default function MapView() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    year, setYear,
+    year, setYear: goToYear,
     aggregateMode, setAggregateMode,
     hasPopulation, metricMode, setMetricMode,
     setSettingsOpen,
@@ -1191,6 +1219,28 @@ export default function MapView() {
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [playing, playSpeed, setPlaying, setUrlYear])
+
+  const tweenFrom = yearTween?.from, tweenTo = yearTween?.to
+  useEffect(() => {
+    if (tweenFrom == null || tweenTo == null) return
+    let raf = 0
+    let start: number | null = null
+    const tick = (now: number) => {
+      const loaded = [tweenFrom, tweenTo].every(y => yearIdMapsRef.current.has(cacheKey(aggregateMode, y)))
+      if (loaded) {
+        start ??= now
+        const u = Math.min(1, (now - start) / YEAR_TWEEN_MS)
+        if (u >= 1) { setYearTween(null); return }
+        const t = u < 0.5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2
+        setYearTween(tw => tw && { ...tw, t })
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [tweenFrom, tweenTo, aggregateMode, cacheKey])
+  // Switching view / metric mid-tween: just land on the target.
+  useEffect(() => { setYearTween(null) }, [aggregateMode, metricMode])
 
   // Expose imperative year setter for scrns `animate` actions (per-frame
   // fractional-year stepping). Uses the raw URL setter so it neither cancels
@@ -1473,9 +1523,16 @@ export default function MapView() {
   const isFractionalYear = !Number.isInteger(year)
   const pairCacheRef = useRef<{ key: string, pairs: WeakMap<object, [number, number]> }>({ key: '', pairs: new WeakMap() })
   const getMetricValue = useCallback((f: ParcelFeatureLike): number => {
-    if (!isFractionalYear) return metricOf(f)
-    const yFloor = Math.floor(year), yCeil = Math.ceil(year)
-    const t = year - yFloor
+    let yFloor: number, yCeil: number, t: number
+    if (yearTween) {
+      ({ from: yFloor, to: yCeil, t } = yearTween)
+    } else if (isFractionalYear) {
+      yFloor = Math.floor(year)
+      yCeil = Math.ceil(year)
+      t = year - yFloor
+    } else {
+      return metricOf(f)
+    }
     const bracket = `${aggregateMode}|${yFloor}|${yCeil}|${metricMode}`
     if (pairCacheRef.current.key !== bracket) pairCacheRef.current = { key: bracket, pairs: new WeakMap() }
     const { pairs } = pairCacheRef.current
@@ -1489,7 +1546,7 @@ export default function MapView() {
       if (floorMap && ceilMap) pairs.set(f, pair)
     }
     return pair[0] + (pair[1] - pair[0]) * t
-  }, [metricOf, isFractionalYear, year, aggregateMode, metricMode, cacheKey])
+  }, [metricOf, isFractionalYear, year, yearTween, aggregateMode, metricMode, cacheKey])
 
 
   // Gray-out only when geometry actually changes (agg switch). Year-only changes
@@ -1672,8 +1729,8 @@ export default function MapView() {
     return [members, pfDim > 0 ? faded : []]
   }, [effectiveData, focusTest, pfDim])
   const FADED_PARAMS = { depthWriteEnabled: false }
-  const fillColorTriggers = [year, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, portfolio, region, pfDim]
-  const elevationTriggers = [year, stableHeightScaleRef.current, aggregateMode, metricMode, maxHeight]
+  const fillColorTriggers = [year, yearTween?.t, maxVal, colorStops, colorScale, hoveredId, selectedId, aggregateMode, actualTheme, metricMode, staleData, colorBy, colorMin, colorMax, portfolio, region, pfDim]
+  const elevationTriggers = [year, yearTween?.t, stableHeightScaleRef.current, aggregateMode, metricMode, maxHeight]
   const parcelLayer = (id: string, layerData: ParcelFeature[], faded: boolean) => new GeoJsonLayer<ParcelProperties>({
     id,
     data: layerData,
@@ -2135,13 +2192,13 @@ export default function MapView() {
                   </>}
                 />
               </span>
-              {!big && <YearControl year={year} setYear={setYear} years={AVAILABLE_YEARS} onPlay={togglePlay} />}
+              {!big && <YearControl year={year} setYear={goToYear} years={AVAILABLE_YEARS} onPlay={togglePlay} />}
             </div>
             {big ? (
               // Player open: the year becomes a big rolling readout (still the
               // picker), with the totals chip enlarged beside it.
               <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '6px 14px' }}>
-                <YearControl year={year} setYear={setYear} years={AVAILABLE_YEARS} big />
+                <YearControl year={year} setYear={goToYear} years={AVAILABLE_YEARS} big />
                 {statsChip}
               </div>
             ) : statsChip}

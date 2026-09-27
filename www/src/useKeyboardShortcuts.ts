@@ -119,7 +119,8 @@ export function useKeyboardShortcuts({
 }: Props) {
   const isWardMode = aggregateMode === 'ward'
   const isLotOrUnit = aggregateMode === 'lot' || aggregateMode === 'unit'
-  const yearIdx = AVAILABLE_YEARS.indexOf(year)
+  // Rounded: mid-playback `year` is fractional.
+  const yearIdx = AVAILABLE_YEARS.indexOf(Math.round(year))
 
   // Continuous movement for press-and-hold
   const activeMovements = useRef(new Set<string>())
