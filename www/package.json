@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "screenshot": "scrns",
     "test": "playwright test",
-    "test:ui": "playwright test --ui"
+    "test:ui": "playwright test --ui",
+    "net": "playwright test -c playwright.net.config.ts",
+    "net:update": "NET_UPDATE=1 playwright test -c playwright.net.config.ts"
   },
   "dependencies": {
     "@deck.gl/core": "^9.2.6",
