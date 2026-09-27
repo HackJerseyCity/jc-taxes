@@ -389,6 +389,10 @@ def generate_yearly_geojson(
     parcels_path = PARCELS_COMBINED if PARCELS_COMBINED.exists() else PARCELS
     err(f"Loading parcels from {parcels_path}")
     parcels = pd.read_parquet(parcels_path)
+    if "years" in parcels.columns:
+        # Year-aware parcel sets (`jct parcels combine`): the lots on this year's roll.
+        parcels = parcels[parcels["years"].map(lambda ys: year in set(ys))].drop(columns="years").reset_index(drop=True)
+        err(f"  {len(parcels):,} parcels active in {year}")
 
     err(f"Loading payments for year {year}")
     payments = pd.read_parquet(payments_path)

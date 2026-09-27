@@ -151,14 +151,26 @@ def bbox_center(geom: dict) -> tuple[float, float]:
     return round((min(xs) + max(xs)) / 2, 6), round((min(ys) + max(ys)) / 2, 6)
 
 
+# Paid-cents value marking a feature absent in a year (year-aware parcel sets:
+# a lot split / merged / renumbered exists only in some years). Fits i32 and f64.
+INACTIVE = -(2**31)
+
+
 def build(view: str, per_year: dict[int, list[dict]]) -> tuple[dict, dict, dict[str, dict]]:
-    """(geom FeatureCollection, values, details by id) for one view. Details
+    """(geom FeatureCollection, values, details by id) for one view. Features are
+    the union over years (latest year's order first, then features absent from
+    it, most recent first); each carries its last appearance's geometry and fixed
+    properties. Years a feature is absent from get `INACTIVE` paid. Details
     (lot / unit views only): `DETAIL_PROPS`, center, owner history."""
-    latest = per_year[max(per_year)]
-    detailed = any("owner" in f["properties"] for f in latest)
-    order = keyed(latest)
+    years = sorted(per_year)
+    last: dict[tuple[str, int], dict] = {}  # key → feature from its latest year
+    for y in reversed(years):
+        for k, f in zip(keyed(per_year[y]), per_year[y]):
+            last.setdefault(k, f)
+    order = list(last)
     index = {k: i for i, k in enumerate(order)}
     n = len(order)
+    detailed = any("owner" in f["properties"] for f in last.values())
     geom = {
         "type": "FeatureCollection",
         "features": [
@@ -171,19 +183,14 @@ def build(view: str, per_year: dict[int, list[dict]]) -> tuple[dict, dict, dict[
                     and (not detailed or k not in DETAIL_PROPS) and (view not in SMALL_VIEWS or k != "area_sqft")
                 },
             }
-            for f in latest
+            for f in last.values()
         ],
     }
-    years = sorted(per_year)
     paid, billed = [], []
     owners: dict[str, dict[int, str | None]] = {}
     for y in years:
-        feats = per_year[y]
-        ks = keyed(feats)
-        if set(ks) != set(order):
-            raise ValueError(f"{view} {y}: feature ids differ from {max(per_year)}")
-        p, b = [0] * n, [0] * n
-        for k, f in zip(ks, feats):
+        p, b = [INACTIVE] * n, [0] * n
+        for k, f in zip(keyed(per_year[y]), per_year[y]):
             pr = f["properties"]
             i = index[k]
             p[i] = round((pr.get("paid") or 0) * 100)
@@ -191,11 +198,11 @@ def build(view: str, per_year: dict[int, list[dict]]) -> tuple[dict, dict, dict[
             if "owner" in pr and k[1] == 0:
                 owners.setdefault(k[0], {})[y] = pr.get("owner")
         paid.append(p)
-        billed.append([bi - pi for pi, bi in zip(p, b)])
+        billed.append([0 if pi == INACTIVE else bi - pi for pi, bi in zip(p, b)])
     values = {"years": years, "count": n, "paid": paid, "billed_minus_paid": billed}
     details = {}
     if detailed:
-        for (i, occ), f in zip(order, latest):
+        for (i, occ), f in last.items():
             if occ:
                 continue
             pr = f["properties"]
@@ -229,7 +236,7 @@ def bundle(cache_dir: Path | None, db: str, local: bool, dry_run: bool, out_dir:
         dump = lambda o: (json.dumps(o, separators=(",", ":")) + "\n").encode()
         outputs = [(f"geom-{suffix}.geojson", dump(geom))]
         if view in SMALL_VIEWS:
-            order = keyed(per_year[max(per_year)])
+            order = [(f["properties"].get("geoid") or f"ward-{f['properties'].get('ward')}", 0) for f in geom["features"]]
             outputs += [(f"values-{suffix}-{y}.json", dump(v)) for y, v in small_values(view, per_year, order).items()]
             if view == "ward":
                 outputs += [(f"ward-shapes-{y}.json", dump(ward_shapes(fs))) for y, fs in per_year.items()]

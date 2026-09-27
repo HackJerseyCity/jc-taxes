@@ -1,6 +1,6 @@
 import struct
 
-from jc_taxes.bundle import build, encode_values, keyed, round_coords, run_length, small_values, ward_shapes, year_values
+from jc_taxes.bundle import INACTIVE, build, encode_values, keyed, round_coords, run_length, small_values, ward_shapes, year_values
 
 
 def feat(block, lot, paid, billed, owner, qual=None, area=100.0):
@@ -84,3 +84,17 @@ def test_small_view_values_and_shapes():
         2026: {"count": 2, "paid": [22.0, 11.0], "billed": [22.0, 11.0], "area_sqft": [210.0, 101.0]},
     }
     assert ward_shapes(per_year[2026]) == {"B": {}, "A": {"lots": {"l": 2}}}
+
+
+def test_build_year_aware_union():
+    # 2025: lot 1 (later split); 2026: lots 1.01 + 1.02.
+    per_year = {
+        2025: [feat("5", "1", 30.0, 30.0, "X"), feat("5", "2", 1.0, 1.0, "Y")],
+        2026: [feat("5", "1.01", 20.0, 20.0, "P"), feat("5", "1.02", 12.0, 12.0, "Q"), feat("5", "2", 1.5, 1.5, "Y")],
+    }
+    geom, values, details = build("lot", per_year)
+    # Latest year's features first, then 2025-only lot 1.
+    assert [(f["properties"]["block"], f["properties"]["lot"]) for f in geom["features"]] == [("5", "1.01"), ("5", "1.02"), ("5", "2"), ("5", "1")]
+    assert values["paid"] == [[INACTIVE, INACTIVE, 100, 3000], [2000, 1200, 150, INACTIVE]]
+    assert values["billed_minus_paid"] == [[0, 0, 0, 0], [0, 0, 0, 0]]
+    assert details["5-1"]["owners"] == [[2025, "X"]]

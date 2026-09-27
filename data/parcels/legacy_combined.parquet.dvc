@@ -1,0 +1,5 @@
+outs:
+- md5: ab6ecb32b62cca32e59eb64c7d668acf
+  size: 3646413
+  hash: md5
+  path: legacy_combined.parquet

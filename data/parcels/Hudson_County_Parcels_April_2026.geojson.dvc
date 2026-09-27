@@ -1,0 +1,5 @@
+outs:
+- md5: accf091115036c5abe6a95d8c3a7b11e
+  size: 27764324
+  hash: md5
+  path: Hudson_County_Parcels_April_2026.geojson

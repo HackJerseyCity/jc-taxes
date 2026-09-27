@@ -1,0 +1,5 @@
+outs:
+- md5: 41c2ed6e654b3c1bc3d6657920c0bfbd
+  size: 3997834
+  hash: md5
+  path: jc_parcels_combined.parquet

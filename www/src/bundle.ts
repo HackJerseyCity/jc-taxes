@@ -88,6 +88,11 @@ export function loadValues(view: string, year: number): Promise<Values> {
     get(`values-${SUFFIX[view]}-${year}.bin`).then(r => r.arrayBuffer()).then(parseValues))
 }
 
+/** Paid-cents value marking a feature absent that year (`INACTIVE` in
+ *  src/jc_taxes/bundle.py): parcel sets are year-aware, so a lot split / merged
+ *  / renumbered only exists in some years. */
+const INACTIVE = -(2 ** 31)
+
 // `round(x, 2)` as the pipeline writes `paid_per_sqft` etc.
 const round2 = (x: number) => Math.round(x * 100) / 100
 
@@ -133,8 +138,10 @@ export async function yearFeatures(view: string, year: number): Promise<ParcelFe
   const yi = v.years.indexOf(year)
   if (yi < 0) throw new Error(`${view}: values file lacks ${year}`)
   const ny = v.years.length
-  return geom.map((g, i) => {
+  const out: ParcelFeature[] = []
+  geom.forEach((g, i) => {
     const k = i * ny + yi
+    if (v.paid[k] === INACTIVE) return
     const paid = v.paid[k] / 100
     const billed = (v.paid[k] + v.billedMinusPaid[k]) / 100
     const area = g.properties.area_sqft ?? 0
@@ -146,6 +153,7 @@ export async function yearFeatures(view: string, year: number): Promise<ParcelFe
       paid_per_sqft: area > 0 ? round2(paid / area) : 0,
       billed_per_sqft: area > 0 ? round2(billed / area) : 0,
     }
-    return { type: 'Feature', geometry: g.geometry, properties }
+    out.push({ type: 'Feature', geometry: g.geometry, properties })
   })
+  return out
 }

@@ -106,8 +106,10 @@ def _covered_frac(rows, county):
     from shapely import STRtree
 
     geoms = county.geometry.values
-    tree = STRtree(geoms)
     out = np.zeros(len(rows))
+    if not len(geoms):
+        return out
+    tree = STRtree(geoms)
     for i, g in enumerate(rows.geometry.values):
         if g is None or g.is_empty or g.area == 0:
             continue
@@ -117,22 +119,25 @@ def _covered_frac(rows, county):
     return out
 
 
-def _contained_in(rows, cover) -> list:
-    """Index labels of `rows` whose area is mostly (> MAX_COVERED) inside `cover`."""
+def _overlap_losers(rows, lot_keys, amt) -> set[str]:
+    """Lots billed in the same year whose shapes overlap (> MAX_COVERED of the
+    smaller): all but the one with the largest amount that year."""
     from shapely import STRtree
 
-    geoms = cover.geometry.values
-    if not len(geoms):
-        return []
+    geoms = rows.geometry.values
     tree = STRtree(geoms)
-    out = []
-    for idx, g in zip(rows.index, rows.geometry.values):
+    losers: set[str] = set()
+    for i, g in enumerate(geoms):
         if g is None or g.is_empty or g.area == 0:
             continue
-        hits = tree.query(g, predicate="intersects")
-        if len(hits) and sum(geoms[h].intersection(g).area for h in hits) / g.area > MAX_COVERED:
-            out.append(idx)
-    return out
+        for j in tree.query(g, predicate="intersects"):
+            if j <= i or lot_keys[j] == lot_keys[i]:
+                continue
+            h = geoms[j]
+            if h.area and g.intersection(h).area > MAX_COVERED * min(g.area, h.area):
+                a, b = lot_keys[i], lot_keys[j]
+                losers.add(a if amt.get(a, 0) < amt.get(b, 0) else b)
+    return losers
 
 
 def _norm(s) -> str:
@@ -142,8 +147,21 @@ def _norm(s) -> str:
 @parcels.command()
 @click.option("-c", "--county", "county_path", type=click.Path(dir_okay=False, path_type=Path), help="County GeoJSON (default: newest `data/parcels/Hudson_County_Parcels_*.geojson`).")
 def combine(county_path: Path | None):
-    """Rebuild `jc_parcels_combined.parquet`: county geometry first, legacy rows for keys it lacks."""
+    """Rebuild `jc_parcels_combined.parquet` with per-year parcel sets (`years` column).
+
+    The county layer is a current snapshot (sometimes ahead of the tax roll);
+    the legacy rows hold lots since split / merged / renumbered. Each year shows
+    the lots billed that year, so historical payments land on their own lots:
+    1. rows whose lot is billed that year (county shape when both have the key).
+       Around a subdivision / merger both the old and new lots can appear on a
+       year's roll (the old one with a trivial amount); when two billed lots
+       overlap, the one with the larger amount that year keeps the area;
+    2. then unbilled rows (exempt land, …), county before legacy, that aren't
+       mostly (> MAX_COVERED) under rows already chosen for that year.
+    Rows active in no year are dropped.
+    """
     import geopandas as gpd
+    import numpy as np
     import pandas as pd
 
     if county_path is None:
@@ -161,42 +179,43 @@ def combine(county_path: Path | None):
         "lot": county["LOT"].map(_norm),
         "qual": county["QCODE"].map(_norm).replace("", None),
         "geometry": county.geometry,
+        "source": service,
     }, crs=county.crs)
-    county["source"] = service
     legacy = gpd.read_parquet(LEGACY)
     legacy = legacy.to_crs(county.crs) if legacy.crs and legacy.crs.to_epsg() != 3424 else legacy.set_crs(county.crs, allow_override=True)
     key = lambda df: df["block"].map(_norm) + "|" + df["lot"].map(_norm) + "|" + df["qual"].map(_norm)
-    have = set(key(county))
-    fallback = legacy[~key(legacy).isin(have)].reset_index(drop=True)
-    # Lots billed in the latest roll year, and in any year.
-    pay = pd.read_parquet(DATA / "payments.parquet", columns=["Year", "Block", "Lot"])
-    lot_key = lambda b, l: b.map(_norm) + "-" + l.map(_norm)
-    latest = YEARS[-1]  # the map's last year (payments.parquet also has stray future-year rows)
-    billed_now = set(lot_key(pay.loc[pay["Year"] == latest, "Block"], pay.loc[pay["Year"] == latest, "Lot"]))
-    shown = pay[pay["Year"].between(YEARS[0], latest)]  # not next year's preliminary bills
-    billed_ever = set(lot_key(shown["Block"], shown["Lot"]))
-    fb_lot = lot_key(fallback["block"], fallback["lot"])
-    co_lot = lot_key(county["block"], county["lot"])
-    # The county layer can be ahead of the tax roll (e.g. 2026 subdivisions not
-    # billed yet) or behind it. Per area, keep the geometry whose lot is billed:
-    # - a legacy lot still billed now keeps its shape, and county lots it mostly
-    #   contains that have never been billed (not-yet-billed successors) drop;
-    # - a legacy lot not billed now and mostly under county parcels is retired /
-    #   renumbered: it drops, and its older payments fold to its successors
-    #   (`fold_orphan_payments`);
-    # - anything else (gaps in the county layer) stays.
-    current = fb_lot.isin(billed_now).values
-    covered = _covered_frac(fallback, county)
-    keep_fb = current | (covered <= MAX_COVERED)
-    ahead = _contained_in(county[~co_lot.isin(billed_ever)], fallback[current])
-    county = county.drop(index=ahead)
-    err(f"legacy rows not in county: {len(fallback):,}: kept {int(current.sum()):,} billed in {latest}, "
-        f"{int((~current & (covered <= MAX_COVERED)).sum()):,} filling gaps; dropped {int((~keep_fb).sum()):,} retired. "
-        f"County lots never billed and superseded by a billed legacy lot: {len(ahead):,} dropped")
-    fallback = fallback[keep_fb]
-    combined = pd.concat([county, fallback[["block", "lot", "qual", "geometry", "source"]]], ignore_index=True)
-    combined["join_key"] = combined["block"] + "-" + combined["lot"]
-    combined = gpd.GeoDataFrame(combined, geometry="geometry", crs=county.crs)
-    combined.to_parquet(PARCELS_COMBINED)
-    err(f"wrote {PARCELS_COMBINED}: {len(combined):,} rows ({len(county):,} {service}, {len(fallback):,} legacy: "
-        + ", ".join(f"{k} {v:,}" for k, v in fallback["source"].value_counts().items()) + ")")
+    legacy = legacy[~key(legacy).isin(set(key(county)))]  # same key: county shape wins
+    rows = gpd.GeoDataFrame(
+        pd.concat([county, legacy[["block", "lot", "qual", "geometry", "source"]]], ignore_index=True),
+        geometry="geometry", crs=county.crs,
+    )
+    is_county = (rows["source"] == service).values
+    lot_key = (rows["block"].map(_norm) + "-" + rows["lot"].map(_norm)).values
+
+    pay = pd.read_parquet(DATA / "payments.parquet", columns=["Year", "Block", "Lot", "Billed", "Paid"])
+    pay = pay[pay["Year"].between(YEARS[0], YEARS[-1])].copy()
+    pay["key"] = pay["Block"].map(_norm) + "-" + pay["Lot"].map(_norm)
+    pay["amt"] = pay["Billed"].fillna(0).abs() + pay["Paid"].fillna(0).abs()
+    amount = pay.groupby(["Year", "key"])["amt"].sum()
+    billed_by_year = {y: set(pay.loc[pay["Year"] == y, "key"]) for y in YEARS}
+
+    active = np.zeros((len(rows), len(YEARS)), dtype=bool)
+    for yi, y in enumerate(YEARS):
+        sel = np.isin(lot_key, list(billed_by_year[y]))
+        amt_y = amount.loc[y] if y in amount.index.get_level_values(0) else pd.Series(dtype=float)
+        losers = _overlap_losers(rows[sel], lot_key[sel], amt_y)
+        sel &= ~np.isin(lot_key, list(losers))
+        for group in (is_county & ~sel, ~is_county & ~sel):
+            idx = np.flatnonzero(group)
+            covered = _covered_frac(rows.iloc[idx], rows[sel])
+            sel[idx[covered <= MAX_COVERED]] = True
+        active[:, yi] = sel
+        err(f"{y}: {int(sel.sum()):,} parcels ({int((sel & is_county).sum()):,} county, {int((sel & ~is_county).sum()):,} legacy); "
+            f"billed lots without geometry: {len(billed_by_year[y] - set(lot_key[sel])):,}")
+    rows["years"] = [[YEARS[j] for j in np.flatnonzero(r)] for r in active]
+    keep = active.any(axis=1)
+    rows = rows[keep].reset_index(drop=True)
+    rows["join_key"] = rows["block"] + "-" + rows["lot"]
+    rows.to_parquet(PARCELS_COMBINED)
+    err(f"wrote {PARCELS_COMBINED}: {len(rows):,} rows ({int(is_county[keep].sum()):,} county, {int((~is_county[keep]).sum()):,} legacy); "
+        f"dropped {int((~keep).sum()):,} active in no year")
