@@ -5,8 +5,16 @@
 # One commit at the end rather than `dvx run --commit --push each`: parallel
 # stages' per-stage pushes race (see crashes' batch/entrypoint.sh). Without
 # $GITHUB_RW_TOKEN (injected by Batch from Secrets Manager) it runs read-only.
-# DVC remote credentials (R2) come from the job's env (`AWS_*` for the r2 remote).
 set -e
+
+# `.dvc/config`'s `r2` remote authenticates via AWS profile `cf`; rebuild it
+# from the R2 keys Batch injects from Secrets Manager.
+if [ -n "${R2_ACCESS_KEY_ID:-}" ]; then
+    mkdir -p ~/.aws
+    printf '[cf]\naws_access_key_id = %s\naws_secret_access_key = %s\n' \
+        "$R2_ACCESS_KEY_ID" "$R2_SECRET_ACCESS_KEY" > ~/.aws/credentials
+    chmod 600 ~/.aws/credentials
+fi
 
 push_back=no
 if [ -n "${GITHUB_RW_TOKEN:-}" ]; then

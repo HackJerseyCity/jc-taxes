@@ -1,0 +1,84 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["boto3", "click"]
+# ///
+"""Stand up (idempotently) the jc-taxes pipeline on AWS Batch, RAC account.
+
+1. Secrets Manager `jct/r2-access-key-id`, `jct/r2-secret-access-key` ← the local
+   `cf` AWS profile (the R2 keys `.dvc/config`'s `r2` remote uses); values are
+   never printed, and a secret already holding the value is left alone.
+2. `dvx batch push`: build `batch/` at REF and push it to ECR `jct-pipeline:<rev>`.
+3. `dvx batch bootstrap -P jct`: role, log group, Fargate-Spot CE, queue, job def,
+   with the R2 secrets injected as `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`.
+
+    batch/setup [-B] [-r REF]
+
+Then run stages with e.g. `AWS_PROFILE=r dvx batch submit -P jct -w data/d1/aggregates.sql.dvc`.
+"""
+import configparser
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import boto3
+from click import command, option
+
+PROFILE = 'r'
+REGION = 'us-east-1'
+PREFIX = 'jct'
+REPO = 'jct-pipeline'
+SECRETS = {
+    'R2_ACCESS_KEY_ID': ('jct/r2-access-key-id', 'aws_access_key_id'),
+    'R2_SECRET_ACCESS_KEY': ('jct/r2-secret-access-key', 'aws_secret_access_key'),
+}
+ROOT = Path(__file__).resolve().parent.parent
+err = lambda *a: print(*a, file=sys.stderr)
+
+
+def put_secret(sm, name: str, value: str) -> str:
+    try:
+        arn = sm.describe_secret(SecretId=name)['ARN']
+        if sm.get_secret_value(SecretId=name).get('SecretString') == value:
+            err(f'{name}: unchanged')
+            return arn
+        sm.put_secret_value(SecretId=name, SecretString=value)
+        err(f'{name}: updated')
+        return arn
+    except sm.exceptions.ResourceNotFoundException:
+        arn = sm.create_secret(Name=name, SecretString=value)['ARN']
+        err(f'{name}: created')
+        return arn
+
+
+def run(*cmd: str):
+    err(f'$ {" ".join(cmd)}')
+    subprocess.run(cmd, check=True, cwd=ROOT, env={**os.environ, 'AWS_PROFILE': PROFILE, 'AWS_REGION': REGION})
+
+
+@command()
+@option('-B', '--no-build', is_flag=True, help='Skip the image build + push (reuse the tag).')
+@option('-r', '--ref', default=None, help='Git rev to build (default: HEAD; must be pushed).')
+def main(no_build: bool, ref: str | None):
+    creds = configparser.ConfigParser()
+    creds.read(Path.home() / '.aws' / 'credentials')
+    sm = boto3.Session(profile_name=PROFILE, region_name=REGION).client('secretsmanager')
+    arns = {env: put_secret(sm, name, creds['cf'][key]) for env, (name, key) in SECRETS.items()}
+
+    account = boto3.Session(profile_name=PROFILE).client('sts').get_caller_identity()['Account']
+    ref = ref or subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    image = f'{account}.dkr.ecr.{REGION}.amazonaws.com/{REPO}:{ref[:9]}'
+    if not no_build:
+        run('docker', 'build', '--platform', 'linux/arm64', '-t', image, '--build-arg', f'REF={ref}', 'batch/')
+        run('dvx', 'batch', 'push', '-B', image)
+    run(
+        'dvx', 'batch', 'bootstrap', '-P', PREFIX, '-i', image,
+        # 60 per-year GeoJSON stages, ~2 min / ≤ 0.6 GB each (2025 units: 554 MB peak):
+        # 16 at a time → all 60 in ~8 min.
+        '-v', '16', '-m', '32768', '-M', '16', '-g', '50',
+        *[a for env, arn in arns.items() for a in ('-s', f'{env}={arn}')],
+    )
+
+
+if __name__ == '__main__':
+    main()
