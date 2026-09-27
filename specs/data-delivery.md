@@ -47,7 +47,11 @@ Plus: **search** (omnibar address → parcel) becomes a lazy index (`addr → id
 ## Phases
 
 1. ✅ **Serving fix** (done 2026-09-27, via the Worker rather than bucket metadata): `jct-edge` `/d/*` serves the DVC objects as JSON, edge-compressed and immutable-cached, same-origin (lots 25.1 MB → 4.1 MB). `jct.rbw.sh` cut over from GitHub Pages to the Worker.
-2. **Aggregates API + values arrays.** Pipeline (`jct stats`) computes per (view × metric × focus × year) totals / maxima / camera extents → D1 tables (seeded by a script, like portfolios; focus includes portfolios, wards, neighborhoods). Worker `/api/scale`, `/api/totals` (or one `/api/summary?view=&metric=&focus=`). Emit `values-{view}` (uint32 paid + billed, `[feature][year]`) as R2 objects via `/d` or `/api/values`. Client: geometry once (trimmed GeoJSON for now) + values; details split out to `/api/parcel/:id` (D1). Lots animation ≈ 3–4 MB total.
+2. **Aggregates API + values arrays** (mostly done 2026-09-27).
+   - ✅ `jct aggregates` → D1 `aggregates` (view × focus × year totals / height maxima) → `/api/summary`: totals chip, sparkline, cross-year height scale (default; `hy` for per-year).
+   - ✅ `jct bundle` → per view (block / lot / unit) `geom-{view}.geojson` (fixed props) + `values-{view}.json` (all years' paid, billed − paid; integer cents), DVC → `/d`; owners → D1 `owners` → `/api/parcel` on hover / select. Wards / census blocks keep per-year GeoJSON (geometry varies by year; small).
+   - Measured (`www/net`, prod): lots playback 52.6 → 4.9 MB, blocks playback 12.2 → 1.0 MB, year step 8.1 → 4.9 MB; first load +~1 MB (lots 4.0 → 4.9) for having every year.
+   - Remaining: binary values (or tiles-embedded) to trim the values file; camera extents server-side.
 3. **Vector tiles for geometry.** PMTiles per view (R2, range requests through the Worker), `MVTLayer` extruded with id-indexed values; verify extrusion across tiles (`--no-clipping`), picking, focus fade / hide, portfolio membership by id set.
 4. **Search** (`/api/search`, D1 FTS) and details polish.
 
