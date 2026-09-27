@@ -24,6 +24,7 @@
     "@floating-ui/react": "^0.27.19",
     "@luma.gl/webgl": "^9.2.6",
     "@rdub/file-tree": "https://github.com/runsascoded/file-tree#d6d2eeef87ad6a601289bfa7639145d01f38d014",
+    "@tanstack/react-query": "^5.104.0",
     "@types/geojson": "^7946.0.16",
     "deck.gl": "^9.2.6",
     "highlight.js": "^11.12.0",

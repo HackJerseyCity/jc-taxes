@@ -11,6 +11,7 @@ import { resolve as dvcResolve } from 'virtual:dvc-data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useKeyboardShortcuts, type ViewState } from './useKeyboardShortcuts'
 import { AVAILABLE_YEARS, DEFAULT_YEAR, YEAR_MAX } from './years'
+import { summaryFocus, useSummary, type SummaryMetric } from './summary'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
 import { fit3d } from './fit3d'
 import FocusPicker, { type FocusOption } from './FocusPicker'
@@ -500,8 +501,8 @@ const boolParam: Param<boolean> = {
 }
 
 // Default-false boolean (opposite of `boolParam`, which defaults true when
-// absent). Used for the animation player's `play` flag so a bare URL is paused.
-const playParam: Param<boolean> = {
+// absent), e.g. the player's `play` flag, so a bare URL is paused.
+const flagParam: Param<boolean> = {
   decode: (s: string | undefined) => s === '1',
   encode: (v: boolean) => v ? '1' : undefined as unknown as string,
 }
@@ -544,7 +545,7 @@ export default function MapView() {
   // the scrubber is being dragged. It overrides `urlYear` for rendering without
   // writing to the URL at 60fps (which history.replaceState throttles). When it
   // clears, the URL year is authoritative again.
-  const [playing, setPlaying] = useUrlState('play', playParam)
+  const [playing, setPlaying] = useUrlState('play', flagParam)
   // Autoplay link (`play=1`) parked at the last year: start on the first year
   // from the very first frame, instead of showing the end year then jumping.
   const [playYear, setPlayYear] = useState<number | null>(
@@ -659,6 +660,9 @@ export default function MapView() {
   const [extruded, setExtruded] = useUrlState('3d', boolParam)
   const [colorBy, setColorBy] = useUrlState('cb', stringParam('metric'))
   const [percentileRaw, setPercentileRaw] = useUrlState('pct', optNumParam)
+  // Heights scale to one max across all years by default (so growth over time
+  // shows); `hy` fits each year to its own tallest bar instead.
+  const [perYearScale, setPerYearScale] = useUrlState('hy', flagParam)
   const [columnRadiusRaw, setColumnRadiusRaw] = useUrlState('cr', optNumParam)
   const [settingsPos, setSettingsPos] = useUrlState('sp', stringParam('tr'))
   const posRight = settingsPos.endsWith('r')
@@ -747,6 +751,11 @@ export default function MapView() {
       return !activeRegion || regionTest(activeRegion, p)
     }
   }, [portfolioTest, activeRegion])
+  // Server-side totals / maxima for this view × focus (null for a portfolio ∧
+  // region combo, which falls back to computing from loaded features).
+  const summaryKey = summaryFocus(activePortfolio ? portfolio : null, activeRegion ? region : null)
+  const summaryQ = useSummary(String(aggregateMode), summaryKey)
+  const serverSummary = summaryQ.data ?? null
   // With a focus, heights auto-fit to its members; cap the tallest bar at the
   // focus set's ground extent (bbox diagonal) so a neighborhood of rowhouses
   // doesn't become 4.5 km spikes. An explicit `mh` always wins.
@@ -794,24 +803,30 @@ export default function MapView() {
   const yearsReadyRef = useRef(yearsReady)
   yearsReadyRef.current = yearsReady
   const dataMax = useMemo(() => {
-    // In animation context (?animYr set, or `year` is fractional) auto-fit per
-    // year would jump `heightScale` at every integer boundary — including
-    // integer frames during a scrns recording — visibly rescaling all bars.
-    // Use the cross-year max once it's computed (covers the ward case where
-    // mode-default `max=10` is a color clamp but actual Ward E reaches $21+),
-    // falling back to the mode default while preload is still in-flight.
-    // scrns `animYr` captures need a stable scale from frame 0, so fall back to
-    // the mode default there; the in-app player instead keeps the current
-    // per-year fit until the cross-year max lands (it swaps scale and jumps to
-    // the start year in the same frame, see the rAF loop).
+    // scrns `animYr` captures need a stable scale from frame 0: the client-side
+    // cross-year max once preloaded, else the mode default.
     if (animYr) return crossYearMax ?? modeConf.max
-    if (crossYearMax != null && (playing || transportOpen || !Number.isInteger(year))) return crossYearMax
+    // Animating (playback, open transport, fractional year): always one scale
+    // for all years, or every integer boundary would visibly rescale all bars.
+    const animating = playing || transportOpen || !Number.isInteger(year)
+    // Server maxima (`/api/summary`, over this focus's members with the same
+    // sliver rule as `scalesHeight`): all years by default, per year with `hy`.
+    // The height clamp (`pct`) is a percentile of the loaded year, so it and a
+    // portfolio ∧ region focus (no summary) fit client-side below.
+    if (serverSummary && percentile == null) {
+      const m = metricMode as SummaryMetric
+      const v = !!perYearScale && !animating
+        ? serverSummary.years.find(y => y.year === Math.round(year))?.max[m]
+        : serverSummary.max[m]
+      if (v) return v
+    }
+    if (crossYearMax != null && animating) return crossYearMax
     if (sortedVals.length === 0) return modeConf.max
     if (percentile != null) {
       return sortedVals[Math.floor(sortedVals.length * percentile / 100)] || modeConf.max
     }
     return sortedVals[sortedVals.length - 1] || modeConf.max
-  }, [sortedVals, modeConf.max, percentile, year, animYr, playing, transportOpen, crossYearMax])
+  }, [sortedVals, modeConf.max, percentile, year, animYr, playing, transportOpen, crossYearMax, serverSummary, perYearScale, metricMode])
   const percentilePrice = useMemo(() => {
     if (percentile == null || sortedVals.length === 0) return null
     return sortedVals[Math.floor(sortedVals.length * percentile / 100)]
@@ -1588,9 +1603,11 @@ export default function MapView() {
     return { count, paid }
   }, [focusTest, displayData])
 
-  // Per-year total paid (focus members, else all) for the transport sparkline;
-  // available once the player has preloaded every year.
+  // Per-year total (focus members, else all) for the transport sparkline: from
+  // the server summary; without one (portfolio ∧ region), once the player has
+  // preloaded every year.
   const yearTotals = useMemo((): [number, number][] | null => {
+    if (serverSummary) return serverSummary.years.map(y => [y.year, y.amount])
     if (!yearsReady) return null
     const out: [number, number][] = []
     for (const y of AVAILABLE_YEARS) {
@@ -1603,7 +1620,7 @@ export default function MapView() {
       out.push([y, paid])
     }
     return out
-  }, [yearsReady, aggregateMode, cacheKey, focusTest])
+  }, [serverSummary, yearsReady, aggregateMode, cacheKey, focusTest])
 
   const colorOf = useCallback((f: ParcelFeatureLike, alpha: number): [number, number, number, number] => {
     if (staleData) return LOADING_COLOR
@@ -1788,7 +1805,7 @@ export default function MapView() {
   // still renders its start year right away; only the play clock waits for the
   // remaining years (spinner + n/11 in the transport), since buffering every
   // year can take a while on a slow connection.
-  const holdRender = (!!portfolio && portfoliosOrNull === null) || !initialFitDone
+  const holdRender = (!!portfolio && portfoliosOrNull === null) || !initialFitDone || summaryQ.isLoading
   const layers = holdRender ? [] : [
     ...(fadedData.length ? [parcelLayer('parcels-faded', fadedData, true)] : []),
     ...(showColumns && fadedData.length ? [columnLayer('total-columns-faded', fadedData, true)] : []),
@@ -1968,6 +1985,14 @@ export default function MapView() {
             </div>
           </>}
           {extruded && <>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Off: one height scale across all years, so growth over time shows. On: each year's tallest bar fills the max height.">
+              <input
+                type="checkbox"
+                checked={!!perYearScale}
+                onChange={(e) => setPerYearScale(e.target.checked)}
+              />
+              Scale heights per year
+            </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input
                 type="checkbox"
@@ -2097,7 +2122,10 @@ export default function MapView() {
         // Focus picker + totals chip: [Citywide / portfolio / ward / hood ▾] · $ · count.
         // Totals track the displayed (rounded) year, so they move with playback.
         const billedYr = isBilledYear(year)
-        const chipStats = focusTest ? portfolioStats : summary && { count: summary.count, paid: billedYr ? summary.billed : summary.paid }
+        const serverYear = serverSummary?.years.find(y => y.year === yearRounded)
+        const chipStats = serverYear ? { count: serverYear.count, paid: serverYear.amount }
+          : focusTest ? portfolioStats
+          : summary && { count: summary.count, paid: billedYr ? summary.billed : summary.paid }
         const noun = chipStats?.count === 1 ? AGG_NOUN[String(aggregateMode)]?.[0] : AGG_NOUN[String(aggregateMode)]?.[1]
         const focusValue = portfolio ? `pf:${portfolio}` : region ? `rg:${region}` : ''
         const onFocus = (v: string) => {

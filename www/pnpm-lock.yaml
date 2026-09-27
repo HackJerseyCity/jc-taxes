@@ -29,6 +29,9 @@ importers:
       '@rdub/file-tree':
         specifier: https://github.com/runsascoded/file-tree#d6d2eeef87ad6a601289bfa7639145d01f38d014
         version: https://codeload.github.com/runsascoded/file-tree/tar.gz/d6d2eeef87ad6a601289bfa7639145d01f38d014(highlight.js@11.12.0)(hyparquet@1.29.2)(jq-web@0.6.2)(react-dom@19.2.4(react@19.2.4))(react-markdown@10.1.0(@types/react@19.2.10)(react@19.2.4))(react-router-dom@7.17.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(remark-gfm@4.0.1)(use-prms@0.5.0(react@19.2.4))(yaml@2.9.0)
+      '@tanstack/react-query':
+        specifier: ^5.104.0
+        version: 5.104.0(react@19.2.4)
       '@types/geojson':
         specifier: ^7946.0.16
         version: 7946.0.16
@@ -1395,6 +1398,14 @@ packages:
     resolution: {integrity: sha512-mxRFDdHIWRxg3UfIIAwCm6NzvxG0jDX/wBN6KsQFTvKFqqg9vTrWUE68qEjHt19A5wwx5X5aUi2zuZT7YR0jrA==}
     cpu: [x64]
     os: [win32]
+
+  '@tanstack/query-core@5.104.0':
+    resolution: {integrity: sha512-JrC2r/JQlXt7khBSdUpsgxNvybzOg+aITa+ARRMlP2AFo93Y8vIqz077rp+e61mJetSZ0T6AJbwW1JHer1vrPQ==}
+
+  '@tanstack/react-query@5.104.0':
+    resolution: {integrity: sha512-e1TZmDCQnWIfiDVryIHeA6Idj+Lfx1hORLOhXS/l5wcgvtVD4yYqbTDl378sGQKIi2cSgb0TEMC9cKK8GGoJEw==}
+    peerDependencies:
+      react: ^18 || ^19
 
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
@@ -6433,6 +6444,13 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.57.1':
     optional: true
+
+  '@tanstack/query-core@5.104.0': {}
+
+  '@tanstack/react-query@5.104.0(react@19.2.4)':
+    dependencies:
+      '@tanstack/query-core': 5.104.0
+      react: 19.2.4
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 

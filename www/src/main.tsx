@@ -1,4 +1,5 @@
 import { StrictMode } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRoot } from 'react-dom/client'
 import { HotkeysProvider } from 'use-kbd'
 import 'use-kbd/styles.css'
@@ -26,12 +27,16 @@ window.addEventListener('error', (e) => {
   }
 }, true)
 
+const queryClient = new QueryClient()
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>
-      <HotkeysProvider>
-        <AppWithModals />
-      </HotkeysProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <HotkeysProvider>
+          <AppWithModals />
+        </HotkeysProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   </StrictMode>,
 )

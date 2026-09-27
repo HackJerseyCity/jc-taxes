@@ -81,7 +81,7 @@ async function mockGeoJSON(page: Page) {
 }
 
 /** `/api/portfolios` (D1, via the edge Worker) from the local DVC checkout of
- *  `portfolios.json`, or an empty list where it isn't pulled (CI). */
+ *  `portfolios.json`, or an empty list where it isn't pulled (CI); `/api/summary` off. */
 async function mockPortfolios(page: Page) {
   const local = join(__dirname, '..', 'public', 'portfolios.json')
   const portfolios = existsSync(local) ? JSON.parse(readFileSync(local, 'utf-8')) : []
@@ -89,6 +89,9 @@ async function mockPortfolios(page: Page) {
     contentType: 'application/json',
     body: JSON.stringify({ source: 'fixture', portfolios }),
   }))
+  // Aggregates are computed from the full data, which the fixtures only sample:
+  // unavailable here, so the app's client-side fallback (from loaded features) runs.
+  await page.route(/\/api\/summary\?/, route => route.fulfill({ status: 503, body: 'no summary in e2e' }))
 }
 
 /** Wait for the app to finish loading data (data-loaded attribute present). */
