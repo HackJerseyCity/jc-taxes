@@ -2,27 +2,28 @@
   "home (blocks)": {
     "fetched": [
       "/api/portfolios",
+      "/api/summary",
       "taxes-2025-blocks.geojson"
     ],
     "byKind": {
       "app": {
         "requests": 4,
-        "transfer": 689418,
-        "decoded": 2431584
+        "transfer": 699898,
+        "decoded": 2465803
       },
       "basemap": {
         "requests": 9,
-        "transfer": 211610,
+        "transfer": 211399,
         "decoded": 409378
       },
       "api": {
-        "requests": 1,
-        "transfer": 2214,
-        "decoded": 3928
+        "requests": 2,
+        "transfer": 3210,
+        "decoded": 5899
       },
       "data": {
         "requests": 1,
-        "transfer": 937177,
+        "transfer": 935046,
         "decoded": 2802563
       }
     }
@@ -30,27 +31,28 @@
   "lots": {
     "fetched": [
       "/api/portfolios",
+      "/api/summary",
       "taxes-2025-lots.geojson"
     ],
     "byKind": {
       "app": {
         "requests": 4,
-        "transfer": 689394,
-        "decoded": 2431574
+        "transfer": 699968,
+        "decoded": 2465793
       },
       "basemap": {
         "requests": 9,
-        "transfer": 211737,
+        "transfer": 211803,
         "decoded": 409378
       },
       "api": {
-        "requests": 1,
-        "transfer": 2215,
-        "decoded": 3928
+        "requests": 2,
+        "transfer": 3252,
+        "decoded": 5899
       },
       "data": {
         "requests": 1,
-        "transfer": 4038955,
+        "transfer": 4047773,
         "decoded": 25094210
       }
     }
@@ -58,27 +60,28 @@
   "units": {
     "fetched": [
       "/api/portfolios",
+      "/api/summary",
       "taxes-2025-units.geojson"
     ],
     "byKind": {
       "app": {
         "requests": 4,
-        "transfer": 689355,
-        "decoded": 2431582
+        "transfer": 699887,
+        "decoded": 2465801
       },
       "basemap": {
         "requests": 9,
-        "transfer": 211600,
+        "transfer": 211603,
         "decoded": 409378
       },
       "api": {
-        "requests": 1,
-        "transfer": 2212,
-        "decoded": 3928
+        "requests": 2,
+        "transfer": 3237,
+        "decoded": 5897
       },
       "data": {
         "requests": 1,
-        "transfer": 6070742,
+        "transfer": 6081236,
         "decoded": 40747694
       }
     }
@@ -86,27 +89,28 @@
   "portfolio (lots)": {
     "fetched": [
       "/api/portfolios",
+      "/api/summary",
       "taxes-2025-lots.geojson"
     ],
     "byKind": {
       "app": {
         "requests": 4,
-        "transfer": 689327,
-        "decoded": 2431578
+        "transfer": 699869,
+        "decoded": 2465816
       },
       "basemap": {
         "requests": 9,
-        "transfer": 211805,
+        "transfer": 211854,
         "decoded": 409378
       },
       "api": {
-        "requests": 1,
-        "transfer": 2216,
-        "decoded": 3928
+        "requests": 2,
+        "transfer": 3192,
+        "decoded": 5832
       },
       "data": {
         "requests": 1,
-        "transfer": 4048387,
+        "transfer": 4071313,
         "decoded": 25094210
       }
     }
@@ -114,28 +118,29 @@
   "step year (lots, j)": {
     "fetched": [
       "/api/portfolios",
+      "/api/summary",
       "taxes-2024-lots.geojson",
       "taxes-2025-lots.geojson"
     ],
     "byKind": {
       "app": {
         "requests": 4,
-        "transfer": 689370,
-        "decoded": 2431574
+        "transfer": 699893,
+        "decoded": 2465793
       },
       "basemap": {
         "requests": 9,
-        "transfer": 211841,
+        "transfer": 211615,
         "decoded": 409378
       },
       "api": {
-        "requests": 1,
-        "transfer": 2216,
-        "decoded": 3928
+        "requests": 2,
+        "transfer": 3215,
+        "decoded": 5899
       },
       "data": {
         "requests": 2,
-        "transfer": 8084993,
+        "transfer": 8077749,
         "decoded": 50185893
       }
     }
@@ -143,6 +148,7 @@
   "playback (blocks)": {
     "fetched": [
       "/api/portfolios",
+      "/api/summary",
       "taxes-2015-blocks.geojson",
       "taxes-2015-blocks.geojson",
       "taxes-2016-blocks.geojson",
@@ -160,22 +166,22 @@
     "byKind": {
       "app": {
         "requests": 4,
-        "transfer": 689310,
-        "decoded": 2431591
+        "transfer": 699904,
+        "decoded": 2465810
       },
       "basemap": {
         "requests": 6,
-        "transfer": 69747,
+        "transfer": 69713,
         "decoded": 170960
       },
       "api": {
-        "requests": 1,
-        "transfer": 2211,
-        "decoded": 3928
+        "requests": 2,
+        "transfer": 3209,
+        "decoded": 5899
       },
       "data": {
         "requests": 13,
-        "transfer": 12160718,
+        "transfer": 12164583,
         "decoded": 36426454
       }
     }
@@ -183,6 +189,7 @@
   "playback (lots)": {
     "fetched": [
       "/api/portfolios",
+      "/api/summary",
       "taxes-2015-lots.geojson",
       "taxes-2015-lots.geojson",
       "taxes-2016-lots.geojson",
@@ -200,22 +207,22 @@
     "byKind": {
       "app": {
         "requests": 4,
-        "transfer": 689350,
-        "decoded": 2431581
+        "transfer": 699902,
+        "decoded": 2465800
       },
       "basemap": {
         "requests": 9,
-        "transfer": 211838,
+        "transfer": 211844,
         "decoded": 409378
       },
       "api": {
-        "requests": 1,
-        "transfer": 2216,
-        "decoded": 3928
+        "requests": 2,
+        "transfer": 3242,
+        "decoded": 5899
       },
       "data": {
         "requests": 13,
-        "transfer": 52615573,
+        "transfer": 52629282,
         "decoded": 325935632
       }
     }
@@ -225,8 +232,8 @@
     "byKind": {
       "app": {
         "requests": 5,
-        "transfer": 524692,
-        "decoded": 1791887
+        "transfer": 535173,
+        "decoded": 1826106
       },
       "basemap": {
         "requests": 2,
@@ -235,7 +242,7 @@
       },
       "files": {
         "requests": 3,
-        "transfer": 1716747,
+        "transfer": 1716737,
         "decoded": 1714625
       }
     }

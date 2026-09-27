@@ -753,7 +753,11 @@ export default function MapView() {
   }, [portfolioTest, activeRegion])
   // Server-side totals / maxima for this view × focus (null for a portfolio ∧
   // region combo, which falls back to computing from loaded features).
-  const summaryKey = summaryFocus(activePortfolio ? portfolio : null, activeRegion ? region : null)
+  // Nothing to ask for until a `pf` param's portfolio list has loaded (else a
+  // throwaway citywide request goes out first).
+  const summaryKey = portfolio && portfoliosOrNull === null
+    ? null
+    : summaryFocus(activePortfolio ? portfolio : null, activeRegion ? region : null)
   const summaryQ = useSummary(String(aggregateMode), summaryKey)
   const serverSummary = summaryQ.data ?? null
   // With a focus, heights auto-fit to its members; cap the tallest bar at the
