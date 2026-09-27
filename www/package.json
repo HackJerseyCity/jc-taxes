@@ -36,7 +36,7 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.17.0",
     "remark-gfm": "^4.0.1",
-    "use-kbd": "https://github.com/runsascoded/use-kbd#f5af8cbfc9bb618c6d7691466a4e072a0baff752",
+    "use-kbd": "https://github.com/runsascoded/use-kbd#7932f66c4a1c827d329d9dd91fd0ba7820df8d07",
     "use-prms": "^0.5.0"
   },
   "devDependencies": {

@@ -222,7 +222,9 @@ test.describe('Omnibar', () => {
     await waitForLoad(page)
 
     await page.keyboard.press('Meta+k')
-    await page.keyboard.type('2019')
+    const input = page.locator('input[type="text"]').first()
+    await expect(input).toBeFocused()
+    await input.fill('2019')
     await expect(page.locator('.kbd-omnibar-result-label').first()).toHaveText('Year 2019')
     await page.keyboard.press('Enter')
     await expect(page).toHaveURL(/[?&]y=19(&|$)/)

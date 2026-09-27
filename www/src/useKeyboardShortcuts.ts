@@ -195,15 +195,17 @@ export function useKeyboardShortcuts({
     label: 'Previous year',
     group: 'Years',
     defaultBindings: ['j', '['],
+    enabled: yearIdx > 0,
     handler: () => stepYear(-1),
-    actionPair: { pairId: 'year', index: 0 },
+    actionPair: { pairId: 'year', index: 0, label: 'Previous / Next year' },
   })
   useAction('year-b', {
     label: 'Next year',
     group: 'Years',
     defaultBindings: ['k', ']'],
+    enabled: yearIdx < AVAILABLE_YEARS.length - 1,
     handler: () => stepYear(1),
-    actionPair: { pairId: 'year', index: 1 },
+    actionPair: { pairId: 'year', index: 1, label: 'Previous / Next year' },
   })
   useAction('year-first', {
     label: 'First year',
@@ -224,6 +226,7 @@ export function useKeyboardShortcuts({
       label: `Year ${y}`,
       group: 'Years',
       keywords: [String(y), String(y % 100)],
+      hideFromModal: true,
       handler: () => setYear(y),
     },
   ])), [setYear]))
@@ -412,7 +415,7 @@ export function useKeyboardShortcuts({
   })
 
   useAction('view:pitch-nudge-a', {
-    label: 'Increase / Decrease pitch a',
+    label: 'Increase pitch',
     group: 'Viewport',
     defaultBindings: ['shift+arrowdown', '\\f shift+arrowdown'],
     handler: (e, captures) => {
@@ -424,10 +427,10 @@ export function useKeyboardShortcuts({
         startMovement('pitch-up')
       }
     },
-    actionPair: { pairId: 'view:pitch-nudge', index: 0 },
+    actionPair: { pairId: 'view:pitch-nudge', index: 0, label: 'Increase / Decrease pitch' },
   })
   useAction('view:pitch-nudge-b', {
-    label: 'Increase / Decrease pitch b',
+    label: 'Decrease pitch',
     group: 'Viewport',
     defaultBindings: ['shift+arrowup', '\\f shift+arrowup'],
     handler: (e, captures) => {
@@ -439,12 +442,12 @@ export function useKeyboardShortcuts({
         startMovement('pitch-down')
       }
     },
-    actionPair: { pairId: 'view:pitch-nudge', index: 1 },
+    actionPair: { pairId: 'view:pitch-nudge', index: 1, label: 'Increase / Decrease pitch' },
   })
 
   // Rotate: shift+left/right
   useAction('view:rotate-a', {
-    label: 'Rotate CW / CCW a',
+    label: 'Rotate CW',
     group: 'Viewport',
     defaultBindings: ['shift+arrowleft', '\\f shift+arrowleft'],
     handler: (e, captures) => {
@@ -456,10 +459,10 @@ export function useKeyboardShortcuts({
         startMovement('rotate-cw')
       }
     },
-    actionPair: { pairId: 'view:rotate', index: 0 },
+    actionPair: { pairId: 'view:rotate', index: 0, label: 'Rotate CW / CCW' },
   })
   useAction('view:rotate-b', {
-    label: 'Rotate CW / CCW b',
+    label: 'Rotate CCW',
     group: 'Viewport',
     defaultBindings: ['shift+arrowright', '\\f shift+arrowright'],
     handler: (e, captures) => {
@@ -471,14 +474,14 @@ export function useKeyboardShortcuts({
         startMovement('rotate-ccw')
       }
     },
-    actionPair: { pairId: 'view:rotate', index: 1 },
+    actionPair: { pairId: 'view:rotate', index: 1, label: 'Rotate CW / CCW' },
   })
 
   // Pan: arrow keys (or N arrow for N discrete steps)
   // No repeat guard on continuous path: allows modifier transitions (e.g. pressing
   // Shift mid-hold switches from pan to rotate via the next repeat event).
   useAction('view:pan-h-a', {
-    label: 'Pan left / right a',
+    label: 'Pan left',
     group: 'Viewport',
     defaultBindings: ['arrowleft', '\\d+ arrowleft'],
     handler: (e, captures) => {
@@ -494,10 +497,10 @@ export function useKeyboardShortcuts({
         startMovement('pan-left')
       }
     },
-    actionPair: { pairId: 'view:pan-h', index: 0 },
+    actionPair: { pairId: 'view:pan-h', index: 0, label: 'Pan left / right' },
   })
   useAction('view:pan-h-b', {
-    label: 'Pan left / right b',
+    label: 'Pan right',
     group: 'Viewport',
     defaultBindings: ['arrowright', '\\d+ arrowright'],
     handler: (e, captures) => {
@@ -513,11 +516,11 @@ export function useKeyboardShortcuts({
         startMovement('pan-right')
       }
     },
-    actionPair: { pairId: 'view:pan-h', index: 1 },
+    actionPair: { pairId: 'view:pan-h', index: 1, label: 'Pan left / right' },
   })
 
   useAction('view:pan-v-a', {
-    label: 'Pan up / down a',
+    label: 'Pan up',
     group: 'Viewport',
     defaultBindings: ['arrowup', '\\d+ arrowup'],
     handler: (e, captures) => {
@@ -533,10 +536,10 @@ export function useKeyboardShortcuts({
         startMovement('pan-up')
       }
     },
-    actionPair: { pairId: 'view:pan-v', index: 0 },
+    actionPair: { pairId: 'view:pan-v', index: 0, label: 'Pan up / down' },
   })
   useAction('view:pan-v-b', {
-    label: 'Pan up / down b',
+    label: 'Pan down',
     group: 'Viewport',
     defaultBindings: ['arrowdown', '\\d+ arrowdown'],
     handler: (e, captures) => {
@@ -552,7 +555,7 @@ export function useKeyboardShortcuts({
         startMovement('pan-down')
       }
     },
-    actionPair: { pairId: 'view:pan-v', index: 1 },
+    actionPair: { pairId: 'view:pan-v', index: 1, label: 'Pan up / down' },
   })
 
   // Height: h N or N h → set max height to N km (converted to meters)
@@ -569,24 +572,24 @@ export function useKeyboardShortcuts({
 
   // Zoom: = to zoom in, - to zoom out
   useAction('view:zoom-a', {
-    label: 'Zoom in / out a',
+    label: 'Zoom in',
     group: 'Viewport',
     defaultBindings: ['='],
     handler: (e) => {
       if (e?.repeat) return
       startMovement('zoom-in')
     },
-    actionPair: { pairId: 'view:zoom', index: 0 },
+    actionPair: { pairId: 'view:zoom', index: 0, label: 'Zoom in / out' },
   })
   useAction('view:zoom-b', {
-    label: 'Zoom in / out b',
+    label: 'Zoom out',
     group: 'Viewport',
     defaultBindings: ['-'],
     handler: (e) => {
       if (e?.repeat) return
       startMovement('zoom-out')
     },
-    actionPair: { pairId: 'view:zoom', index: 1 },
+    actionPair: { pairId: 'view:zoom', index: 1, label: 'Zoom in / out' },
   })
 
   useAction('color:yr-built', {
