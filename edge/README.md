@@ -5,7 +5,8 @@ This Worker serves the built map SPA (`../www/dist`) and adds per-URL Open Graph
 | Path | What it does |
 |---|---|
 | `/`, `/about`, `/files/*`, `/index.html` | SPA shell, with `<title>`, `og:*` and `twitter:*` tags rewritten per query (HTMLRewriter) |
-| `/og?agg=&mt=&y=` / `/og?pf=&y=` | 1200×630 PNG stats card (satori + resvg-wasm), cached in R2 |
+| `/og?agg=&mt=&y=[&w=]` / `/og?pf=&y=` `[&layout=a\|b\|c\|d]` | 1200×630 PNG card (satori + resvg-wasm), cached in R2 by content hash. Totals + sparkline from the D1 `aggregates`; layouts `b`–`d` embed a pre-rendered map (`jct-og` bucket `maps/<view>-WxH.jpg`, e.g. `citywide`, `ward-e`, `<portfolio key>`; falls back to `citywide`) |
+| `/og/review` | Side-by-side comparison of card layouts for a few views |
 | `/api/portfolios` | Curated portfolios as JSON (D1 if bound, else R2 `portfolios.json`) |
 | `/d/files/md5/…` | DVC-cached map data from the `jc-taxes` bucket (read-only binding), as compressed JSON with immutable edge caching; the SPA is built with `VITE_DVC_BASE_URL=/d` |
 | everything else | Static assets (SPA fallback serves `index.html` with the default tags) |

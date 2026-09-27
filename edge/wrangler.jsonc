@@ -31,7 +31,7 @@
     // JS/CSS/images are served straight from Assets — free, and not counted
     // against Worker request quotas. Other deep links still get the SPA
     // fallback, just with the default (static) OG tags.
-    "run_worker_first": ["/", "/index.html", "/about", "/files/*", "/og", "/api/*", "/d/*"]
+    "run_worker_first": ["/", "/index.html", "/about", "/files/*", "/og", "/og/*", "/api/*", "/d/*"]
   },
   "r2_buckets": [
     {

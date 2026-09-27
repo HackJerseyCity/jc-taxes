@@ -63,8 +63,8 @@ const COL = {
   border: 'rgba(255,255,255,0.14)',
 }
 
-function tree(c: CardContent): unknown {
-  const paid = c.paid != null ? abbr(c.paid) : '—'
+function textCard(c: CardContent): unknown {
+  const paid = c.amount != null ? abbr(c.amount) : '—'
   const countLine = c.count != null ? `${c.count.toLocaleString()} ${c.countNoun}` : ''
 
   return h('div', {
@@ -85,7 +85,7 @@ function tree(c: CardContent): unknown {
       h('div', { style: { display: 'flex', fontSize: 30, color: COL.muted, marginTop: 14 } }, c.measure),
       h('div', { style: { display: 'flex', alignItems: 'flex-end', marginTop: 30 } },
         h('div', { style: { display: 'flex', fontSize: 132, fontWeight: 700, color: COL.accent, lineHeight: 1 } }, paid),
-        h('div', { style: { display: 'flex', fontSize: 34, color: COL.muted, marginLeft: 20, marginBottom: 18 } }, `paid · ${c.year}`),
+        h('div', { style: { display: 'flex', fontSize: 34, color: COL.muted, marginLeft: 20, marginBottom: 18 } }, `${c.billed ? 'billed' : 'paid'} · ${c.year}`),
       ),
     ),
     // Footer chips
@@ -100,9 +100,101 @@ function tree(c: CardContent): unknown {
   )
 }
 
-export async function renderCard(c: CardContent): Promise<Uint8Array> {
+// ── Map layouts (b / c / d): a pre-rendered map image (captured offline; see
+// edge/README.md) plus the stats, and a sparkline of every year's total. ──
+
+const b64 = (bytes: Uint8Array) => {
+  let s = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(s)
+}
+const dataUrl = (bytes: Uint8Array, type: string) => `data:${type};base64,${b64(bytes)}`
+
+/** Sparkline as an SVG data URL: every year's amount, the card's year marked. */
+function sparkline(c: CardContent, w: number, hgt: number): string | null {
+  const pts = c.series.filter(s => s.amount > 0)
+  if (pts.length < 2) return null
+  const max = Math.max(...pts.map(s => s.amount)), min = 0
+  const x = (i: number) => 6 + (i * (w - 12)) / (pts.length - 1)
+  const y = (v: number) => hgt - 6 - ((v - min) / (max - min || 1)) * (hgt - 12)
+  const line = pts.map((s, i) => `${x(i).toFixed(1)},${y(s.amount).toFixed(1)}`).join(' ')
+  const area = `6,${hgt - 6} ${line} ${x(pts.length - 1).toFixed(1)},${hgt - 6}`
+  const ci = pts.findIndex(s => s.year === c.year)
+  const dot = ci >= 0 ? `<circle cx="${x(ci)}" cy="${y(pts[ci].amount)}" r="7" fill="${COL.accent}" stroke="${COL.bg0}" stroke-width="3"/>` : ''
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${hgt}">`
+    + `<polygon points="${area}" fill="${COL.accent}" fill-opacity="0.15"/>`
+    + `<polyline points="${line}" fill="none" stroke="${COL.accent}" stroke-width="4" stroke-linejoin="round"/>${dot}</svg>`
+  return `data:image/svg+xml;base64,${btoa(svg)}`
+}
+
+function growth(c: CardContent): string | null {
+  const first = c.series.find(s => s.amount > 0), cur = c.series.find(s => s.year === c.year)
+  if (!first || !cur || first.year === cur.year) return null
+  return `×${(cur.amount / first.amount).toFixed(2)} since ${first.year}`
+}
+
+function statsColumn(c: CardContent, width: number, big: number): unknown {
+  const amount = c.amount != null ? abbr(c.amount) : '—'
+  const spark = sparkline(c, width, 110)
+  const g = growth(c)
+  return h('div', { style: { display: 'flex', flexDirection: 'column', width, justifyContent: 'space-between', height: '100%' } },
+    h('div', { style: { display: 'flex', flexDirection: 'column' } },
+      h('div', { style: { display: 'flex', fontSize: 20, color: COL.muted, letterSpacing: 2 } }, 'JERSEY CITY · PROPERTY TAXES'),
+      h('div', { style: { display: 'flex', fontSize: 44, fontWeight: 700, lineHeight: 1.1, marginTop: 18 } }, c.scope),
+      h('div', { style: { display: 'flex', fontSize: 24, color: COL.muted, marginTop: 10 } }, c.measure),
+    ),
+    h('div', { style: { display: 'flex', flexDirection: 'column' } },
+      h('div', { style: { display: 'flex', fontSize: big, fontWeight: 700, color: COL.accent, lineHeight: 1 } }, amount),
+      h('div', { style: { display: 'flex', fontSize: 26, color: COL.muted, marginTop: 8 } },
+        `${c.billed ? 'billed' : 'paid'} in ${c.year}${c.count != null ? ` · ${c.count.toLocaleString()} ${c.countNoun}` : ''}`),
+      spark ? h('img', { src: spark, width, height: 110, style: { marginTop: 22 } }) : h('div', { style: { display: 'flex' } }, ''),
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 22, color: COL.muted, marginTop: 6 } },
+        h('div', { style: { display: 'flex' } }, g ?? ''),
+        h('div', { style: { display: 'flex' } }, 'jct.rbw.sh'),
+      ),
+    ),
+  )
+}
+
+/** b: map left (720×630), stats right. */
+function mapLeft(c: CardContent, map: string): unknown {
+  return h('div', { style: { width: WIDTH, height: HEIGHT, display: 'flex', background: COL.bg0, fontFamily: 'Inter', color: COL.text } },
+    h('img', { src: map, width: 720, height: HEIGHT }),
+    h('div', { style: { display: 'flex', padding: '44px 40px', width: 480, height: HEIGHT } }, statsColumn(c, 400, 84)),
+  )
+}
+
+/** c: full-bleed map, stats over a dark gradient on the left. */
+function fullBleed(c: CardContent, map: string): unknown {
+  return h('div', { style: { width: WIDTH, height: HEIGHT, display: 'flex', position: 'relative', fontFamily: 'Inter', color: COL.text, background: COL.bg0 } },
+    h('img', { src: map, width: WIDTH, height: HEIGHT, style: { position: 'absolute', left: 0, top: 0 } }),
+    h('div', { style: { position: 'absolute', left: 0, top: 0, width: 620, height: HEIGHT, display: 'flex', background: 'linear-gradient(90deg, rgba(10,16,32,0.96) 0%, rgba(10,16,32,0.85) 70%, rgba(10,16,32,0) 100%)' } }),
+    h('div', { style: { position: 'absolute', left: 0, top: 0, display: 'flex', padding: '44px 48px', height: HEIGHT } }, statsColumn(c, 440, 92)),
+  )
+}
+
+/** d: big number left, map right. */
+function mapRight(c: CardContent, map: string): unknown {
+  return h('div', { style: { width: WIDTH, height: HEIGHT, display: 'flex', background: COL.bg0, fontFamily: 'Inter', color: COL.text } },
+    h('div', { style: { display: 'flex', padding: '44px 40px', width: 480, height: HEIGHT } }, statsColumn(c, 400, 96)),
+    h('img', { src: map, width: 720, height: HEIGHT }),
+  )
+}
+
+/** Map image size a layout needs (`maps/<key>-WxH.jpg`), or null for text-only. */
+export function mapSize(layout: CardContent['layout']): [number, number] | null {
+  return layout === 'c' ? [1200, 630] : layout === 'b' || layout === 'd' ? [720, 630] : null
+}
+
+function tree(c: CardContent, map: Uint8Array | null): unknown {
+  if (!map || c.layout === 'a') return textCard(c)
+  const url = dataUrl(map, 'image/jpeg')
+  return c.layout === 'b' ? mapLeft(c, url) : c.layout === 'c' ? fullBleed(c, url) : mapRight(c, url)
+}
+
+export async function renderCard(c: CardContent, map: Uint8Array | null = null): Promise<Uint8Array> {
   await ensureWasm()
-  const svg = await satori(tree(c) as never, {
+  const svg = await satori(tree(c, map) as never, {
     width: WIDTH,
     height: HEIGHT,
     fonts: [

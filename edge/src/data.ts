@@ -1,11 +1,7 @@
-/** R2-backed data the Worker reads at runtime, cached per-isolate.
- *
- * `stats.json` (per-view + per-portfolio totals) and `portfolios.json` (curated
- * developer portfolios) are derived data kept OUT of git — they live in the
- * `jct-og` R2 bucket (`stats.json` written by `jct stats --upload`,
- * `portfolios.json` mirrored from the DVC-tracked data file). Fetching them at
- * the edge keeps developer/owner names out of the committed source and the
- * client bundle.
+/** App data the Worker reads at runtime, cached per-isolate: curated developer
+ * portfolios from D1 (fallback: the `portfolios.json` mirror in the `jct-og` R2
+ * bucket). Kept out of git — developer / owner names never go in the source or
+ * the client bundle. Totals / aggregates come from D1 (`content.ts`).
  */
 
 export interface Env {
@@ -13,28 +9,9 @@ export interface Env {
   OG: R2Bucket
   // Production `jc-taxes` bucket, read-only use: DVC-cached map data (`dvc.ts`).
   DATA: R2Bucket
-  // Bound only once a D1 database is provisioned (see edge/README.md); the
-  // portfolios endpoint falls back to R2 when it's absent.
+  // D1 `jct` (edge/d1/migrations). Optional so local tooling without the
+  // binding still runs; portfolios then fall back to R2.
   DB?: D1Database
-}
-
-export interface YearStat {
-  count: number
-  paid: number
-  billed?: number
-}
-
-export interface PortfolioStat {
-  label: string
-  years: Record<string, YearStat>
-}
-
-export interface Stats {
-  generated: string
-  years: number[]
-  latestYear: number
-  aggs: Record<string, Record<string, YearStat>>
-  portfolios: Record<string, PortfolioStat>
 }
 
 export interface Portfolio {
@@ -48,20 +25,16 @@ export interface Portfolio {
 
 // Per-isolate memo. R2 GETs are in-region and fast, but a warm isolate serves
 // many crawls, so cache the parsed JSON for the isolate's lifetime.
-let statsCache: Stats | null = null
 let portfoliosCache: Portfolio[] | null = null
-
-export async function getStats(env: Env): Promise<Stats | null> {
-  if (statsCache) return statsCache
-  const obj = await env.OG.get('stats.json')
-  if (!obj) return null
-  statsCache = await obj.json<Stats>()
-  return statsCache
-}
 
 export async function getPortfolios(env: Env): Promise<Portfolio[]> {
   if (portfoliosCache) return portfoliosCache
-  const obj = await env.OG.get('portfolios.json')
-  portfoliosCache = obj ? await obj.json<Portfolio[]>() : []
+  if (env.DB) {
+    const { results } = await env.DB.prepare('SELECT key, label FROM portfolios ORDER BY ord, key').all<Portfolio>()
+    portfoliosCache = results
+  } else {
+    const obj = await env.OG.get('portfolios.json')
+    portfoliosCache = obj ? await obj.json<Portfolio[]>() : []
+  }
   return portfoliosCache
 }

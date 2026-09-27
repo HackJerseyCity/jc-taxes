@@ -7,7 +7,11 @@
 export const AGGS = ['block', 'lot', 'unit', 'ward', 'census-block'] as const
 export const METRICS = ['per_sqft', 'per_capita', 'total'] as const
 export const MIN_YEAR = 2015
-export const MAX_YEAR = 2025
+export const MAX_YEAR = 2026
+/** Years shown by amount billed (payments still coming in): `BILLED_YEARS` in MapView.tsx. */
+export const BILLED_YEARS = new Set([2026])
+export const LAYOUTS = ['a', 'b', 'c', 'd'] as const
+export type Layout = (typeof LAYOUTS)[number]
 
 export type Agg = (typeof AGGS)[number]
 export type Metric = (typeof METRICS)[number]
@@ -17,6 +21,10 @@ export interface CardParams {
   metric: Metric
   year: number
   pf: string
+  /** Ward focus (`w=e` → 'E'), when no portfolio. */
+  ward: string
+  /** Card layout (see `og/card.ts`); `a` = text-only. */
+  layout: Layout
 }
 
 function pick<T extends string>(raw: string | null, allowed: readonly T[], dflt: T): T {
@@ -50,7 +58,11 @@ export function normalizeParams(url: URL, portfolioKeys: Set<string>): CardParam
   const pfRaw = get(url, 'p', 'pf') ?? ''
   const pf = portfolioKeys.has(pfRaw) ? pfRaw : ''
 
-  return { agg, metric, year, pf }
+  const wRaw = (url.searchParams.get('w') ?? '').toUpperCase()
+  const ward = !pf && /^[A-F]$/.test(wRaw) ? wRaw : ''
+  const layout = pick(url.searchParams.get('layout'), LAYOUTS, 'a')
+
+  return { agg, metric, year, pf, ward, layout }
 }
 
 /** Stable, canonical query string — the OG-image URL + R2 cache key. Only
@@ -63,7 +75,9 @@ export function canonicalQuery(p: CardParams): string {
   } else {
     sp.set('agg', p.agg)
     sp.set('mt', p.metric)
+    if (p.ward) sp.set('w', p.ward.toLowerCase())
   }
   sp.set('y', String(p.year))
+  if (p.layout !== 'a') sp.set('layout', p.layout)
   return sp.toString()
 }
