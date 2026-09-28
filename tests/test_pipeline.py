@@ -29,6 +29,7 @@ def test_stages():
     # 12 years × 5 views of GeoJSON; bundle: 5 geom + 12 × (3 binary views
     # + 2 small views + ward shapes) + parcels SQL.
     assert Counter(a.computation.cmd.split(" -y ")[0] for a in arts) == {
+        "python -m jc_taxes.cli hls pack": 1,
         "python -m jc_taxes.payments": 1,
         "python -m jc_taxes.cli parcels combine -c data/parcels/Hudson_County_Parcels_April_2026.geojson": 1,
         "python -m jc_taxes.geojson_yearly": 60,
@@ -44,3 +45,24 @@ def test_stages():
     for i, a in enumerate(arts):
         for d in a.computation.deps:
             assert index.get(d.path, -1) < i, (a.path, d.path)
+
+
+def test_hls_pack_roundtrip(tmp_path):
+    import gzip
+    import json
+
+    from jc_taxes.hls import iter_records, pack
+
+    src = tmp_path / "cache"
+    src.mkdir()
+    # Written out of order, with non-compact formatting.
+    for acct in ("300", "100", "200"):
+        with gzip.open(src / f"{acct}.json.gz", "wt") as f:
+            json.dump({"accountInquiryVM": {"AccountNumber": int(acct), "Owner": "É"}}, f, indent=2)
+    out = tmp_path / "hls.parquet"
+    assert pack(src, out) == 3
+    assert list(iter_records(out)) == [
+        {"accountInquiryVM": {"AccountNumber": 100, "Owner": "É"}},
+        {"accountInquiryVM": {"AccountNumber": 200, "Owner": "É"}},
+        {"accountInquiryVM": {"AccountNumber": 300, "Owner": "É"}},
+    ]

@@ -1,0 +1,11 @@
+outs:
+- hash: md5
+  path: JerseyCity.parquet
+meta:
+  computation:
+    cmd: python -m jc_taxes.cli hls pack
+    deps:
+      /data/cache: eaad0c9753e4e8ff540cef1c6a75aad2
+    git_deps:
+      /src/jc_taxes/hls.py: 3e1d1b125e4077999b1a51e95426404840f03d0a
+      /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b

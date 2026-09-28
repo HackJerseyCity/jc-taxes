@@ -1,41 +1,31 @@
 #!/usr/bin/env python3
-"""Extract yearly payment data from cached account details."""
-import gzip
-import json
-import sys
+"""Extract yearly payment data from the packed HLS account records."""
 from pathlib import Path
 
 import click
 import pandas as pd
 from utz import err
 
-from .paths import DATA, MUNIS, cache_dir as muni_cache_dir
+from .hls import iter_records, packed_path
+from .paths import DATA, MUNIS
 
 
 def extract_payments(
-    cache_dir: Path,
+    packed: Path,
     output: Path,
 ) -> pd.DataFrame:
     """
-    Extract yearly payment totals from cached JSON files.
+    Extract yearly payment totals from the packed HLS records (`jct hls pack`).
 
     Returns DataFrame with columns:
         AccountNumber, Block, Lot, Qualifier, Year, Billed, Paid
     """
-    json_files = sorted(cache_dir.glob("*.json")) + sorted(cache_dir.glob("*.json.gz"))
-    err(f"Processing {len(json_files)} cached files from {cache_dir}...")
+    err(f"Processing {packed}...")
 
     records = []
-    for i, path in enumerate(json_files):
+    for i, data in enumerate(iter_records(packed)):
         if (i + 1) % 10000 == 0:
-            err(f"  {i + 1}/{len(json_files)}")
-
-        if path.suffixes == ['.json', '.gz']:
-            with gzip.open(path, 'rt') as f:
-                data = json.load(f)
-        else:
-            with open(path) as f:
-                data = json.load(f)
+            err(f"  {i + 1}")
 
         acct = data.get("accountInquiryVM", {})
         account_number = acct.get("AccountNumber")
@@ -83,16 +73,16 @@ def extract_payments(
 
 @click.command()
 @click.option("-m", "--muni", type=click.Choice(sorted(MUNIS)), default="JerseyCity", show_default=True)
-@click.option("-i", "--input-dir", default=None, help="Cache dir (default: data/cache/{muni})")
+@click.option("-i", "--input", "input_path", default=None, help="Packed HLS records (default: data/hls/{muni}.parquet)")
 @click.option("-o", "--output", default=None, help="Output parquet (default: data/payments.{muni}.parquet)")
-def main(muni: str, input_dir: str, output: str):
-    cache = Path(input_dir) if input_dir else muni_cache_dir(muni)
+def main(muni: str, input_path: str, output: str):
+    packed = Path(input_path) if input_path else packed_path(muni)
     if output:
         out = Path(output)
     else:
         # JC keeps the legacy unsuffixed path; other munis get muni-suffixed
         out = DATA / "payments.parquet" if muni == "JerseyCity" else DATA / f"payments.{muni}.parquet"
-    extract_payments(cache, out)
+    extract_payments(packed, out)
 
 
 if __name__ == "__main__":

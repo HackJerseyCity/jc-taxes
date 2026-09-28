@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Generate year-specific GeoJSON files showing taxes paid per parcel."""
-import gzip
 import json
 import re
 from collections import defaultdict
@@ -15,25 +14,11 @@ import shapely.ops
 from pyproj import Transformer
 from utz import err
 
-
-def _iter_cache_jsons(cache_dir: Path):
-    """Yield parsed JSON dicts from cached account files (.json or .json.gz)."""
-    paths = list(cache_dir.glob("*.json")) + list(cache_dir.glob("*.json.gz"))
-    for path in paths:
-        try:
-            if path.suffixes[-2:] == [".json", ".gz"]:
-                with gzip.open(path, "rt") as f:
-                    yield json.load(f)
-            else:
-                with open(path) as f:
-                    yield json.load(f)
-        except Exception:
-            continue
-
 from .building_desc import parse_building_desc
 from .census import load_jc_census_blocks, load_jc_neighborhoods, load_jc_wards
 from .coastline import clip_parcel
-from .paths import CACHE, DATA, PARCELS, PARCELS_COMBINED
+from .hls import iter_records, packed_path
+from .paths import DATA, PARCELS, PARCELS_COMBINED
 
 # Transformers for different CRS scenarios
 wgs84_to_njsp = Transformer.from_crs("EPSG:4326", "EPSG:3424", always_xy=True)
@@ -41,8 +26,8 @@ njsp_to_wgs84 = Transformer.from_crs("EPSG:3424", "EPSG:4326", always_xy=True)
 
 
 @lru_cache(maxsize=None)
-def load_owners(cache_dir: Path = CACHE) -> tuple[dict[str, str], dict[str, str]]:
-    """Load property owners from cached account JSON files.
+def load_owners(packed: Path = packed_path()) -> tuple[dict[str, str], dict[str, str]]:
+    """Load property owners from the packed HLS account records (account order).
 
     Returns:
         (lot_owners, unit_owners) where:
@@ -52,7 +37,7 @@ def load_owners(cache_dir: Path = CACHE) -> tuple[dict[str, str], dict[str, str]
     """
     lot_owners: dict[str, str] = {}
     unit_owners: dict[str, str] = {}
-    for data in _iter_cache_jsons(cache_dir):
+    for data in iter_records(packed):
         acct = data.get("accountInquiryVM", {})
         block = str(acct.get("Block", "")).strip()
         lot = str(acct.get("Lot", "")).strip()
@@ -78,14 +63,14 @@ def load_owners(cache_dir: Path = CACHE) -> tuple[dict[str, str], dict[str, str]
 
 
 @lru_cache(maxsize=None)
-def load_addresses(cache_dir: Path = CACHE) -> dict[str, str]:
-    """Load property addresses from cached account JSON files.
+def load_addresses(packed: Path = packed_path()) -> dict[str, str]:
+    """Load property addresses from the packed HLS account records (account order; first per lot wins).
 
     Returns:
         dict mapping "block-lot" to PropertyLocation address string
     """
     addresses = {}
-    for data in _iter_cache_jsons(cache_dir):
+    for data in iter_records(packed):
         acct = data.get("accountInquiryVM", {})
         block = str(acct.get("Block", "")).strip()
         lot = str(acct.get("Lot", "")).strip()

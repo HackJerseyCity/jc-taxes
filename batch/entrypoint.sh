@@ -43,5 +43,11 @@ if [ "$push_back" = yes ]; then
         git commit -q -m "Pipeline run: $n \`.dvc\` updated @ $(date -u +%FT%TZ)"
         git push -u origin HEAD || { echo "entrypoint: push failed" >&2; [ "$rc" -eq 0 ] && rc=1; }
     fi
+else
+    # No push-back: log the `.dvc` changes (md5s only) for `git apply` on a
+    # dev machine, between markers: `dvx batch` logs → `sed -n '/^--- dvc diff ---$/,/^--- end ---$/p'`.
+    echo "--- dvc diff ---"
+    git -C /app diff -- '*.dvc'
+    echo "--- end ---"
 fi
 exit "$rc"

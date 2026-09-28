@@ -18,6 +18,7 @@ from .stats import stats
 from .aggregates import aggregates
 from .bundle import bundle
 from .d1 import d1
+from .hls import hls
 from .pipeline import pipeline
 from .parcels import parcels
 from .paths import (
@@ -48,6 +49,7 @@ main.add_command(stats)
 main.add_command(aggregates)
 main.add_command(bundle)
 main.add_command(d1)
+main.add_command(hls)
 main.add_command(pipeline)
 main.add_command(parcels)
 

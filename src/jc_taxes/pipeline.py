@@ -2,9 +2,9 @@
 data it was built from (`deps`, md5s) and the code (`git_deps`, blob / tree
 SHAs), so `dvx status` says what's stale and `dvx run <target>` rebuilds it.
 
-    HLS cache ─ payments ─┬─ combined parcels ─┐
-    county parcels ───────┘   legacy parcels ──┤
-    tax records, TIGER water, census ──────────┴─ taxes-{year}-{view}.geojson (×60)
+    HLS cache ─ packed records ─ payments ─┬─ combined parcels ─┐
+    county parcels ────────────────────────┘   legacy parcels ──┤
+    packed records, tax records, TIGER water, census ───────────┴─ taxes-{year}-{view}.geojson (×60)
         ├─ bundle: geom-* / values-* / ward-shapes-* (app data) + data/d1/parcels.sql
         └─ data/d1/aggregates.sql (+ portfolios.json)
     portfolios.json ─ data/d1/portfolios.sql
@@ -37,6 +37,7 @@ TIGER = "data/tiger/tl_2023_34017_areawater.zip"
 PORTFOLIOS = "www/public/portfolios.json"
 LEAVES = (CACHE, COUNTY, LEGACY, ENRICHED, TIGER, PORTFOLIOS)
 
+HLS = "data/hls/JerseyCity.parquet"
 PAYMENTS = "data/payments.parquet"
 COMBINED = "data/jc_parcels_combined.parquet"
 D1_PARCELS = "data/d1/parcels.sql"
@@ -55,10 +56,16 @@ def stages():
         return [f"{PKG}/{m}.py" for m in mods]
 
     cache, county, legacy, enriched, tiger, portfolios = map(leaf, LEAVES)
+    # One object instead of ~70k per-account files, in a fixed order.
+    hls = Artifact(HLS, Computation(
+        cmd="python -m jc_taxes.cli hls pack",
+        deps=[cache],
+        git_deps=code("hls", "paths"),
+    ))
     payments = Artifact(PAYMENTS, Computation(
         cmd="python -m jc_taxes.payments",
-        deps=[cache],
-        git_deps=code("payments", "paths"),
+        deps=[hls],
+        git_deps=code("payments", "hls", "paths"),
     ))
     combined = Artifact(COMBINED, Computation(
         cmd=f"python -m jc_taxes.cli parcels combine -c {COUNTY}",
@@ -68,8 +75,8 @@ def stages():
     geojson = {
         (year, view): Artifact(f"www/public/taxes-{year}-{suffix}.geojson", Computation(
             cmd=f"python -m jc_taxes.geojson_yearly -y {year} -a {view} -o www/public",
-            deps=[combined, payments, enriched, cache, tiger],
-            git_deps=[*code("geojson_yearly", "census", "coastline", "building_desc", "paths"), "census"],
+            deps=[combined, payments, enriched, hls, tiger],
+            git_deps=[*code("geojson_yearly", "hls", "census", "coastline", "building_desc", "paths"), "census"],
         ))
         for view, suffix in VIEWS.items()
         for year in YEARS
@@ -123,7 +130,7 @@ def stages():
         ))
         for env, db in (("dev", "jct-dev"), ("prod", "jct"))
     ]
-    return [payments, combined, *all_geojson, *bundle, *d1_sql, r2_br, *d1_loads]
+    return [hls, payments, combined, *all_geojson, *bundle, *d1_sql, r2_br, *d1_loads]
 
 
 @click.group()

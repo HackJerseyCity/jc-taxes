@@ -23,7 +23,6 @@ the cached account details for those rows and derive two datasets:
 
 Pre-2005 portal history is partial, so series start at `--start-year` (2005).
 """
-import gzip
 import json
 import re
 from collections import Counter, defaultdict
@@ -32,7 +31,8 @@ from pathlib import Path
 import click
 from utz import err
 
-from .paths import DATA, cache_dir as muni_cache_dir
+from .hls import iter_records, packed_path
+from .paths import DATA
 
 DATA_DIR = DATA.parent / "www" / "public" / "data"
 DEFAULT_OUT = DATA_DIR / "jc_pilots.json"
@@ -77,18 +77,15 @@ def project_label(slug: str) -> str:
     return PROJECT_LABELS.get(slug, slug.title())
 
 
-def yearly(cache_dir: Path, start_year: int) -> list[dict]:
-    files = sorted(cache_dir.glob("*.json")) + sorted(cache_dir.glob("*.json.gz"))
-    err(f"Scanning {len(files)} cached files from {cache_dir}...")
+def yearly(packed: Path, start_year: int) -> list[dict]:
+    err(f"Scanning {packed}...")
     by_year: dict[int, dict] = defaultdict(lambda: {"billed": 0.0, "paid": 0.0, "accts": set()})
     acct_years: dict[str, dict[int, float]] = defaultdict(dict)
     acct_project: dict[str, Counter] = defaultdict(Counter)
-    for i, path in enumerate(files):
+    for i, data in enumerate(iter_records(packed)):
         if (i + 1) % 20000 == 0:
-            err(f"  {i + 1}/{len(files)}")
-        opener = gzip.open if path.suffix == ".gz" else open
-        with opener(path, "rt") as f:
-            acct = json.load(f).get("accountInquiryVM", {})
+            err(f"  {i + 1}")
+        acct = data.get("accountInquiryVM", {})
         an = acct.get("AccountNumber")
         for det in acct.get("Details", []):
             desc = str(det.get("Description") or "")
@@ -149,7 +146,7 @@ def expirations(acct_years, acct_project, first_year: int, last_full_year: int, 
 @click.option("-Y", "--end-year", default=2025, show_default=True, help="Last full year (current year is mid-billing)")
 def pilots(exp_output: str, top_projects: int, output: str, start_year: int, end_year: int):
     """Aggregate PILOT/abatement bills per year + historical expiration wave -> JSON."""
-    rows, acct_years, acct_project = yearly(muni_cache_dir("JerseyCity"), start_year)
+    rows, acct_years, acct_project = yearly(packed_path("JerseyCity"), start_year)
     rows = [r for r in rows if r["year"] <= end_year]
     Path(output).parent.mkdir(parents=True, exist_ok=True)
     Path(output).write_text(json.dumps(rows, indent=2) + "\n")
