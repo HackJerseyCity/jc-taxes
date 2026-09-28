@@ -16,6 +16,15 @@ if [ -n "${R2_ACCESS_KEY_ID:-}" ]; then
     chmod 600 ~/.aws/credentials
 fi
 
+# `-e REF=<rev>` runs a newer rev than the image was built at (no rebuild for
+# code / `.dvc` changes; `uv sync` is a nop unless the lockfile changed).
+if [ -n "${REF:-}" ]; then
+    git -C /app fetch -q origin "$REF"
+    git -C /app checkout -q FETCH_HEAD
+    (cd /app && uv sync -q --frozen --no-dev)
+    echo "entrypoint: at $(git -C /app rev-parse --short HEAD)" >&2
+fi
+
 push_back=no
 if [ -n "${GITHUB_RW_TOKEN:-}" ]; then
     git -C /app remote set-url --push origin \

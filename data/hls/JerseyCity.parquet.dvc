@@ -1,5 +1,7 @@
 outs:
-- hash: md5
+- md5: 44894a2aca12fa7fca3000e68c37be5c
+  size: 276287191
+  hash: md5
   path: JerseyCity.parquet
 meta:
   computation:

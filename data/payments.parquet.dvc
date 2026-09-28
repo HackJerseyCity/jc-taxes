@@ -7,7 +7,8 @@ meta:
   computation:
     cmd: python -m jc_taxes.payments
     deps:
-      cache: eaad0c9753e4e8ff540cef1c6a75aad2
+      hls/JerseyCity.parquet: 44894a2aca12fa7fca3000e68c37be5c
     git_deps:
-      /src/jc_taxes/payments.py: 699f98b9c02b86dd94b18a1b1496cb8bb0683f63
+      /src/jc_taxes/payments.py: 4e6c5c06120761bbcdef4bc94639cfbfc05d3070
       /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b
+      /src/jc_taxes/hls.py: 3e1d1b125e4077999b1a51e95426404840f03d0a
