@@ -49,7 +49,7 @@ Until DVX has explicit-only stages (`~/c/dvx/specs/explicit-only-stages.md`), a 
 
 - Move the HLS fetch into Batch, writing / refreshing the packed file directly (then `data/cache` can go).
 - `REF` (entrypoint) runs a pushed rev without an image rebuild; rebuild only when the lockfile or `batch/` changes.
-- Why is a Fargate pull of many small objects ≫10× slower than locally (~67 objects/s)? Likely serial per-object fetches in `dvx run`'s dep pull: DVX spec.
+- DVX materializes tracked dirs one object at a time (`cache.py` `materialize_targets`), and `-f` forces absent-but-fetchable upstreams (re-running the pack, pulling `data/cache`); forced rebuilds need `--cached 'data/hls/*'`, which `dvx batch submit` can't pass yet (`aws batch submit-job` with a command override meanwhile). DVX spec: `~/c/dvx/specs/parallel-materialize.md`.
 - Build the Batch image in CI (GHA → ECR via OIDC) instead of locally.
 - Fold the re-pull's resilience (`tmp/hls-repull.sh`: truncated-gzip cleanup, stall watchdog, retries) into `jct fetch`, then make the HLS pull a scheduled fetch stage (`fetch.schedule: weekly`) for Batch.
 - OG map captures (`www/scripts/og-maps.mjs`) depend on a deployed app, not files: keep as a manual step after a dev deploy.
