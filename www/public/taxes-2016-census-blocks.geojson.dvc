@@ -5,7 +5,7 @@ outs:
   path: taxes-2016-census-blocks.geojson
 meta:
   computation:
-    cmd: python -m jc_taxes.geojson_yearly -y 2016 -a census-block -o www/public
+    cmd: python -m jc_taxes.geojson_yearly -y 2016 -a census-block
     deps:
       /data/jc_parcels_combined.parquet: 41c2ed6e654b3c1bc3d6657920c0bfbd
       /data/payments.parquet: edc8bfaaa22d5684ba175b75259b9510

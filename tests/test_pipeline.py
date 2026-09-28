@@ -31,7 +31,7 @@ def test_stages():
     assert Counter(a.computation.cmd.split(" -y ")[0] for a in arts) == {
         "python -m jc_taxes.cli hls pack": 1,
         "python -m jc_taxes.payments": 1,
-        "python -m jc_taxes.cli parcels combine -c data/parcels/Hudson_County_Parcels_April_2026.geojson": 1,
+        "python -m jc_taxes.cli parcels combine -c parcels/Hudson_County_Parcels_April_2026.geojson": 1,
         "python -m jc_taxes.geojson_yearly": 60,
         "python -m jc_taxes.cli bundle -n": 5 + 12 * 6 + 1,
         "python -m jc_taxes.cli aggregates -n": 1,

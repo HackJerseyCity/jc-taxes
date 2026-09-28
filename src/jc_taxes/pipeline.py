@@ -18,6 +18,8 @@ water) are plain DVX-tracked leaves; their refresh commands are in
 recorded hashes are kept; only `meta.computation` changes.
 """
 from os import chdir
+from os.path import relpath
+from pathlib import Path
 
 import click
 from utz import err
@@ -68,13 +70,14 @@ def stages():
         git_deps=code("payments", "hls", "paths"),
     ))
     combined = Artifact(COMBINED, Computation(
-        cmd=f"python -m jc_taxes.cli parcels combine -c {COUNTY}",
+        # `dvx run` runs each cmd in its `.dvc`'s directory: paths are relative to it.
+        cmd=f"python -m jc_taxes.cli parcels combine -c {relpath(COUNTY, Path(COMBINED).parent)}",
         deps=[county, legacy, payments],
         git_deps=code("parcels", "paths"),
     ))
     geojson = {
         (year, view): Artifact(f"www/public/taxes-{year}-{suffix}.geojson", Computation(
-            cmd=f"python -m jc_taxes.geojson_yearly -y {year} -a {view} -o www/public",
+            cmd=f"python -m jc_taxes.geojson_yearly -y {year} -a {view}",
             deps=[combined, payments, enriched, hls, tiger],
             git_deps=[*code("geojson_yearly", "hls", "census", "coastline", "building_desc", "paths"), "census"],
         ))
