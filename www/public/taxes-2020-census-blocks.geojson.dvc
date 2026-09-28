@@ -1,6 +1,6 @@
 outs:
-- md5: e173773c17dcbb3882ab7796f8ccad62
-  size: 1539730
+- md5: 15819910434850da83279d516cb2e8d4
+  size: 1539903
   hash: md5
   path: taxes-2020-census-blocks.geojson
 meta:

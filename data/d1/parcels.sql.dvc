@@ -1,36 +1,36 @@
 outs:
-- md5: 0fed94ef27ab0f5a659ce63954f08b2b
-  size: 22788777
+- md5: c8c9f99e312372cd8423a5710836c7c9
+  size: 22784101
   hash: md5
   path: parcels.sql
 meta:
   computation:
     cmd: python -m jc_taxes.cli bundle -n
     deps:
-      /www/public/taxes-2015-lots.geojson: 178f53976f3b83b7d428f204739275dc
-      /www/public/taxes-2016-lots.geojson: c118e28cdcb7897da4697cba3cfc3175
-      /www/public/taxes-2017-lots.geojson: 0e8c55bf8a90c73d154a4f2345e802b8
-      /www/public/taxes-2018-lots.geojson: 61d229a7768f280853779aac5ebf8df9
-      /www/public/taxes-2019-lots.geojson: 052050f485e3561e179e8bb0669f70b5
-      /www/public/taxes-2020-lots.geojson: dbef3d5075d0acca002624996093acc4
-      /www/public/taxes-2021-lots.geojson: c98fda99588d512ff03d60a43798fd78
-      /www/public/taxes-2022-lots.geojson: d26bf2537df77efec48f82477b1d2f06
-      /www/public/taxes-2023-lots.geojson: 9c6f1534ddc98868a453e0ed6c2eba5c
-      /www/public/taxes-2024-lots.geojson: 59dfe3db0ec249071546c55dd788fd92
-      /www/public/taxes-2025-lots.geojson: ca9cf23b55f003e66d340e00b6c211ab
-      /www/public/taxes-2026-lots.geojson: 4572f4e5357d9dd07568288c876c57b3
-      /www/public/taxes-2015-units.geojson: b654096066add4d716459ca0bf257cd2
-      /www/public/taxes-2016-units.geojson: f18acd974ad4c99198d01689079466aa
-      /www/public/taxes-2017-units.geojson: 274fedaa1d663fe37a62ed94970de7b4
-      /www/public/taxes-2018-units.geojson: f9a6b0696f1ebd21e3393cc6af097838
-      /www/public/taxes-2019-units.geojson: a759352d4524dbe1e2e5dd42095328dd
-      /www/public/taxes-2020-units.geojson: b4e6d03855558141ba56b7700ca8a336
-      /www/public/taxes-2021-units.geojson: 9b0fe6f7f51c5b8801c211568c826578
-      /www/public/taxes-2022-units.geojson: 874cc34e6acb7f81b39580d89d873341
-      /www/public/taxes-2023-units.geojson: 98c5c1469b8970c94c73b5e320f6fb64
-      /www/public/taxes-2024-units.geojson: e576991575549ce7da5a765d8969830c
-      /www/public/taxes-2025-units.geojson: a97cbd6ee44427152709a79674c5ff90
-      /www/public/taxes-2026-units.geojson: 20800af33be88106d918983c98081b0d
+      /www/public/taxes-2015-lots.geojson: 327d5b185b890279843514976e051e21
+      /www/public/taxes-2016-lots.geojson: 7c15790fb9b71c3146e3d7c643db7dff
+      /www/public/taxes-2017-lots.geojson: bafd3d36faca4255499b2d70d4b0f1d7
+      /www/public/taxes-2018-lots.geojson: d6dbfce1f338da73745d0968bcd19662
+      /www/public/taxes-2019-lots.geojson: f7548cc0035134c1ce16dc1bc0d68d56
+      /www/public/taxes-2020-lots.geojson: c5d972533ec2851794cd7312b54cf783
+      /www/public/taxes-2021-lots.geojson: a86d91bdfeca7dcd6b1a13743982ba1f
+      /www/public/taxes-2022-lots.geojson: 33b31e483b91d75a1ebbdcf84d316472
+      /www/public/taxes-2023-lots.geojson: 560a7c8dd27901f79e97c6d027f76649
+      /www/public/taxes-2024-lots.geojson: 59d6ddc557f0eb521cb37ca888c917d9
+      /www/public/taxes-2025-lots.geojson: 805257fd24fdaf81cd5e0b0908b58dbe
+      /www/public/taxes-2026-lots.geojson: be7e6ea1df1c05b0cac989373072a6fc
+      /www/public/taxes-2015-units.geojson: 81fba7b9b1f476749a4cec86e7ab18cb
+      /www/public/taxes-2016-units.geojson: 69c65874ece09528ca47fd362b1fc2c8
+      /www/public/taxes-2017-units.geojson: e9ecfa500e9339c6f04c6987230d0dae
+      /www/public/taxes-2018-units.geojson: 2eb93eb9aa19f963317bc327204a9a99
+      /www/public/taxes-2019-units.geojson: 04fc7c304fb4936aef557cf8c55a1995
+      /www/public/taxes-2020-units.geojson: a9d35e6d43292597e34688beedcb133f
+      /www/public/taxes-2021-units.geojson: 865403d3ae94d7b979188f2852eb3e0d
+      /www/public/taxes-2022-units.geojson: 3d02bfa1b7c9e2d9eeff05775bc078a7
+      /www/public/taxes-2023-units.geojson: 2dc53360e7d60530376387946a016461
+      /www/public/taxes-2024-units.geojson: eab2a0bbb1c8b1aee9fd31569aa6c4d2
+      /www/public/taxes-2025-units.geojson: 203b57f43b8e65ee9ae60bb0ff18ee0f
+      /www/public/taxes-2026-units.geojson: 162cbe56c61cc6b40e5f7d4fc67204df
     git_deps:
       /src/jc_taxes/bundle.py: fa9ef8c0114956aa29f949ba909f52104f4113a7
       /src/jc_taxes/stats.py: 8681db54d74f0abba0117944caa7467c9ad48e3a

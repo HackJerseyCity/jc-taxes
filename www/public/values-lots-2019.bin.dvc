@@ -7,18 +7,18 @@ meta:
   computation:
     cmd: python -m jc_taxes.cli bundle -n
     deps:
-      taxes-2015-lots.geojson: 178f53976f3b83b7d428f204739275dc
-      taxes-2016-lots.geojson: c118e28cdcb7897da4697cba3cfc3175
-      taxes-2017-lots.geojson: 0e8c55bf8a90c73d154a4f2345e802b8
-      taxes-2018-lots.geojson: 61d229a7768f280853779aac5ebf8df9
-      taxes-2019-lots.geojson: 052050f485e3561e179e8bb0669f70b5
-      taxes-2020-lots.geojson: dbef3d5075d0acca002624996093acc4
-      taxes-2021-lots.geojson: c98fda99588d512ff03d60a43798fd78
-      taxes-2022-lots.geojson: d26bf2537df77efec48f82477b1d2f06
-      taxes-2023-lots.geojson: 9c6f1534ddc98868a453e0ed6c2eba5c
-      taxes-2024-lots.geojson: 59dfe3db0ec249071546c55dd788fd92
-      taxes-2025-lots.geojson: ca9cf23b55f003e66d340e00b6c211ab
-      taxes-2026-lots.geojson: 4572f4e5357d9dd07568288c876c57b3
+      taxes-2015-lots.geojson: 327d5b185b890279843514976e051e21
+      taxes-2016-lots.geojson: 7c15790fb9b71c3146e3d7c643db7dff
+      taxes-2017-lots.geojson: bafd3d36faca4255499b2d70d4b0f1d7
+      taxes-2018-lots.geojson: d6dbfce1f338da73745d0968bcd19662
+      taxes-2019-lots.geojson: f7548cc0035134c1ce16dc1bc0d68d56
+      taxes-2020-lots.geojson: c5d972533ec2851794cd7312b54cf783
+      taxes-2021-lots.geojson: a86d91bdfeca7dcd6b1a13743982ba1f
+      taxes-2022-lots.geojson: 33b31e483b91d75a1ebbdcf84d316472
+      taxes-2023-lots.geojson: 560a7c8dd27901f79e97c6d027f76649
+      taxes-2024-lots.geojson: 59d6ddc557f0eb521cb37ca888c917d9
+      taxes-2025-lots.geojson: 805257fd24fdaf81cd5e0b0908b58dbe
+      taxes-2026-lots.geojson: be7e6ea1df1c05b0cac989373072a6fc
     git_deps:
       /src/jc_taxes/bundle.py: fa9ef8c0114956aa29f949ba909f52104f4113a7
       /src/jc_taxes/stats.py: 8681db54d74f0abba0117944caa7467c9ad48e3a
