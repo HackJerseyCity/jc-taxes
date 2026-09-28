@@ -14,7 +14,7 @@ Every change (code or data) goes: build → deploy to **dev** → review it ther
 | Environments | **Done:** dev `jct-edge-dev` (+ D1 `jct-dev`) at `jct-edge-dev.ryan-0dc.workers.dev`; CI deploys dev on push, prod on manual `env: prod`. |
 | IaC | **`infra/` (Pulumi) written, previewed clean; `pulumi up` pending (user).** Imports R2 `jc-taxes` / `jct-og`, D1 `jct` / `jct-dev`, Worker domains `jct.rbw.sh` / `jct-files.rbw.sh`; adopts `jc-taxes` CORS; `jct-dev.rbw.sh` behind `dev_domain`. |
 | Pipeline | **DVX provenance for every stage** (`jct pipeline write`, `specs/dvx-pipeline.md`). Still runs locally. |
-| Batch | `batch/` image (Dockerfile + entrypoint) written; AWS side (`dvx batch bootstrap` / Pulumi) waits on the account choice. |
+| Batch | **Bootstrapped in RAC AWS** (`006196295121`, us-east-1, prefix `jct`) by `batch/setup`: R2 keys in Secrets Manager (`jct/r2-*`), image in ECR `jct-pipeline:<rev>`, Fargate-Spot CE `jct-spot` (16 vCPU), queue + job def `jct` (16 vCPU / 32 GB). Run: `AWS_PROFILE=r dvx batch submit -P jct -w <targets>`. |
 
 ## Plan
 
@@ -52,5 +52,4 @@ Every change (code or data) goes: build → deploy to **dev** → review it ther
 
 ## Open questions
 
-- AWS account for Batch: which one? The HCCS / OA accounts are other projects'; jc-taxes is independent (RAC).
 - Keep `jct-edge.ryan-0dc.workers.dev` as prod's alias, or disable `workers_dev` on prod once dev exists?
