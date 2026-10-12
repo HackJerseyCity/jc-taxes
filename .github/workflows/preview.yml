@@ -1,0 +1,126 @@
+name: PR preview
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'PR number (approves its current head commit only)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    if: github.event_name != 'issue_comment' || (github.event.issue.pull_request && startsWith(github.event.comment.body, '/preview'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      sha: ${{ steps.gate.outputs.sha }}
+      pr: ${{ steps.gate.outputs.pr }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/github-script@v7
+        id: gate
+        with:
+          script: |
+            await require('./.github/scripts/preview-gate.cjs')({ github, context, core });
+      - name: Test trusted preview tooling
+        run: node --test .github/scripts/preview-gate.test.cjs
+  build:
+    needs: gate
+    if: needs.gate.outputs.sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Approved code executes here, on a separate runner without CF credentials.
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Build and test approved commit
+        env:
+          VITE_DVC_BASE_URL: /d
+        run: |
+          cd www
+          printf 'packages:\n  - .\n' > pnpm-workspace.yaml
+          node -e "const fs=require('fs'); const p=require('./package.json'); delete p.devDependencies.scrns; fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+          pnpm install --no-frozen-lockfile
+          pnpm build
+          pnpm exec playwright install --with-deps chromium
+          pnpm test
+          cd ../edge
+          pnpm install --frozen-lockfile
+          node scripts/prune-dvc-assets.mjs
+          pnpm exec wrangler deploy --env dev --dry-run --outdir preview-build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-${{ needs.gate.outputs.pr }}-${{ needs.gate.outputs.sha }}
+          path: |
+            www/dist
+            edge/preview-build
+          retention-days: 3
+  deploy:
+    needs: [gate, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # Trusted base code/config only; never install dependencies from the PR here.
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: preview-${{ needs.gate.outputs.pr }}-${{ needs.gate.outputs.sha }}
+          path: tmp/preview-artifact
+      - name: Install trusted deployment tools
+        working-directory: edge
+        run: pnpm install --frozen-lockfile
+      - name: Generate isolated preview configuration
+        working-directory: edge
+        env:
+          PR_NUMBER: ${{ needs.gate.outputs.pr }}
+        run: |
+          cp -R ../tmp/preview-artifact/www/dist ../www/dist
+          cp -R ../tmp/preview-artifact/edge/preview-build preview-build
+          node scripts/preview-config.mjs
+      - name: Deploy preview
+        working-directory: edge
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm exec wrangler deploy --config preview.json --no-bundle
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const number = Number('${{ needs.gate.outputs.pr }}');
+            await github.rest.issues.createComment({ ...context.repo, issue_number: number,
+              body: `Preview of commit ${{ needs.gate.outputs.sha }}: https://jct-pr-${number}.ryan-0dc.workers.dev\n\nProduction is unchanged.` });
