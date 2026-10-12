@@ -31,6 +31,7 @@ from pathlib import Path
 import click
 from utz import err
 
+from . import assessed
 from .aggregates import YEARS
 from .paths import D1_SQL, ROOT
 from .stats import WWW_PUBLIC, _load_geojson
@@ -47,6 +48,9 @@ SMALL_VALUE_PROPS = ("paid", "billed", "area_sqft")
 WARD_ALT_SHAPES = ("lots", "blocks")
 DYNAMIC = {"paid", "billed", "paid_per_sqft", "billed_per_sqft", "paid_per_capita", "billed_per_capita", "year"}
 PER_YEAR_DETAILS = {"owner"}
+# Lot / unit views also get MOD-IV assessed values (`av`, `av_x`) and a
+# `yr_built` fallback: `assessed.annotate`.
+ASSESSED_VIEWS = {"lot", "unit"}
 # Moved from the geometry to D1 `parcels` (lot / unit views): only the tooltip
 # and search use them. (`yr_built` stays: color-by-year-built needs it for every parcel.)
 DETAIL_PROPS = ("addr", "bldg_desc", "stories", "units", "bldg_sqft")
@@ -222,17 +226,24 @@ def _sql(v) -> str:
 @click.command()
 @click.option("-c", "--cache-dir", type=click.Path(file_okay=False, path_type=Path), help="Cache GeoJSON not checked out locally (see `jct stats`).")
 @click.option("-d", "--db", default="jct", show_default=True, help="D1 database name.")
+@click.option("-m", "--modiv", "modiv_path", type=click.Path(dir_okay=False, path_type=Path), default=assessed.LATEST_PATH, show_default=True, help="MOD-IV parquet for lot / unit assessed values.")
 @click.option("-l", "--local", is_flag=True, help="Apply owners to the local (wrangler dev) D1 instead of remote.")
 @click.option("-n", "--dry-run", is_flag=True, help="Write files + SQL, but don't load D1.")
 @click.option("-o", "--out-dir", type=click.Path(file_okay=False, path_type=Path), default=WWW_PUBLIC, show_default=True, help="Where to write geom-*/values-* (DVC-tracked).")
 @click.option("-v", "--view", "views", multiple=True, type=click.Choice(list(VIEWS)), help="Only these views (default: all).")
-def bundle(cache_dir: Path | None, db: str, local: bool, dry_run: bool, out_dir: Path, views: tuple[str, ...]):
+def bundle(cache_dir: Path | None, db: str, modiv_path: Path, local: bool, dry_run: bool, out_dir: Path, views: tuple[str, ...]):
     """Write per-view geometry + all-years values; load owner history into D1."""
     stmts = []
+    records = None
     for view in views or tuple(VIEWS):
         suffix = VIEWS[view]
         per_year = {y: _load_geojson(view, y, cache_dir, force=False)["features"] for y in YEARS}
         geom, values, details = build(view, per_year)
+        if view in ASSESSED_VIEWS:
+            if records is None:
+                records = assessed.load(modiv_path)
+            st = assessed.annotate(view, geom["features"], records)
+            err(f"{view}: {st['matched']:,}/{st['features']:,} features matched MOD-IV ({modiv_path.name}); yr_built filled on {st['yr_filled']:,}")
         dump = lambda o: (json.dumps(o, separators=(",", ":")) + "\n").encode()
         outputs = [(f"geom-{suffix}.geojson", dump(geom))]
         if view in SMALL_VIEWS:

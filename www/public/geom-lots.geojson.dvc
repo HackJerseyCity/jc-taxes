@@ -1,6 +1,6 @@
 outs:
-- md5: e34c57e3fe1a2cc4e1fb1279b5c2fb53
-  size: 11896054
+- md5: f33814e2443de8dbc0075920055496dd
+  size: 12348927
   hash: md5
   path: geom-lots.geojson
 meta:
@@ -19,7 +19,9 @@ meta:
       taxes-2024-lots.geojson: 59d6ddc557f0eb521cb37ca888c917d9
       taxes-2025-lots.geojson: 805257fd24fdaf81cd5e0b0908b58dbe
       taxes-2026-lots.geojson: be7e6ea1df1c05b0cac989373072a6fc
+      /data/modiv/treasury/2026.parquet: d62c19693490353e26f268e0ec20b2d1
     git_deps:
-      /src/jc_taxes/bundle.py: fa9ef8c0114956aa29f949ba909f52104f4113a7
+      /src/jc_taxes/bundle.py: da0cafc12afc9569faf01649f54e80a2c561ea81
       /src/jc_taxes/stats.py: 8681db54d74f0abba0117944caa7467c9ad48e3a
       /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b
+      /src/jc_taxes/assessed.py: e8111ae66fd2562c62d5414f3219249569f06ba7

@@ -25,7 +25,8 @@ import click
 from utz import err
 
 from .aggregates import YEARS
-from .bundle import SMALL_VIEWS, VIEWS
+from .assessed import LATEST
+from .bundle import ASSESSED_VIEWS, SMALL_VIEWS, VIEWS
 from .paths import ROOT
 
 PKG = "src/jc_taxes"
@@ -37,7 +38,10 @@ LEGACY = "data/parcels/legacy_combined.parquet"
 ENRICHED = "data/taxrecords_enriched.parquet"
 TIGER = "data/tiger/tl_2023_34017_areawater.zip"
 PORTFOLIOS = "www/public/portfolios.json"
-LEAVES = (CACHE, COUNTY, LEGACY, ENRICHED, TIGER, PORTFOLIOS)
+# Latest Treasury MOD-IV (`jct modiv pull-treasury -y Y` + `jct modiv parse`):
+# lot / unit assessed values in the bundle.
+MODIV = f"data/modiv/treasury/{LATEST}.parquet"
+LEAVES = (CACHE, COUNTY, LEGACY, ENRICHED, TIGER, PORTFOLIOS, MODIV)
 
 HLS = "data/hls/JerseyCity.parquet"
 PAYMENTS = "data/payments.parquet"
@@ -57,7 +61,7 @@ def stages():
     def code(*mods: str) -> list[str]:
         return [f"{PKG}/{m}.py" for m in mods]
 
-    cache, county, legacy, enriched, tiger, portfolios = map(leaf, LEAVES)
+    cache, county, legacy, enriched, tiger, portfolios, modiv = map(leaf, LEAVES)
     # One object instead of ~70k per-account files, in a fixed order.
     hls = Artifact(HLS, Computation(
         cmd="python -m jc_taxes.cli hls pack",
@@ -90,7 +94,7 @@ def stages():
     # `jct bundle` writes every view's files in one run: co-outputs share the
     # cmd; each depends only on its own view's GeoJSONs.
     bundle_cmd = "python -m jc_taxes.cli bundle -n"
-    bundle_code = code("bundle", "stats", "paths")
+    bundle_code = code("bundle", "stats", "paths", "assessed")
 
     def bundled(path: str, deps: list) -> Artifact:
         return Artifact(path, Computation(cmd=bundle_cmd, deps=deps, git_deps=bundle_code))
@@ -98,7 +102,8 @@ def stages():
     bundle = []
     for view, suffix in VIEWS.items():
         deps = by_view[view]
-        bundle.append(bundled(f"www/public/geom-{suffix}.geojson", deps))
+        geom_deps = [*deps, modiv] if view in ASSESSED_VIEWS else deps
+        bundle.append(bundled(f"www/public/geom-{suffix}.geojson", geom_deps))
         if view in SMALL_VIEWS:
             bundle += [bundled(f"www/public/values-{suffix}-{y}.json", deps) for y in YEARS]
             if view == "ward":

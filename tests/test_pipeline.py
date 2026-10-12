@@ -66,3 +66,11 @@ def test_hls_pack_roundtrip(tmp_path):
         {"accountInquiryVM": {"AccountNumber": 200, "Owner": "É"}},
         {"accountInquiryVM": {"AccountNumber": 300, "Owner": "É"}},
     ]
+
+
+def test_geom_depends_on_modiv():
+    from jc_taxes.pipeline import MODIV
+    deps = {a.path: {d.path for d in a.computation.deps} for a in stages()}
+    assert MODIV in deps["www/public/geom-lots.geojson"]
+    assert MODIV in deps["www/public/geom-units.geojson"]
+    assert MODIV not in deps["www/public/geom-blocks.geojson"]

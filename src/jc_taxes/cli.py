@@ -16,6 +16,7 @@ from .pilots import pilots
 from .r2 import r2
 from .stats import stats
 from .aggregates import aggregates
+from .assessed import assessed
 from .bundle import bundle
 from .d1 import d1
 from .hls import hls
@@ -47,6 +48,7 @@ main.add_command(pilots)
 main.add_command(r2)
 main.add_command(stats)
 main.add_command(aggregates)
+main.add_command(assessed)
 main.add_command(bundle)
 main.add_command(d1)
 main.add_command(hls)

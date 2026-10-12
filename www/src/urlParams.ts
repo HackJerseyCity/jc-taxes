@@ -57,6 +57,18 @@ export function yearParam(dflt: number): Param<number> {
   }
 }
 
+/** Built-since year (`bs=21`): 2-digit from 2000 like `y`, 4-digit before;
+ *  absent = off. */
+export const builtSinceParam: Param<number | undefined> = {
+  decode: (s) => {
+    if (s == null || s === '') return undefined
+    const n = parseInt(s, 10)
+    if (isNaN(n)) return undefined
+    return n < 100 ? 2000 + n : n
+  },
+  encode: (v) => v == null ? undefined : v >= 2000 && v < 2100 ? String(v - 2000).padStart(2, '0') : String(v),
+}
+
 /** Ward (`w=e`): lowercase letter in the URL, `A`–`F` internally. */
 export const wardParam: Param<string> = {
   encode: (v) => v ? v.toLowerCase() : undefined,

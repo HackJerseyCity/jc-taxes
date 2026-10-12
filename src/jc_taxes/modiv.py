@@ -297,7 +297,7 @@ def cmd_pull_treasury(years: tuple[int, ...], force: bool, layout: bool, extract
     """
     import fnmatch, subprocess, zipfile
     if not years:
-        years = (2021, 2022, 2023, 2024, 2025)
+        years = (2021, 2022, 2023, 2024, 2025, 2026)
     TREASURY_ROOT.mkdir(parents=True, exist_ok=True)
     if layout:
         _stream_download(TREASURY_LAYOUT_URL, TREASURY_ROOT / "modivlayout.pdf", force=force)

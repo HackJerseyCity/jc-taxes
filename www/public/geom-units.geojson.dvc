@@ -1,6 +1,6 @@
 outs:
-- md5: 40a34f1069c1be2f9b80270eadbce861
-  size: 20863981
+- md5: 39d9ac76db60ce32e3279f807d4cb6cb
+  size: 21803965
   hash: md5
   path: geom-units.geojson
 meta:
@@ -19,7 +19,9 @@ meta:
       taxes-2024-units.geojson: eab2a0bbb1c8b1aee9fd31569aa6c4d2
       taxes-2025-units.geojson: 203b57f43b8e65ee9ae60bb0ff18ee0f
       taxes-2026-units.geojson: 162cbe56c61cc6b40e5f7d4fc67204df
+      /data/modiv/treasury/2026.parquet: d62c19693490353e26f268e0ec20b2d1
     git_deps:
-      /src/jc_taxes/bundle.py: fa9ef8c0114956aa29f949ba909f52104f4113a7
+      /src/jc_taxes/bundle.py: da0cafc12afc9569faf01649f54e80a2c561ea81
       /src/jc_taxes/stats.py: 8681db54d74f0abba0117944caa7467c9ad48e3a
       /src/jc_taxes/paths.py: 8abac51b79a1fa480342bb60dfc81d200a00938b
+      /src/jc_taxes/assessed.py: e8111ae66fd2562c62d5414f3219249569f06ba7
