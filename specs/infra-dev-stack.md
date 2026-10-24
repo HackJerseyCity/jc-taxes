@@ -11,8 +11,8 @@ Every change (code or data) goes: build → deploy to **dev** → review it ther
 | Map data files | **Content-addressed.** The app fetches DVC objects by md5 via the Worker's `/d/files/md5/…`, and brotli copies are `br/<md5>`. Dev and prod builds coexist on the same bucket. |
 | D1 (`aggregates`, `parcels`, `portfolios`) | **Separate dev / prod databases, loaded from the same DVX-tracked SQL** (`data/d1/*.sql`, `jct d1 load -d jct-dev|jct`). The prod stage's `.dvc` (`deploy/prod/d1.dvc`) records which SQL prod has. |
 | OG assets | Rendered cards are content-hash keyed. Map captures (`maps/<view>-WxH.jpg`, `pnpm -C www og-maps`) are mutable keys shared by dev and prod. |
-| Environments | **Done:** dev `jct-edge-dev` (+ D1 `jct-dev`) at `jct-edge-dev.ryan-0dc.workers.dev`; CI deploys dev on push, prod on manual `env: prod`. |
-| IaC | **`infra/` (Pulumi) written, previewed clean; `pulumi up` pending (user).** Imports R2 `jc-taxes` / `jct-og`, D1 `jct` / `jct-dev`, Worker domains `jct.rbw.sh` / `jct-files.rbw.sh`; adopts `jc-taxes` CORS; `jct-dev.rbw.sh` behind `dev_domain`. |
+| Environments | **Done:** dev `jct-edge-dev` (+ D1 `jct-dev`) at `jct-dev.rbw.sh` (Pulumi `dev_domain`; also `jct-edge-dev.ryan-0dc.workers.dev`); CI deploys dev on push, prod on manual `env: prod`. |
+| IaC | **Done (`infra/`, Pulumi, applied).** Imports R2 `jc-taxes` / `jct-og`, D1 `jct` / `jct-dev`, Worker domains `jct.rbw.sh` / `jct-files.rbw.sh`; adopts `jc-taxes` CORS; creates `jct-dev.rbw.sh` (`dev_domain: true`). |
 | Pipeline | **DVX provenance for every stage** (`jct pipeline write`, `specs/dvx-pipeline.md`). Still runs locally. |
 | Batch | **Bootstrapped in RAC AWS** (`006196295121`, us-east-1, prefix `jct`) by `batch/setup`: R2 keys in Secrets Manager (`jct/r2-*`), image in ECR `jct-pipeline:<rev>`, Fargate-Spot CE `jct-spot` (16 vCPU), queue + job def `jct` (16 vCPU / 32 GB). Run: `AWS_PROFILE=r dvx batch submit -P jct -w <targets>`. |
 
