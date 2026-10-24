@@ -17,11 +17,15 @@ exported below).
 """
 import pulumi
 import pulumi_cloudflare as cf
+import json
+from hashlib import sha256
 
 config = pulumi.Config()
 account_id = config.require('cloudflare_account_id')
 zone_id = config.require('zone_id')  # rbw.sh
 dev_domain = config.get_bool('dev_domain') is True
+staging_bucket = config.get('staging_bucket')
+staging_token = config.get_bool('staging_token') is True
 
 protect = pulumi.ResourceOptions(protect=True)
 
@@ -41,6 +45,47 @@ buckets = {
     )
     for name in ('jc-taxes', 'jct-og')
 }
+
+if staging_bucket:
+    staging = cf.R2Bucket(
+        'contributor-staging',
+        account_id=account_id,
+        name=staging_bucket,
+        location='ENAM',
+        opts=protect,
+    )
+    # No public-domain or managed-domain resource: uploads remain private.
+    pulumi.export('staging_bucket', staging.name)
+    pulumi.export('staging_dvx_url', staging.name.apply(lambda name: f's3://{name}/.dvc/cache'))
+    if staging_token:
+        group_name = 'Workers R2 Storage Bucket Item Write'
+        groups = cf.get_account_api_token_permission_groups_list(
+            account_id=account_id,
+            name=group_name,
+        ).results
+        matches = [group.id for group in groups if group.name == group_name]
+        if len(matches) != 1:
+            raise ValueError(f'Expected exactly one {group_name} permission group')
+        token = cf.AccountToken(
+            'alfonsoar-staging-token',
+            account_id=account_id,
+            name='jc-taxes staging: alfonsoar',
+            expires_on=config.require('staging_token_expires'),
+            policies=[{
+                'effect': 'allow',
+                'permission_groups': [{'id': matches[0]}],
+                'resources': staging.name.apply(lambda name: json.dumps({
+                    f'com.cloudflare.edge.r2.bucket.{account_id}_default_{name}': '*',
+                })),
+            }],
+            opts=pulumi.ResourceOptions(additional_secret_outputs=['value']),
+        )
+        pulumi.export('staging_credentials', pulumi.Output.all(
+            access_key_id=token.id,
+            secret_access_key=pulumi.Output.secret(token.value.apply(lambda value: sha256(value.encode()).hexdigest())),
+        ))
+elif staging_token:
+    raise ValueError('staging_token requires staging_bucket')
 
 cf.R2BucketCors(
     'jc-taxes-cors',

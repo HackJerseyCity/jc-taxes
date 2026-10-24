@@ -25,3 +25,7 @@ direnv exec .. pulumi up
 ```
 
 The deploy token needs Zone → Workers Routes (edit) on `rbw.sh` for the domain create.
+
+## Contributor staging
+
+`staging_bucket` declares a protected private R2 bucket for Alfonso's uploads, separate from the canonical public cache. `staging_token` optionally manages an expiring bucket-only object read/write credential; issuance additionally requires Account API Tokens Read/Write. Credential outputs are secret and must not be printed. See [contributor data](../docs/contributor-data.md) for DVX setup, current issuance status and promotion policy.

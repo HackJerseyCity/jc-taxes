@@ -137,6 +137,63 @@ def r2():
 
 
 @r2.command()
+@click.option("-n", "--dry-run", is_flag=True, help="Validate staging objects without publishing them.")
+@click.option("-s", "--source-bucket", required=True, help="Private contributor staging bucket.")
+@click.argument("sidecars", nargs=-1, required=True, type=click.Path(exists=True, path_type=Path))
+def promote(dry_run: bool, source_bucket: str, sidecars: tuple[Path, ...]):
+    """Verify staged MD5 objects and publish to canonical without overwriting."""
+    from hashlib import md5
+    from tempfile import TemporaryDirectory
+
+    from yaml import safe_load
+
+    if source_bucket == R2_BUCKET:
+        raise click.ClickException("Source must differ from the canonical bucket")
+    expected = {}
+    for sidecar in sidecars:
+        for out in safe_load(sidecar.read_text())["outs"]:
+            oid, size = out["md5"], out["size"]
+            if out.get("hash") != "md5" or not re.fullmatch(r"[0-9a-f]{32}", oid):
+                raise click.ClickException(f"{sidecar}: only standalone MD5 blobs are supported")
+            if oid in expected and expected[oid] != size:
+                raise click.ClickException(f"{oid}: conflicting sizes")
+            expected[oid] = size
+    s3 = _client()
+    (ROOT / "tmp").mkdir(exist_ok=True)
+    with TemporaryDirectory(prefix="promotion-", dir=ROOT / "tmp") as directory:
+        for oid, size in expected.items():
+            key = f"{CACHE_PREFIX}/{oid[:2]}/{oid[2:]}"
+            path = Path(directory) / oid
+
+            def validate(bucket: str) -> None:
+                s3.download_file(bucket, key, str(path))
+                digest = md5(usedforsecurity=False)
+                with path.open("rb") as stream:
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                if (digest.hexdigest(), path.stat().st_size) != (oid, size):
+                    raise click.ClickException(f"{bucket}/{key}: hash or size mismatch")
+
+            validate(source_bucket)
+            if _remote_size(s3, key) is not None:
+                validate(R2_BUCKET)
+                err(f"skip verified canonical {oid}")
+                continue
+            if dry_run:
+                err(f"would promote verified {oid} ({size} B)")
+                continue
+            try:
+                with path.open("rb") as stream:
+                    s3.put_object(Bucket=R2_BUCKET, Key=key, Body=stream, IfNoneMatch="*")
+            except ClientError as exc:
+                if exc.response["Error"]["Code"] not in ("PreconditionFailed", "412"):
+                    raise
+                # Another publisher won the conditional creation; verify its bytes.
+            validate(R2_BUCKET)
+            err(f"promoted verified {oid} ({size} B)")
+
+
+@r2.command()
 @click.option("-f", "--force", is_flag=True, help="Re-publish even if the destination exists with matching size.")
 @click.option("-n", "--dry-run", is_flag=True, help="Print planned publishes without executing them.")
 def publish(force: bool, dry_run: bool):
