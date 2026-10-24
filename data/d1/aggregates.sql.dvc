@@ -1,6 +1,6 @@
 outs:
-- md5: e7cdb166e896664dac113a8512ae603e
-  size: 567073
+- md5: 833d478e696e45a64ae6ef7fbf8f654a
+  size: 582061
   hash: md5
   path: aggregates.sql
 meta:
@@ -67,7 +67,7 @@ meta:
       /www/public/taxes-2024-census-blocks.geojson: f361e3f33d9efbbf978e40adfcd42dac
       /www/public/taxes-2025-census-blocks.geojson: 310ae96e8fcfd957e5873e2933feb377
       /www/public/taxes-2026-census-blocks.geojson: 8fab8c0993a45697e9c372227015f712
-      /www/public/portfolios.json: 99d4e41e22e5e3024055c7c5954c9de6
+      /www/public/portfolios.json: b9312ca0b984db6e2d9414b0d9dc7cf9
     git_deps:
       /src/jc_taxes/aggregates.py: ed0bbd98d91159c33197382238774d42a2370fbf
       /src/jc_taxes/stats.py: 8681db54d74f0abba0117944caa7467c9ad48e3a
