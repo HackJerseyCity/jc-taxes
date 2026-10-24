@@ -2,7 +2,7 @@ meta:
   computation:
     cmd: python -m jc_taxes.cli r2 precompress
     deps:
-      /www/public/geom-blocks.geojson: c97cafb2f3937dc8d0c94755d24833b4
+      /www/public/geom-blocks.geojson: d06c56da160338a054aa9145af3b5552
       /www/public/values-blocks-2015.bin: fe9e7c033777e3cfb5c08d88123a4759
       /www/public/values-blocks-2016.bin: b11fae48a523516bc026f795f65d224e
       /www/public/values-blocks-2017.bin: e889bbc3cc0731df9d1f199327294f35
@@ -15,7 +15,7 @@ meta:
       /www/public/values-blocks-2024.bin: 2ba0a5f7133dfb771f7ef7d12e825b97
       /www/public/values-blocks-2025.bin: f698919a7fdbb4db026dda9fafacdb26
       /www/public/values-blocks-2026.bin: fd3d4d2d1dda5e7b57a5c753b983db5b
-      /www/public/geom-lots.geojson: f8f2e1368ac9e842806302bf8fd766b8
+      /www/public/geom-lots.geojson: f33814e2443de8dbc0075920055496dd
       /www/public/values-lots-2015.bin: 226a62ecfe8725e17c8191ea0d362fcf
       /www/public/values-lots-2016.bin: 4f72dd054f741626faa990981c22c5bf
       /www/public/values-lots-2017.bin: 522833d8fc856d4e62539c8084602f09
@@ -28,7 +28,7 @@ meta:
       /www/public/values-lots-2024.bin: c2c871b3c616d69ea84579a22047f9a4
       /www/public/values-lots-2025.bin: 9eeaf6f82c2d207f7783bde09ada00d8
       /www/public/values-lots-2026.bin: 545b1b421adcba1ee793d05a7da7d82a
-      /www/public/geom-units.geojson: 40a34f1069c1be2f9b80270eadbce861
+      /www/public/geom-units.geojson: 39d9ac76db60ce32e3279f807d4cb6cb
       /www/public/values-units-2015.bin: ca83f75fd223c810e091a0be0252790c
       /www/public/values-units-2016.bin: 7d68396db66ad28e8878ea5a0dfde0cf
       /www/public/values-units-2017.bin: 7e274ce10283f9439d55b8787453c9f2
@@ -41,7 +41,7 @@ meta:
       /www/public/values-units-2024.bin: 5663e07f6160ef94e150cf392173f9f2
       /www/public/values-units-2025.bin: 9b70c6947543ecf39f51c3e0940bd068
       /www/public/values-units-2026.bin: 3c1064388a83451f1deb71e46f01df13
-      /www/public/geom-wards.geojson: 55073a8a6fe903927d5e33dcf7c7770b
+      /www/public/geom-wards.geojson: 51d74318fdbd9903fcadc9dd6b893fe1
       /www/public/values-wards-2015.json: ea730860a3d7625b732a808b7965b3de
       /www/public/values-wards-2016.json: 0e3a694ad2f746faee5b6b6136cf6dfe
       /www/public/values-wards-2017.json: 2881d2bdb8266e54858314bb45aeb500
@@ -54,19 +54,19 @@ meta:
       /www/public/values-wards-2024.json: e7221bc469ce991b245ffd12752224ce
       /www/public/values-wards-2025.json: b6227585e3a505c32e241ee70876ed47
       /www/public/values-wards-2026.json: 132ee48d3db81983d4c7ae38ac89c9cf
-      /www/public/ward-shapes-2015.json: 01732b97f4ae09fe1af73fcebdafd0ee
-      /www/public/ward-shapes-2016.json: 5bc2c26064a2e6e369386d79e14508d1
-      /www/public/ward-shapes-2017.json: a444732b11331cb07c0d198da4d408ee
-      /www/public/ward-shapes-2018.json: 145089eb06c5a15c1eb89f0d5c281b18
-      /www/public/ward-shapes-2019.json: ced7b5276082a7bf97ebe16cf9133383
-      /www/public/ward-shapes-2020.json: afe7901bf61cdc7876ffe13009d6e744
-      /www/public/ward-shapes-2021.json: 4520fa3d50f084ceecb812a546b5353f
-      /www/public/ward-shapes-2022.json: 0612347f3f2bce72ce01ba72c72a4383
-      /www/public/ward-shapes-2023.json: f6a6a5ea1f377a766a312b2b87c09efb
-      /www/public/ward-shapes-2024.json: 7a5c7a18e3efad1f2d59aebac77ae4b1
-      /www/public/ward-shapes-2025.json: bbd68802d09e438426fff15bf07d438f
-      /www/public/ward-shapes-2026.json: ed347c1ab1eec55aecabdb4545ecc234
-      /www/public/geom-census-blocks.geojson: 367da513cfcc5beed2941ec72877a8d4
+      /www/public/ward-shapes-2015.json: ddc641804d319836e7ba3f6f064484b3
+      /www/public/ward-shapes-2016.json: 5cdb2fd6e15cbeffd7f9a66d4a27f0e0
+      /www/public/ward-shapes-2017.json: 1fa6e5d919abbf48ad2ceb8aea257aa8
+      /www/public/ward-shapes-2018.json: 835fe7ec5a6af1be353b6245b147750d
+      /www/public/ward-shapes-2019.json: 42ccb13e8787b854b1ec79d50a37b853
+      /www/public/ward-shapes-2020.json: b339c65a7ad467227db73a8896c397c0
+      /www/public/ward-shapes-2021.json: 75c72b6cbda9b24a611ddcdf93fe8df4
+      /www/public/ward-shapes-2022.json: f7597538ce9997e690b68bbc5a0e2d00
+      /www/public/ward-shapes-2023.json: aa48ac981e3e6acee034bed80a450f12
+      /www/public/ward-shapes-2024.json: f3a89258a919583ecf9ccde317f8d1aa
+      /www/public/ward-shapes-2025.json: 32d962bc6ddb8927c9b9ccae6d23362d
+      /www/public/ward-shapes-2026.json: a8b30a31c88aa160a399de71b4ddd2bc
+      /www/public/geom-census-blocks.geojson: 35d1debbaad98f5fc1f061ee4a5dbe61
       /www/public/values-census-blocks-2015.json: cfcc1d8f8b4469bbfb9323bd91b7d0f2
       /www/public/values-census-blocks-2016.json: c23ea0f4793e6136de63a3a7e369287a
       /www/public/values-census-blocks-2017.json: 6e9a4f39584f15be3ba6ab5cc38d6bce
@@ -75,9 +75,9 @@ meta:
       /www/public/values-census-blocks-2020.json: cb220da107139902f14fbe35be3e1813
       /www/public/values-census-blocks-2021.json: 8625d73b5d1aa9854f27e981d8362a19
       /www/public/values-census-blocks-2022.json: 80d1de800e76624f74e2dbfc0c8bb518
-      /www/public/values-census-blocks-2023.json: 1bd464ee0f2a27a67857742efb34c0c8
+      /www/public/values-census-blocks-2023.json: 90e232030f28391284ef9f0c3fa49c02
       /www/public/values-census-blocks-2024.json: db64966b30273e15cdb82840758e4ec2
       /www/public/values-census-blocks-2025.json: 1c4d031d1dc7b31c00615b3c77990f90
       /www/public/values-census-blocks-2026.json: 306a80edd5de822e36cfc2073b997e4a
     git_deps:
-      /src/jc_taxes/r2.py: 5754ff3f800481f464199f1624dfbe59deb99912
+      /src/jc_taxes/r2.py: 212d466c37001d22c00cd913595989509c094013

@@ -150,8 +150,27 @@ def pipeline():
 @click.option("-n", "--dry-run", is_flag=True, help="List the `.dvc` files that would be written.")
 def write(dry_run: bool):
     """(Re)write every stage's `.dvc` (`meta.computation`: cmd, deps, git_deps)."""
+    from dvx.run.artifact import Artifact
+    from dvx.run.dvc_files import read_dvc_file
+
     chdir(ROOT)  # stage paths are repo-relative
     arts = stages()
+    # Recorded hashes win over the workspace: `write_dvc` otherwise re-hashes
+    # any output / dep present on disk, and a stale local copy (outputs built
+    # in Batch, never pulled) would overwrite the committed md5s.
+    seen = {}
+    todo = list(arts)
+    while todo:
+        a = todo.pop()
+        if id(a) in seen:
+            continue
+        seen[id(a)] = a
+        if a.computation:
+            todo += [d for d in a.computation.deps if isinstance(d, Artifact)]
+    for a in seen.values():
+        prior = read_dvc_file(Path(a.path))
+        if prior is not None and prior.md5:
+            a.md5, a.size = prior.md5, prior.size
     for a in arts:
         if dry_run:
             print(f"{a.path}.dvc")
