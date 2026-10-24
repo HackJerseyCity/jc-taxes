@@ -7,8 +7,9 @@
 - D1 `jct` (prod) and `jct-dev`: imported, protected.
 - Worker custom domains: `jct.rbw.sh` → `jct-edge`, `jct-files.rbw.sh` →
   `jct-files` (imported); `jct-dev.rbw.sh` → `jct-edge-dev` (created, gated by
-  `dev_domain`). One label under `rbw.sh`, so Universal SSL covers them; a
-  two-label `dev.jct.rbw.sh` would need paid Advanced Certificate Manager.
+  `dev_domain`). A custom domain one label under `rbw.sh` gets its own edge
+  certificate; a two-label `dev.jct.rbw.sh` got none (tested 2026-10-24), which
+  needs Advanced Certificate Manager with Total TLS on the zone (paid).
 
 Not managed: the `data.jct.rbw.sh` R2 custom domain (`R2CustomDomain` can't be
 imported, and creating over the live one would fail); Worker scripts
