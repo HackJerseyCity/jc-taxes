@@ -1,6 +1,6 @@
 # jc-taxes Cloudflare infra (Pulumi)
 
-Declarative CF stack: R2 `jc-taxes` + `jct-og`, `jc-taxes` CORS, D1 `jct` + `jct-dev`, Worker custom domains (`jct.rbw.sh`, `jct-files.rbw.sh`, and `jct-dev.rbw.sh` once `dev_domain` is on). Same pattern as crashes / ctbk: Pulumi (Python), `pulumi-cloudflare`, local git-committed `state/` (passphrase-encrypted secrets; none today). Pulumi owns resources; wrangler owns Worker code (`edge/wrangler.jsonc` bindings reference the names / ids exported here). Existing resources are imported and `protect`ed. See `__main__.py` for what's deliberately unmanaged (`data.jct.rbw.sh`).
+Declarative CF stack: R2 `jc-taxes` + `jct-og`, `jc-taxes` CORS, D1 `jct` + `jct-dev`, Worker custom domains (`jct.rbw.sh`, `jct-files.rbw.sh`, and `dev.jct.rbw.sh` / `jct-dev.rbw.sh` once `dev_domain` is on). Same pattern as crashes / ctbk: Pulumi (Python), `pulumi-cloudflare`, local git-committed `state/` (passphrase-encrypted secrets; none today). Pulumi owns resources; wrangler owns Worker code (`edge/wrangler.jsonc` bindings reference the names / ids exported here). Existing resources are imported and `protect`ed. See `__main__.py` for what's deliberately unmanaged (`data.jct.rbw.sh`).
 
 ## Stack
 

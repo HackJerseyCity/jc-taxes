@@ -11,8 +11,8 @@ Every change (code or data) goes: build → deploy to **dev** → review it ther
 | Map data files | **Content-addressed.** The app fetches DVC objects by md5 via the Worker's `/d/files/md5/…`, and brotli copies are `br/<md5>`. Dev and prod builds coexist on the same bucket. |
 | D1 (`aggregates`, `parcels`, `portfolios`) | **Separate dev / prod databases, loaded from the same DVX-tracked SQL** (`data/d1/*.sql`, `jct d1 load -d jct-dev|jct`). The prod stage's `.dvc` (`deploy/prod/d1.dvc`) records which SQL prod has. |
 | OG assets | Rendered cards are content-hash keyed. Map captures (`maps/<view>-WxH.jpg`, `pnpm -C www og-maps`) are mutable keys shared by dev and prod. |
-| Environments | **Done:** dev `jct-edge-dev` (+ D1 `jct-dev`) at `jct-dev.rbw.sh` (Pulumi `dev_domain`; also `jct-edge-dev.ryan-0dc.workers.dev`); CI deploys dev on push, prod on manual `env: prod`. |
-| IaC | **Done (`infra/`, Pulumi, applied).** Imports R2 `jc-taxes` / `jct-og`, D1 `jct` / `jct-dev`, Worker domains `jct.rbw.sh` / `jct-files.rbw.sh`; adopts `jc-taxes` CORS; creates `jct-dev.rbw.sh` (`dev_domain: true`). |
+| Environments | **Done:** dev `jct-edge-dev` (+ D1 `jct-dev`) at `dev.jct.rbw.sh` / `jct-dev.rbw.sh` (Pulumi `dev_domain`; also `jct-edge-dev.ryan-0dc.workers.dev`); CI deploys dev on push, prod on manual `env: prod`. |
+| IaC | **Done (`infra/`, Pulumi, applied).** Imports R2 `jc-taxes` / `jct-og`, D1 `jct` / `jct-dev`, Worker domains `jct.rbw.sh` / `jct-files.rbw.sh`; adopts `jc-taxes` CORS; creates `dev.jct.rbw.sh` + `jct-dev.rbw.sh` (`dev_domain: true`). |
 | Pipeline | **DVX provenance for every stage** (`jct pipeline write`, `specs/dvx-pipeline.md`). Still runs locally. |
 | Batch | **Bootstrapped in RAC AWS** (`006196295121`, us-east-1, prefix `jct`) by `batch/setup`: R2 keys in Secrets Manager (`jct/r2-*`), image in ECR `jct-pipeline:<rev>`, Fargate-Spot CE `jct-spot` (16 vCPU), queue + job def `jct` (16 vCPU / 32 GB). Run: `AWS_PROFILE=r dvx batch submit -P jct -w <targets>`. |
 
@@ -20,7 +20,7 @@ Every change (code or data) goes: build → deploy to **dev** → review it ther
 
 ### 1. Dev environment (wrangler envs)
 - `wrangler.jsonc` `env.dev`: Worker `jct-edge-dev`, D1 `jct-dev`, the same `DATA` bucket (content-addressed, read-only), and OG bucket `jct-og` with a `dev/` key prefix (or its own bucket).
-- Domain: **`jct-dev.rbw.sh`** (one label). `dev.jct.rbw.sh` is two labels below the zone, which needs Advanced Certificate Manager (paid) for a Workers custom domain; see the memory note in the R2 migration.
+- Domain: **`dev.jct.rbw.sh`** (also `jct-dev.rbw.sh`). Workers custom domains get free edge certs at any depth; `jct.rbw.sh`'s cert already covers `*.jct.rbw.sh`. (An earlier note here claimed two-label names need paid ACM: wrong.)
 - CI: push to `main` → deploy **dev**. Promote to prod is a manual `workflow_dispatch` (or tag) that deploys the *same* commit's build to prod and runs the D1 promote.
 
 ### 2. Versioned D1 data

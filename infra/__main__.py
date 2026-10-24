@@ -6,10 +6,10 @@
   so it adopts the existing rules idempotently).
 - D1 `jct` (prod) and `jct-dev`: imported, protected.
 - Worker custom domains: `jct.rbw.sh` → `jct-edge`, `jct-files.rbw.sh` →
-  `jct-files` (imported); `jct-dev.rbw.sh` → `jct-edge-dev` (created, gated by
-  `dev_domain`). A custom domain one label under `rbw.sh` gets its own edge
-  certificate; a two-label `dev.jct.rbw.sh` got none (tested 2026-10-24), which
-  needs Advanced Certificate Manager with Total TLS on the zone (paid).
+  `jct-files` (imported); `dev.jct.rbw.sh` and `jct-dev.rbw.sh` → `jct-edge-dev`
+  (created, gated by `dev_domain`). Custom domains get free edge certificates at
+  any depth (no ACM); `dev.jct.rbw.sh` is covered by `jct.rbw.sh`'s cert
+  (SAN `*.jct.rbw.sh`).
 
 Not managed: the `data.jct.rbw.sh` R2 custom domain (`R2CustomDomain` can't be
 imported, and creating over the live one would fail); Worker scripts
@@ -124,7 +124,7 @@ d1 = {
 DOMAINS = {
     'jct.rbw.sh': ('jct-edge', '4ec04f11fe6787325647b3d1a7c2223cdab8989b'),
     'jct-files.rbw.sh': ('jct-files', '59e0463efd397146cacc02edaa82d23bfa7d794c'),
-    **({'jct-dev.rbw.sh': ('jct-edge-dev', None)} if dev_domain else {}),
+    **({h: ('jct-edge-dev', None) for h in ('jct-dev.rbw.sh', 'dev.jct.rbw.sh')} if dev_domain else {}),
 }
 for hostname, (service, domain_id) in DOMAINS.items():
     cf.WorkersCustomDomain(

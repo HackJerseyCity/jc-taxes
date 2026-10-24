@@ -48,7 +48,7 @@ Databases `jct` (prod) and `jct-dev` (bound as `DB`; schema in `d1/migrations`) 
 
 ## Dev → prod
 
-- **dev**: `jct-edge-dev` (`wrangler deploy --env dev` / `pnpm run deploy:dev`), D1 `jct-dev`, at <https://jct-dev.rbw.sh> (also <https://jct-edge-dev.ryan-0dc.workers.dev>). CI deploys it on every push to `main`; data loads via `dvx run deploy/dev/d1.dvc`.
+- **dev**: `jct-edge-dev` (`wrangler deploy --env dev` / `pnpm run deploy:dev`), D1 `jct-dev`, at <https://dev.jct.rbw.sh> (also `jct-dev.rbw.sh`, `jct-edge-dev.ryan-0dc.workers.dev`). CI deploys it on every push to `main`; data loads via `dvx run deploy/dev/d1.dvc`.
 - **promote**: after checking dev, `dvx run deploy/prod/d1.dvc` (same SQL files → `jct`), and run the Deploy workflow manually with `env: prod` (deploys that commit's build to `jct.rbw.sh`).
 - Map data files are content-addressed (`/d/files/md5/…`), so dev and prod builds share the `jc-taxes` bucket without interfering.
 
