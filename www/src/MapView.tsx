@@ -18,7 +18,8 @@ import { useParcelDetails } from './parcel'
 import { findPortfolio, portfolioPredicate, usePortfolios } from './portfolios'
 import { fit3d } from './fit3d'
 import FocusPicker, { type FocusOption } from './FocusPicker'
-import { HOOD_SLUGS, aggAlias, hoodParam, metricAlias, portfolioAlias, wardParam, yearParam } from './urlParams'
+import { HOOD_SLUGS, aggAlias, builtSinceParam, hoodParam, metricAlias, portfolioAlias, wardParam, yearParam } from './urlParams'
+import { ASSESSED_YEAR, BUILT_SINCE_MIN, builtSinceStats, builtSinceTest, pct } from './builtSince'
 import { WARDS, boundsOf, hoodsOf, parseRegion, regionLabel, regionTest } from './regions'
 import { useTouchPitch } from './useTouchPitch'
 import { useParcelSearch, type AddressHit } from './useParcelSearch'
@@ -253,7 +254,11 @@ const abbr = (n: number) =>
   n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` :
   n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` :
   n >= 1e3 ? `$${(n / 1e3).toFixed(0)}K` : `$${Math.round(n)}`
-type Summary = { count: number, paid: number, billed: number, area: number, withPaid: number, yr: number }
+type Summary = {
+  count: number, paid: number, billed: number, area: number, withPaid: number, yr: number,
+  // Present only when a focus is active: the unfiltered totals for context.
+  city?: { count: number, paid: number },
+}
 function SummaryStats({ s, aggLabel }: { s: Summary, aggLabel: string }) {
   const collected = s.billed > 0 ? (s.paid / s.billed) * 100 : null
   const row = (label: string, value: string, sub?: string) => (
@@ -267,13 +272,14 @@ function SummaryStats({ s, aggLabel }: { s: Summary, aggLabel: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 230 }}>
       <div style={{ fontWeight: 600, marginBottom: 2 }}>
-        {s.yr} · {s.count.toLocaleString()} {aggLabel}
+        {s.yr} · {s.count.toLocaleString()} {aggLabel}{s.city && ' highlighted'}
       </div>
       {row('Total paid', usd(s.paid), `(${abbr(s.paid)})`)}
       {s.billed > 0 && row('Total billed', usd(s.billed), `(${abbr(s.billed)})`)}
       {collected != null && row('Collected', `${collected.toFixed(2)}%`)}
       {row('With tax > 0', `${s.withPaid.toLocaleString()} / ${s.count.toLocaleString()}`)}
       {s.area > 0 && row('Total area', `${abbr(s.area).replace('$', '')} sqft`)}
+      {s.city && row('Citywide paid', abbr(s.city.paid), `· ${s.city.count.toLocaleString()} ${aggLabel}`)}
       <div style={{ color: 'var(--text-secondary)', fontSize: 11, marginTop: 4, fontWeight: 400 }}>
         Sum over the current view; totals vary by view (coverage).
       </div>
@@ -666,6 +672,9 @@ export default function MapView() {
   const [wardLabels, setWardLabels] = useUrlState('wl', boolParam)
   const [extruded, setExtruded] = useUrlState('3d', boolParam)
   const [colorBy, setColorBy] = useUrlState('cb', stringParam('metric'))
+  // "Built since" (`bs=21`): lot / unit views only, like color-by-year-built.
+  const [builtSinceRaw, setBuiltSince] = useUrlState('bs', builtSinceParam)
+  const builtSince = (aggregateMode === 'lot' || aggregateMode === 'unit') ? builtSinceRaw : undefined
   const [percentileRaw, setPercentileRaw] = useUrlState('pct', optNumParam)
   // Heights scale to one max across all years by default (so growth over time
   // shows); `hy` fits each year to its own tallest bar instead.
@@ -752,7 +761,7 @@ export default function MapView() {
   // Focus = portfolio ∧ region (`rg`: ward / neighborhood). Non-members are
   // faded (or hidden at `pfd=0`); stats + height auto-fit cover members only.
   const activeRegion = useMemo(() => parseRegion(region), [region])
-  const focusTest = useMemo(() => {
+  const regionFocusTest = useMemo(() => {
     if (!portfolioTest && !activeRegion) return null
     return (p: ParcelProperties | null | undefined): boolean => {
       if (!p) return false
@@ -760,11 +769,19 @@ export default function MapView() {
       return !activeRegion || regionTest(activeRegion, p)
     }
   }, [portfolioTest, activeRegion])
+  // Third focus term: built since N (`bs`).
+  const focusTest = useMemo(() => {
+    if (!builtSince) return regionFocusTest
+    const built = builtSinceTest(builtSince)
+    return (p: ParcelProperties | null | undefined): boolean =>
+      built(p) && (!regionFocusTest || regionFocusTest(p))
+  }, [regionFocusTest, builtSince])
   // Server-side totals / maxima for this view × focus (null for a portfolio ∧
   // region combo, which falls back to computing from loaded features).
   // Nothing to ask for until a `pf` param's portfolio list has loaded (else a
   // throwaway citywide request goes out first).
-  const summaryKey = portfolio && portfoliosOrNull === null
+  // A built-since filter isn't precomputed either: client-side, like portfolio ∧ region.
+  const summaryKey = builtSince || (portfolio && portfoliosOrNull === null)
     ? null
     : summaryFocus(activePortfolio ? portfolio : null, activeRegion ? region : null)
   const summaryQ = useSummary(String(aggregateMode), summaryKey)
@@ -783,7 +800,9 @@ export default function MapView() {
   const maxHeight = maxHeightRaw ?? (
     focusExtentM != null ? Math.min(modeConf.maxHeight, Math.max(300, focusExtentM)) : modeConf.maxHeight
   )
-  const focusLabel = [activePortfolio?.label, activeRegion && regionLabel(activeRegion)].filter(Boolean).join(' · ')
+  const pickerLabel = [activePortfolio?.label, activeRegion && regionLabel(activeRegion)].filter(Boolean).join(' · ')
+  const builtSinceLabel = builtSince ? `Built since ${builtSince}` : ''
+  const focusLabel = [pickerLabel, builtSinceLabel].filter(Boolean).join(' · ')
   // Features that set the auto-fit height scale: portfolio members only (when
   // one is active, so its buildings fill the vertical range), and — for
   // per-area metrics — not slivers, whose tiny (often coastline-clipped) area
@@ -938,11 +957,12 @@ export default function MapView() {
     if (colorBy === 'yr_built' && newAgg !== 'lot' && newAgg !== 'unit') {
       switchColorBy('metric')
     }
+    if (builtSinceRaw && newAgg !== 'lot' && newAgg !== 'unit') setBuiltSince(undefined)
     const newMetric = effectiveMetricFor(newAgg, metricMode)
     switchToMode(newAgg, newMetric)
     setAggregateModeRaw(newAgg)
     if (newMetric !== metricMode) setMetricModeRaw(newMetric)
-  }, [aggregateMode, switchToMode, metricMode, colorBy, switchColorBy, setAggregateModeRaw, setMetricModeRaw])
+  }, [aggregateMode, switchToMode, metricMode, colorBy, switchColorBy, builtSinceRaw, setBuiltSince, setAggregateModeRaw, setMetricModeRaw])
 
   const setMetricMode = useCallback((newMetric: string) => {
     switchToMode(aggregateMode, newMetric)
@@ -1637,16 +1657,22 @@ export default function MapView() {
   // feature.
   const summary = useMemo(() => {
     if (!displayData || displayData.length === 0) return null
-    let paid = 0, billed = 0, area = 0, withPaid = 0
+    // With a focus (portfolio / region / built-since) the tooltip describes the
+    // lit set, matching the chip it hangs off; citywide totals ride along.
+    let count = 0, paid = 0, billed = 0, area = 0, withPaid = 0, cityPaid = 0
     for (const f of displayData) {
       const p = f.properties
+      if (p?.paid) cityPaid += p.paid
+      if (focusTest && !focusTest(p)) continue
+      count++
       if (p?.paid) { paid += p.paid; withPaid++ }
       if (p?.billed) billed += p.billed
       if (p?.area_sqft) area += p.area_sqft
     }
     const yr = displayData[0]?.properties?.year ?? yearRounded
-    return { count: displayData.length, paid, billed, area, withPaid, yr }
-  }, [displayData, yearRounded])
+    const city = focusTest ? { count: displayData.length, paid: cityPaid } : undefined
+    return { count, paid, billed, area, withPaid, yr, city }
+  }, [displayData, yearRounded, focusTest])
   const portfolioStats = useMemo(() => {
     if (!focusTest || !displayData) return null
     let count = 0, paid = 0
@@ -1656,6 +1682,10 @@ export default function MapView() {
     }
     return { count, paid }
   }, [focusTest, displayData])
+  const builtStats = useMemo(() => {
+    if (!builtSince || !displayData) return null
+    return builtSinceStats(displayData, builtSince, amountOf, regionFocusTest)
+  }, [builtSince, displayData, regionFocusTest])
 
   // Per-year total (focus members, else all) for the transport sparkline: from
   // the server summary; without one (portfolio ∧ region), once the player has
@@ -1963,6 +1993,22 @@ export default function MapView() {
               Color by year built
             </label>
           )}
+          {(aggregateMode === 'lot' || aggregateMode === 'unit') && (
+            <label title="Light parcels built in or after a year; dim the rest">
+              Built since:{' '}
+              <select
+                aria-label="Built since"
+                value={builtSince ?? ''}
+                onChange={(e) => setBuiltSince(e.target.value ? Number(e.target.value) : undefined)}
+                style={inputStyle}
+              >
+                <option value="">Off</option>
+                {Array.from({ length: YEAR_MAX - BUILT_SINCE_MIN + 1 }, (_, i) => YEAR_MAX - i).map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </label>
+          )}
           {aggregateMode === 'ward' && (<>
             <label>
               Geometry:{' '}
@@ -2215,20 +2261,35 @@ export default function MapView() {
             >
               <FocusPicker
                 value={focusValue}
-                label={focusLabel || 'Citywide'}
+                label={pickerLabel || 'Citywide'}
                 options={focusOptions}
                 onChange={onFocus}
               />
+              {builtSince && (
+                <button
+                  data-testid="built-since-label"
+                  onClick={() => setBuiltSince(undefined)}
+                  title="Clear built-since filter"
+                  aria-label="Clear built-since filter"
+                  style={{
+                    pointerEvents: 'auto', cursor: 'pointer', opacity: 0.9,
+                    background: 'none', border: 'none', color: 'inherit',
+                    font: 'inherit', padding: 0,
+                  }}
+                >· built since {builtSince} ✕</button>
+              )}
               {chipStats && (
                 <Tooltip content={summary ? <SummaryStats s={summary} aggLabel={summaryAggLabel} /> : null}>
-                  <span style={{ opacity: 0.9, fontVariantNumeric: 'tabular-nums', cursor: 'help' }}>
-                    {abbr(chipStats.paid)} · {chipStats.count.toLocaleString()} {noun}
+                  <span data-testid="totals-chip" style={{ opacity: 0.9, fontVariantNumeric: 'tabular-nums', cursor: 'help' }}>
+                    {abbr(chipStats.paid)}
+                    {builtStats && ` (${pct(builtStats.amount, builtStats.amountAll)} of ${builtStats.scoped ? 'focus' : 'citywide'} ${billedYr ? 'billed' : 'paid'})`}
+                    {' · '}{chipStats.count.toLocaleString()} {noun}
                   </span>
                 </Tooltip>
               )}
-              {focusTest && (
+              {(portfolio || region) && (
                 <button
-                  onClick={() => { setPortfolio(''); setRegion('') }}
+                  onClick={() => { setPortfolio(''); setRegion(''); setBuiltSince(undefined) }}
                   title="Clear highlight"
                   aria-label="Clear highlight"
                   style={{
@@ -2241,6 +2302,26 @@ export default function MapView() {
                 >✕</button>
               )}
             </span>
+            {builtStats && (
+              <div
+                data-testid="built-since-stats"
+                style={{
+                  marginTop: 4, fontSize: big ? 15 : 12, opacity: 0.95, fontVariantNumeric: 'tabular-nums',
+                  display: 'inline-block', background: 'rgba(0,0,0,0.6)', color: 'white',
+                  padding: '2px 10px', borderRadius: 8, textShadow: 'none', whiteSpace: 'normal',
+                }}
+              >
+                {/* Assessed value is a single fixed MOD-IV year; only show it when
+                    that year is in view, so a 2026 figure isn't printed beside a
+                    different year's paid/billed total. */}
+                {yearRounded === ASSESSED_YEAR && (<>
+                  {ASSESSED_YEAR} taxable assessed {abbr(builtStats.av)} ({pct(builtStats.av, builtStats.avAll)} of {builtStats.scoped ? 'focus' : 'citywide'} assessed)
+                  {builtStats.avExempt > 0 && ` · exempt / PILOT ${abbr(builtStats.avExempt)}`}
+                  {' · '}
+                </>)}
+                {builtStats.unknown.toLocaleString()} {AGG_NOUN[String(aggregateMode)]?.[builtStats.unknown === 1 ? 0 : 1]} with no year built (excluded)
+              </div>
+            )}
           </div>
         )
         if (isAnim) {

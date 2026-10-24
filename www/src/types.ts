@@ -24,6 +24,8 @@ export type ParcelProperties = {
   stories?: number
   units?: number
   yr_built?: number
+  av?: number         // taxable net assessed value, latest MOD-IV (lot / unit views)
+  av_x?: number       // exempt / PILOT (class 15*) net assessed value
   bldg_sqft?: number
   bldg_desc?: string
   lots?: Geometry      // tax-lot fragments geometry (ward geometry toggle)
