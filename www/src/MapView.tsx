@@ -1659,10 +1659,11 @@ export default function MapView() {
     if (!displayData || displayData.length === 0) return null
     // With a focus (portfolio / region / built-since) the tooltip describes the
     // lit set, matching the chip it hangs off; citywide totals ride along.
-    let count = 0, paid = 0, billed = 0, area = 0, withPaid = 0, cityPaid = 0
+    let count = 0, paid = 0, billed = 0, area = 0, withPaid = 0, cityPaid = 0, cityBilled = 0
     for (const f of displayData) {
       const p = f.properties
       if (p?.paid) cityPaid += p.paid
+      if (p?.billed) cityBilled += p.billed
       if (focusTest && !focusTest(p)) continue
       count++
       if (p?.paid) { paid += p.paid; withPaid++ }
@@ -1670,7 +1671,7 @@ export default function MapView() {
       if (p?.area_sqft) area += p.area_sqft
     }
     const yr = displayData[0]?.properties?.year ?? yearRounded
-    const city = focusTest ? { count: displayData.length, paid: cityPaid } : undefined
+    const city = focusTest ? { count: displayData.length, paid: cityPaid, billed: cityBilled } : undefined
     return { count, paid, billed, area, withPaid, yr, city }
   }, [displayData, yearRounded, focusTest])
   const portfolioStats = useMemo(() => {
@@ -2379,7 +2380,7 @@ export default function MapView() {
             ) : statsChip}
             {billedYr && summary && (
               <div style={{ marginTop: 6, fontSize: 12, opacity: 0.9, textShadow: 'inherit' }}>
-                {Math.round(year)}: amounts billed (final quarter due Nov 1) · citywide paid so far {abbr(summary.paid)} ({Math.round(summary.paid / Math.max(summary.billed, 1) * 100)}% of billed)
+                {Math.round(year)}: amounts billed (final quarter due Nov 1) · citywide paid so far {abbr((summary.city ?? summary).paid)} ({Math.round((summary.city ?? summary).paid / Math.max((summary.city ?? summary).billed, 1) * 100)}% of billed)
               </div>
             )}
           </div>
