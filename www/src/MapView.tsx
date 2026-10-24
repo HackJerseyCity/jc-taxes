@@ -203,7 +203,7 @@ function InlineSelect({ value, label, onChange, options, title, fontSize, fontWe
 // native <select> styled to read as inline title text; it's the app's primary
 // year control. Steps within `years`; the select snaps to the nearest integer so it
 // tracks fractional-year animation/playback without falling back.
-function YearControl({ year, setYear, years, onPlay, big }: { year: number, setYear: (y: number) => void, years: number[], onPlay?: () => void, big?: boolean }) {
+function YearControl({ year, setYear, years, onPlay, onClose, big }: { year: number, setYear: (y: number) => void, years: number[], onPlay?: () => void, onClose?: () => void, big?: boolean }) {
   const cur = Math.round(year)
   const idx = years.indexOf(cur)
   const go = (d: number) => { const i = idx + d; if (i >= 0 && i < years.length) setYear(years[i]) }
@@ -241,6 +241,7 @@ function YearControl({ year, setYear, years, onPlay, big }: { year: number, setY
       />
       {btn(() => go(1), idx >= years.length - 1, '›', 'Next year')}
       {onPlay && btn(onPlay, false, '▶', 'Play through years', 11)}
+      {onClose && btn(onClose, false, '×', 'Close player', 20)}
     </span>
   )
 }
@@ -531,6 +532,9 @@ const optNumParam: Param<number | undefined> = {
 export default function MapView() {
   const kbdCtx = useHotkeysContext()
   const [data, setData] = useState<ParcelFeature[] | null>(null)
+  // Which view `data` holds: on a view switch it keeps the previous view's
+  // features until the new view loads.
+  const [dataAgg, setDataAgg] = useState<AggregateMode | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [hovered, setHovered] = useState<ParcelProperties | null>(null)
   const suppressHoverRef = useRef(false)
@@ -1154,6 +1158,7 @@ export default function MapView() {
     const allCached = needed.every(y => yearCacheRef.current.has(cacheKey(aggregateMode, y)))
     if (allCached) {
       setData(yearCacheRef.current.get(cacheKey(aggregateMode, yearFloor)) ?? null)
+      setDataAgg(aggregateMode)
       setLoading(false)
       yearOnlyChangeRef.current = false
       return
@@ -1162,6 +1167,7 @@ export default function MapView() {
     ensureLoaded()
       .then(() => {
         setData(yearCacheRef.current.get(cacheKey(aggregateMode, yearFloor)) ?? null)
+        setDataAgg(aggregateMode)
         setLoading(false)
         yearOnlyChangeRef.current = false
       })
@@ -1336,7 +1342,7 @@ export default function MapView() {
   // Ward label info: stable text/metadata (doesn't depend on viewState)
   type WardLabelInfo = { ward: string; text: string; metricVal: number; rings: number[][][] }
   const wardLabelInfo = useMemo((): WardLabelInfo[] => {
-    if (!data || aggregateMode !== 'ward' || !wardLabels) return []
+    if (!data || aggregateMode !== 'ward' || dataAgg !== 'ward' || !wardLabels) return []
     return data.map(f => {
       const p = f.properties
       if (!p?.ward) return null
@@ -1349,7 +1355,7 @@ export default function MapView() {
       if (p.paid_per_capita) lines.push(`$${p.paid_per_capita.toLocaleString()}/capita`)
       return { ward: p.ward, text: lines.join('\n'), metricVal, rings }
     }).filter((x): x is WardLabelInfo => x !== null)
-  }, [data, aggregateMode, wardLabels, metricMode])
+  }, [data, dataAgg, aggregateMode, wardLabels, metricMode])
 
   // Screen-space label positions via offscreen rasterization.
   // Projects each ward's extruded 3D geometry (top face, base face, side quads)
@@ -2286,7 +2292,7 @@ export default function MapView() {
               // Player open: the year becomes a big rolling readout (still the
               // picker), with the totals chip enlarged beside it.
               <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '6px 14px' }}>
-                <YearControl year={year} setYear={goToYear} years={AVAILABLE_YEARS} big />
+                <YearControl year={year} setYear={goToYear} years={AVAILABLE_YEARS} onClose={animYr ? undefined : closeTransport} big />
                 {statsChip}
               </div>
             ) : statsChip}
@@ -2580,9 +2586,9 @@ export default function MapView() {
       )}
 
       {/* Ward labels (HTML overlay, pure screen-space) */}
-      {wardScreenLabels.map(label => (
+      {wardScreenLabels.map((label, i) => (
         <div
-          key={label.ward}
+          key={`${label.ward}-${i}`}
           style={{
             position: 'absolute',
             left: label.x,
